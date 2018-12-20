@@ -1,1 +1,1 @@
-# Heartware - Software for optical determination of Cardiomyocyte contracatility
+# OpenHeartWare (OHW) - Software for optical determination of Cardiomyocyte contracatility
