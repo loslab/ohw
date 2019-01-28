@@ -1132,10 +1132,10 @@ class TableWidget(QWidget):
             #self.ax_kinetics.cla()
             #self.ax_kinetics.plot(self.OHW.timeindex, self.OHW.mean_absMotions, '-', linewidth = 2) #self.fig_kinetics
 
-            if Peaks["t_peaks_low_sorted"] != None:
+            if type(Peaks["t_peaks_low_sorted"]) == np.ndarray:
                 # plot peaks, low peaks are marked as triangles , high peaks are marked as circles         
                 self.highpeaks, = self.ax_kinetics.plot(Peaks["t_peaks_low_sorted"], Peaks["peaks_low_sorted"], marker='o', ls="", ms=5, color='r' )
-                self.lowpeaks, = self.ax_kinetics.plot(Peaks["t_peaks_high_sorted"], Peaks["peaks_high_sorted"], marker='^', ls="", ms=5, color='r' )  #easier plotting without for loop          
+                self.lowpeaks, = self.ax_kinetics.plot(Peaks["t_peaks_high_sorted"], Peaks["peaks_high_sorted"], marker='^', ls="", ms=5, color='r' )       
                 self.plotted_peaks = True
                 
             self.canvas_kinetics.draw()
@@ -1361,8 +1361,9 @@ class TableWidget(QWidget):
             #max_motion = self.mean_maxMotion    #np.max(self.MaxMotions_trans)
             #scale_max = np.mean(self.OHW.absMotions)    #should be mean of 1d-array of max motions
             
-            scale_max = np.mean(np.max(self.OHW.absMotions,axis=(1,2)))
-                        
+            #scale_max = np.mean(np.max(self.OHW.absMotions,axis=(1,2)))
+            scale_max = self.OHW.get_scale_maxMotion()
+            
             self.imshow_heatmaps = self.ax_heatmaps.imshow(self.OHW.absMotions[0], vmin = 0, vmax = scale_max, cmap = 'jet', interpolation = 'bilinear')
             self.slider_heatmaps.setMaximum(self.OHW.absMotions.shape[0]-1)
             
@@ -1392,18 +1393,13 @@ class TableWidget(QWidget):
             blockwidth = self.OHW.MV_parameters["blockwidth"]
             microns_per_pixel = self.OHW.videoMeta["microns_per_pixel"]
             scalingfactor = self.OHW.scalingfactor
-            scale_max = np.mean(np.max(self.OHW.absMotions,axis=(1,2)))
-            
-            #print("before draw quiver canvas", self.OHW.scaledImageStack[0].shape, self.OHW.videoMeta["Blackval"], self.OHW.videoMeta["Whiteval"])
+            scale_max = self.OHW.get_scale_maxMotion() # np.mean(np.max(self.OHW.absMotions,axis=(1,2)))
             
             arrowscale = scale_max / (blockwidth * microns_per_pixel / scalingfactor) #0.07 previously
             self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.OHW.scaledImageStack.shape[1], blockwidth), np.arange(blockwidth/2, self.OHW.scaledImageStack.shape[2], blockwidth))
             
             self.imshow_quivers = self.ax_quivers.imshow(self.OHW.scaledImageStack[0], cmap = "gray", vmin = self.OHW.videoMeta["Blackval"], vmax = self.OHW.videoMeta["Whiteval"])
             self.quiver_quivers = self.ax_quivers.quiver(self.MotionCoordinatesX, self.MotionCoordinatesY, self.MotionX[0], self.MotionY[0], pivot='mid', color='r', units ="xy", scale = arrowscale)    #adjust scale to max. movement and mpp value
-            # abs. quiver length: µm/s --> 0.5 x-axis units
-            # scale: Number of data units per arrow length unit: A/L --> l = a*(L/A) = a * scale^-1
-            # max: blockwidth --> scale = max / (blockwidth * microns_per_pixel)
             
             self.canvas_quivers.draw()
             self.tab4.layout.addWidget(self.canvas_quivers,  6,  2)
