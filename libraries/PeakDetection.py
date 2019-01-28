@@ -71,27 +71,30 @@ class PeakDetection():
             print("only ", self.foundPeaks, " peaks detected, which are not enough for the analysis")
             return
         
-        sort_index = self.peak_heights_th.argsort()
+        sort_index_height = self.peak_heights_th.argsort()
         
         #peak_heights_sorted = np.sort(self.peak_heights_th)
-        peak_heights_sorted = self.peak_heights_th[sort_index]
-        peaktimes_sorted = self.peaktimes_th[sort_index]
+        peak_heights_sorted = self.peak_heights_th[sort_index_height]
+        peaktimes_sorted = self.peaktimes_th[sort_index_height]
         peak_differences = np.diff(peak_heights_sorted)
         
         max_difference_index = np.argmax(peak_differences)+1
         peaks_low = peak_heights_sorted[0:max_difference_index]
         peaks_high = peak_heights_sorted[max_difference_index:]
         
-        t_peaks_low = self.peaktimes_th[0:max_difference_index]
-        t_peaks_high = self.peaktimes_th[max_difference_index:]
-        #print(t_peaks_low, peaks_low)
-        #print(t_peaks_high, peaks_high)
+        t_peaks_low = peaktimes_sorted[0:max_difference_index]
+        t_peaks_high = peaktimes_sorted[max_difference_index:]
+        print(t_peaks_low, peaks_low)
+        print(t_peaks_high, peaks_high)
         
         #sort the high and low peaks along the time axis
-        t_peaks_high_sorted = np.sort(t_peaks_high)
-        t_peaks_low_sorted = np.sort(t_peaks_low)
-        peaks_high_sorted = np.array(peaks_high)[np.argsort(t_peaks_high)]
-        peaks_low_sorted = np.array(peaks_low)[np.argsort(t_peaks_low)]
+        sort_index_t_high = np.argsort(t_peaks_high)
+        sort_index_t_low = np.argsort(t_peaks_low)
+        
+        t_peaks_high_sorted = t_peaks_high[sort_index_t_high]
+        t_peaks_low_sorted = t_peaks_low[sort_index_t_low]
+        peaks_high_sorted = peaks_high[sort_index_t_high]
+        peaks_low_sorted = peaks_low[sort_index_t_low]
         
         decimals = 4
         max_contraction     = np.round(np.mean(peaks_high), decimals)

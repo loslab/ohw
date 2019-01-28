@@ -232,7 +232,7 @@ class OHW():
         savefig_heatmaps.set_size_inches(16, 12)
         saveax_heatmaps.axis('off')   
         
-        scale_max = np.mean(np.max(self.absMotions,axis=(1,2)))
+        scale_max = self.get_scale_maxMotion()
         imshow_heatmaps = saveax_heatmaps.imshow(self.absMotions[0], vmin = 0, vmax = scale_max, cmap = "jet", interpolation="bilinear")#  cmap="inferno"
         
         cbar_heatmaps = savefig_heatmaps.colorbar(imshow_heatmaps)
@@ -287,7 +287,7 @@ class OHW():
         savefig_quivers.set_size_inches(16, 12)
         saveax_quivers.axis('off')   
 
-        scale_max = np.mean(np.max(self.absMotions,axis=(1,2)))        
+        scale_max = self.get_scale_maxMotion()       
         arrowscale = scale_max / (self.MV_parameters["blockwidth"] * self.videoMeta["microns_per_pixel"] / self.scalingfactor) #0.07 previously
         
         imshow_quivers = saveax_quivers.imshow(self.scaledImageStack[0], vmin = self.videoMeta["Blackval"], vmax = self.videoMeta["Whiteval"], cmap = "gray")
@@ -349,6 +349,16 @@ class OHW():
         self.mean_absMotions = np.nanmean(filtered_absMotions, axis=(1,2))
         self.timeindex = (np.arange(self.mean_absMotions.shape[0]) / self.videoMeta["fps"]).round(2)
     
+    def get_scale_maxMotion(self):
+        """
+            returns maximum for scaling of heatmap + arrows in quiver
+        """
+        
+        max_motion_framenr = np.argmax(self.mean_absMotions)
+        max_motion_frame = self.absMotions[max_motion_framenr]
+        scale_min, scale_maxMotion = np.percentile(max_motion_frame, (0.1, 95))
+        return scale_maxMotion
+        
     def detect_peaks(self, ratio, number_of_neighbours):
         """
             peak detection in mean_absMotions
