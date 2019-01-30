@@ -2,18 +2,24 @@
 
 from matplotlib import pyplot as plt
 import numpy as np
-from PyQt5.QtCore import QThread
+from PyQt5.QtCore import QThread, pyqtSignal
 from PIL import ImageDraw, ImageFont, Image
 
-def turn_function_into_thread(inputfunction, *arg, **kwargs):
+def turn_function_into_thread(inputfunction, emit_progSignal=False, *arg, **kwargs):
     class ThreadedFunction(QThread):
+        # create signal if wanted
+        if emit_progSignal == True:
+            progressSignal = pyqtSignal(float)
+        else:
+            progressSignal = False
+            
         def __init__(self, inputfunction, *arg, **kwargs):
             QThread.__init__(self)
             #self.stop_flag = False
 
         # run method gets called when we start the thread
         def run(self):
-            inputfunction(*arg, **kwargs)
+            inputfunction(progressSignal = self.progressSignal, *arg, **kwargs)
       
     return ThreadedFunction(inputfunction)
 

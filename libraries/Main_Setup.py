@@ -1238,10 +1238,18 @@ class TableWidget(QWidget):
             else:
                 self.OHW.scale_ImageStack(self.OHW.rawImageStack.shape[0][1])   # too hacky, refactor...
                 
-            self.OHW.calculate_MVs_threaded(blockwidth = blockwidth, delay = delay, max_shift = maxShift)#   16,2,7 as standard
-                        
-            self.OHW.thread_BM_stack.finished.connect(self.initialize_calculatedMVs)
-            self.OHW.thread_BM_stack.progressSignal.connect(self.updateProgressBar)
+            #self.OHW.calculate_MVs_threaded(blockwidth = blockwidth, delay = delay, max_shift = maxShift)#   16,2,7 as standard
+            
+
+            
+            calculate_MVs_thread = self.OHW.calculate_MVs_thread(blockwidth = blockwidth, delay = delay, max_shift = maxShift)
+            calculate_MVs_thread.start()
+            calculate_MVs_thread.progressSignal.connect(self.updateProgressBar)
+            calculate_MVs_thread.finished.connect(self.initialize_calculatedMVs)
+            #self.OHW.thread_BM_stack.finished.connect(self.initialize_calculatedMVs)
+            #self.OHW.thread_BM_stack.progressSignal.connect(self.updateProgressBar)
+            
+            
             #self.initialize_calculatedMVs()
         
         def updateProgressBar(self, value):

@@ -39,7 +39,7 @@ class OHW():
         self.timeindex = None   # time index for 1D-representation
         self.PeakDetection = PeakDetection.PeakDetection()    # class which detects + saves peaks
        
-    def read_imagestack(self, inputfolder):
+    def read_imagestack(self, inputfolder, *args, **kwargs):
         """
             reads desired inputvideo as np.array
             choose inputmethod based on file extension
@@ -99,7 +99,7 @@ class OHW():
         """
     
     def read_imagestack_thread(self, inputfolder):
-        self.thread_read_imagestack = helpfunctions.turn_function_into_thread(self.read_imagestack, inputfolder)
+        self.thread_read_imagestack = helpfunctions.turn_function_into_thread(self.read_imagestack, emit_progSignal = True, inputfolder = inputfolder)
         return self.thread_read_imagestack
     
     def read_videofile(self, inputpath):
@@ -180,10 +180,13 @@ class OHW():
             self.thread_BM_stack = OFlowCalc.BM_stack_thread(self.scaledImageStack, **parameters)
             self.thread_BM_stack.start()
             #self.thread_BM_stack.finished.connect(self.finish_MVs_threaded)
-            
+    
+    def calculate_MVs_thread(self, **parameters):
+        self.thread_calculate_MVs = helpfunctions.turn_function_into_thread(self.calculate_MVs, emit_progSignal=True, **parameters)
+        return self.thread_calculate_MVs            
     
     def initialize_calculatedMVs(self):
-        self.rawMVs = self.thread_BM_stack.MotionVectorsAll
+        #self.rawMVs = self.thread_BM_stack.MotionVectorsAll
         
         self.unitMVs = (self.rawMVs / self.scalingfactor) * self.videoMeta["microns_per_pixel"] * (self.videoMeta["fps"] / self.MV_parameters["delay"])
         self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame
@@ -193,8 +196,7 @@ class OHW():
         
         self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results
     
-    
-    def calculate_MVs(self, method = 'BM', **parameters):
+    def calculate_MVs(self, method = 'BM', progressSignal = None, **parameters):
         """
             calculates motionvectors MVs of imagestack based on method and parameters
         """
@@ -212,7 +214,7 @@ class OHW():
         self.MV_parameters = parameters   #store parameters which were used for the calculation of MVs
         
         if method == 'BM':          
-            self.rawMVs = OFlowCalc.BM_stack(self.scaledImageStack, **parameters)
+            self.rawMVs = OFlowCalc.BM_stack(self.scaledImageStack, progressSignal = progressSignal, **parameters)
     
         self.unitMVs = (self.rawMVs / self.scalingfactor) * self.videoMeta["microns_per_pixel"] * (self.videoMeta["fps"] / self.MV_parameters["delay"])
         self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame
@@ -221,8 +223,39 @@ class OHW():
         self.calc_TimeAveragedMotion()
         
         self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results
+        
+    """
+    def calculate_MVs(self, method = 'BM', progressSignal = None, **parameters):
+
+            calculates motionvectors MVs of imagestack based on method and parameters
+
+    
+
+            switch method:
             
-    def save_heatmap(self, singleframe = False):
+            -blockmatch
+            -gunnar farnbäck
+            -lucas-kanade
+            
+            self.rawMVs = ...
+
+        
+        self.MV_parameters = parameters   #store parameters which were used for the calculation of MVs
+        
+        if method == 'BM':          
+            self.rawMVs = OFlowCalc.BM_stack(self.scaledImageStack, progressSignal, **parameters)
+    
+        self.unitMVs = (self.rawMVs / self.scalingfactor) * self.videoMeta["microns_per_pixel"] * (self.videoMeta["fps"] / self.MV_parameters["delay"])
+        self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame
+        
+        self.get_mean_absMotion()
+        self.calc_TimeAveragedMotion()
+        
+        self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results
+    """
+
+    
+    def save_heatmap(self, singleframe = False, *args, **kwargs):
         """
             saves either the selected frame (singleframe = framenumber) or the whole heatmap video (=False)
         """    
@@ -269,7 +302,7 @@ class OHW():
         self.thread_save_heatmap = helpfunctions.turn_function_into_thread(self.save_heatmap, singleframe=False)
         return self.thread_save_heatmap
             
-    def save_quiver(self, singleframe = False):
+    def save_quiver(self, singleframe = False, *args, **kwargs):
         """
             saves either the selected frame (singleframe = framenumber) or the whole heatmap video (= False)
         """
