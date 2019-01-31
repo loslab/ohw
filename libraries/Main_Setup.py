@@ -119,7 +119,8 @@ class TableWidget(QWidget):
             
             #label to display current results folder
             self.label_resultsfolder = QLabel('Current results folder: ')
-          
+            self.label_resultsfolder.setFont(QFont("Times",weight=QFont.Bold))
+                        
             #button for changing the results folder
             self.button_change_resultsfolder = QPushButton('Change results folder ')
             self.button_change_resultsfolder.resize(self.button_change_resultsfolder.sizeHint())
@@ -676,7 +677,7 @@ class TableWidget(QWidget):
             #button for starting the analysis
             self.button_batch_startAnalysis = QPushButton('Start the automated analysis of the chosen folders...')
             self.button_batch_startAnalysis.resize(self.button_batch_startAnalysis.sizeHint())
-            self.button_batch_startAnalysis.clicked.connect(self.startBatchAnalysis)
+            self.button_batch_startAnalysis.clicked.connect(self.on_startBatchAnalysis)
             self.button_batch_startAnalysis.setEnabled(False)
             
             #button for aborting the analysis
@@ -684,6 +685,16 @@ class TableWidget(QWidget):
             self.button_batch_stopAnalysis.resize(self.button_batch_stopAnalysis.sizeHint())
             self.button_batch_stopAnalysis.clicked.connect(self.stopBatchAnalysis)
             self.button_batch_stopAnalysis.setEnabled(False)
+            
+            #label to display current results folder
+            self.label_resultsfolder_batch = QLabel('Current results folder: ')
+            self.label_resultsfolder_batch.setFont(QFont("Times",weight=QFont.Bold))
+          
+            #button for changing the results folder
+            self.button_change_resultsfolder_batch = QPushButton('Change results folder ')
+            self.button_change_resultsfolder_batch.resize(self.button_change_resultsfolder_batch.sizeHint())
+            self.button_change_resultsfolder_batch.clicked.connect(self.on_change_resultsfolder)
+            self.button_change_resultsfolder_batch.setEnabled(True)
             
             #create a progressbar    
             self.progressbar_batch = QProgressBar(self)
@@ -712,10 +723,12 @@ class TableWidget(QWidget):
             self.tab6.layout.addWidget(self.batch_checkScaling,         10,0)
             self.tab6.layout.addWidget(self.batch_checkFilter,          11,0)
             self.tab6.layout.addWidget(self.batch_checkHeatmaps,        12,0)
-            self.tab6.layout.addWidget(self.batch_checkQuivers,         13,0)  
-            self.tab6.layout.addWidget(self.button_batch_startAnalysis, 14,0)
-            self.tab6.layout.addWidget(self.progressbar_batch,          15,0)
-            self.tab6.layout.addWidget(self.button_batch_stopAnalysis,  15,1)
+            self.tab6.layout.addWidget(self.batch_checkQuivers,         13,0)
+            self.tab6.layout.addWidget(self.label_resultsfolder_batch,  14,0)
+            self.tab6.layout.addWidget(self.button_change_resultsfolder_batch, 15,0)
+            self.tab6.layout.addWidget(self.button_batch_startAnalysis, 16,0)
+            self.tab6.layout.addWidget(self.progressbar_batch,          17,0)
+            self.tab6.layout.addWidget(self.button_batch_stopAnalysis,  17,1)
             
             self.tab6.setLayout(self.tab6.layout)
 
@@ -730,31 +743,11 @@ class TableWidget(QWidget):
                 return self.batch_spinbox_delay.value()
             
             elif self.sender() == self.batch_spinbox_maxShift:
-                self.maxShift_batch = self.batch_spinbox_maxShift.value()
+                self.maxshift_batch = self.batch_spinbox_maxShift.value()
                 return self.batch_spinbox_maxShift.value()
             
-        def startBatchAnalysis(self):
-            print('Starting the batch analysis...')
-            print('These are your folders: ', self.batch_folders)
-            self.button_addBatchFolder.setEnabled(False)
-            self.button_batch_startAnalysis.setEnabled(False)
-        
-            
-         #### calculate the motion vectors
-           #user chooses a folder for saving all results to:
-            start_folder = os.path.abspath(os.path.join(self.batch_folders[0], '..'))
-            self.save_folder_batch = UserDialogs.chooseFolderByUser('Choose a folder for saving the results: ', start_folder)
-            
-            #if 'cancel' was pressed: simply do nothing and wait for user to click another button
-            if (self.save_folder_batch == ''):
-                self.button_batch_startAnalysis.setEnabled(True)
-                print('Batch analysis did not start correctly. Start again!')
-                return
-            
-            #enable the stop button!
-            self.button_batch_stopAnalysis.setEnabled(True)
-            
-            #get current settings from checkboxes and spinboxes
+        def on_startBatchAnalysis(self):
+            # get current settings from checkboxes and spinboxes
             self.blockwidth_batch = self.batch_spinbox_blockwidth.value()
             self.delay_batch = self.batch_spinbox_delay.value()
             self.maxShift_batch = self.batch_spinbox_maxShift.value()
@@ -764,37 +757,70 @@ class TableWidget(QWidget):
             self.batch_quiver_status = self.batch_checkQuivers.isChecked()
             self.batch_scaling_status = self.batch_checkScaling.isChecked()
             
-            if (self.batch_scaling_status == True):
-                self.batch_factor_scaling = 1024
-            elif (self.batch_scaling_status == False): 
-                self.batch_factor_scaling = 2048
-                        
-            #set maximum of corresponding progressbar:
-            #at 4 places in the thread the signal is emitted --> 4*
-            self.setMaximumProgressbar(5, 2*len(self.batch_folders))
-           # self.setMaximumProgressbar(5, 4*len(self.batch_folders))
-            self.batch_threads = []
-                        
-            #START THREADS
-            for input_folder in self.batch_folders:
-                newThread = BatchThread_file.BatchThread(self.save_folder_batch, input_folder, self.blockwidth_batch, self.delay_batch, self.maxShift_batch, self.batch_filter_status, self.batch_factor_scaling, self.batch_heatmap_status, self.batch_quiver_status)           
-                newThread.progress.connect(self.updateProgressbar)
-                #start the thread
-                newThread.start()
-                self.batch_threads.append(newThread)
-                time.sleep(3)
+            print('Starting the batch analysis...')
+            print('These are your folders: ', self.batch_folders)
+            self.button_addBatchFolder.setEnabled(False)
+            self.button_batch_startAnalysis.setEnabled(False)
             
+            if (self.results_folder_batch == ''):
+                self.button_batch_startAnalysis.setEnabled(True)
+                print('Batch analysis did not start correctly. Start again!')
+                return
             
+            #enable the stop button!
+            self.button_batch_stopAnalysis.setEnabled(True)
+         
+            #### perform analysis for each folder:
+            for folder in self.batch_folders:
+                print('Start Analysis for folder %s:' %folder)
+                current_ohw = OHW.OHW()
+                
+                # create a subfolder for the results 
+                save_subfolder = self.results_folder_batch / folder
+                if not os.path.exists(str(save_subfolder)):
+                    os.makedirs(str(save_subfolder))
+                current_ohw.results_folder = save_subfolder
+                
+                # read data
+                current_ohw.read_imagestack(folder)
+                print('    ... finished reading data.')
+                
+                # scale data if desired
+                if self.batch_scaling_status == True:
+                    current_ohw.scale_ImageStack()
+                else:
+                    current_ohw.scale_ImageStack(current_ohw.rawImageStack.shape[0][1])   # too hacky, refactor...
+                
+                # calculate MVs
+                current_ohw.calculate_MVs(blockwidth=self.blockwidth_batch, delay=self.delay_batch, max_shift=self.maxShift_batch)
+                print('    ... finished calculating motion vectors.')
+
+                # plot beating kinetics
+                current_filename = str(save_subfolder) +'/' + 'beating_kinetics.png'
+                current_ohw.plot_beatingKinetics(filename=current_filename)
+                print('    ... finished plotting beating kinetics.')
+                # create heatmap video if chosen by user
+                if self.batch_heatmap_status == True:
+                    current_ohw.save_heatmap()
+                    print('    ... finished saving heatmaps.')
+                 
+                # create quiver video if chosen by user
+                if self.batch_quiver_status == True:
+                    current_ohw.save_quiver()
+                    print('    ... finished saving quivers.')
+                                    
         def stopBatchAnalysis(self):
-            #end the threads
-            for thread in self.batch_threads:
-                thread.endThread()
-            
-            #get ready for new analysis:
-            self.button_batch_startAnalysis.setEnabled(True)
-            self.button_batch_stopAnalysis.setEnabled(False)
-            self.progressbar_batch.setValue(0)
-            print('Threads are terminated. Ready for new analysis.')
+            print('currently not working... ')
+            return 
+#            #end the threads
+#            for thread in self.batch_threads:
+#                thread.endThread()
+#            
+#            #get ready for new analysis:
+#            self.button_batch_startAnalysis.setEnabled(True)
+#            self.button_batch_stopAnalysis.setEnabled(False)
+#            self.progressbar_batch.setValue(0)
+#            print('Threads are terminated. Ready for new analysis.')
             
         def addBatchFolder(self):
             folderDialog = MultipleFoldersByUser.MultipleFoldersDialog()
@@ -808,6 +834,7 @@ class TableWidget(QWidget):
             
             if len(self.batch_folders)>0:
                 self.button_batch_startAnalysis.setEnabled(True)
+                self.results_folder_batch = os.path.dirname(os.path.dirname(chosen_folders[0]))
                 
         def removeBatchFolder(self):
             print('Remove a folder..')
@@ -963,7 +990,6 @@ class TableWidget(QWidget):
             self.button_change_resultsfolder.setEnabled(True)
         
         def on_change_resultsfolder(self):
-            print('yeah')
             #choose a folder
             msg = 'Choose a new folder for saving your results'
             folderName = UserDialogs.chooseFolderByUser(msg)  
@@ -971,15 +997,27 @@ class TableWidget(QWidget):
             #if 'cancel' was pressed: simply do nothing and wait for user to click another button
             if (folderName == ''):
                 return
-            
-            #change the results folder of the OHW class
-            self.OHW.results_folder = pathlib.Path(folderName)
+                       
+            if self.sender() == self.button_change_resultsfolder:
+                #change the results folder of the OHW class
+                self.OHW.results_folder = pathlib.Path(folderName)
+           
+                #display
+                current_folder = 'Current results folder: ' + str(pathlib.PureWindowsPath(self.OHW.results_folder))
+                self.label_resultsfolder.setText(current_folder)
+                
+
+            elif self.sender() == self.button_change_resultsfolder_batch:
+                #change the batch results folder of the OHW class
+                self.results_folder_batch = pathlib.Path(folderName)
+                
+                #display new results folder
+                current_folder = 'Current results folder: ' + str(pathlib.PureWindowsPath(self.results_folder_batch))
+                self.label_resultsfolder_batch.setText(current_folder)
+                
             print('New results folder:')
             print(folderName)
             
-            #display new results folder
-            current_folder = 'Current results folder: ' + str(pathlib.PureWindowsPath(self.OHW.results_folder))
-            self.label_resultsfolder.setText(current_folder)
             
         def on_loadFile(self):
             #choose a file

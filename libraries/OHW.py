@@ -22,23 +22,23 @@ class OHW():
     def __init__(self):
         
         self.inputpath = None #
-        self.rawImageStack = None # array for raw imported imagestack
+        self.rawImageStack = None       # array for raw imported imagestack
         self.scaledImageStack = None
-        self.rawMVs = None  # array for raw motion vectors (MVs)
+        self.rawMVs = None              # array for raw motion vectors (MVs)
         self.videoMeta = {"microns_per_pixel":1,"fps":1,"blackval":0,"whiteval":None}   # dict of video metadata: microns_per_pixel, fps, blackval, whiteval, 
-        self.unitMVs = None # MVs in correct unit (microns)
+        self.unitMVs = None             # MVs in correct unit (microns)
         self.scalingfactor = None
-        self.MV_parameters = None   # dict for MV parameters
-        self.results_folder = None  # folder for saving results
+        self.MV_parameters = None       # dict for MV parameters
+        self.results_folder = None      # folder for saving results
         self.absMotions = None
-        self.mean_absMotions = None # for 1D-representation
-        self.avg_absMotion = None # time averaged absolute motion
-        self.avg_MotionX = None  # time averaged x-motion
-        self.avg_MotionY = None  # time averaged y-motion
-        self.max_avgMotion = None   # maximum of time averaged motions
-        self.timeindex = None   # time index for 1D-representation
+        self.mean_absMotions = None     # for 1D-representation
+        self.avg_absMotion = None       # time averaged absolute motion
+        self.avg_MotionX = None         # time averaged x-motion
+        self.avg_MotionY = None         # time averaged y-motion
+        self.max_avgMotion = None       # maximum of time averaged motions
+        self.timeindex = None           # time index for 1D-representation
         self.PeakDetection = PeakDetection.PeakDetection()    # class which detects + saves peaks
-       
+
     def read_imagestack(self, inputfolder):
         """
             reads desired inputvideo as np.array
@@ -415,7 +415,8 @@ class OHW():
     
     def plot_TimeAveragedMotions(self, file_ext):
         plotfunctions.plot_TimeAveragedMotions(self.avg_absMotion, self.avg_MotionX, self.avg_MotionY, self.max_avgMotion, self.results_folder, file_ext)
-    
+               
+            
 if __name__ == "__main__":
     OHW = OHW()
     #OHW.read_imagestack("..//sampleinput")
