@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import os
+import os, sys
 import cv2
 import time
 
@@ -1427,8 +1427,8 @@ class TableWidget(QWidget):
         
         def restartGUI(self):
             #restarts the application to work with new data
-            mainWidget = self.findMainWindow()
-            mainWidget.restartGUI()
+            python = sys.executable
+            os.execl(python, python, *sys.argv)
         
         def updateHeatMap(self, frame):
             #callback when slider is moved

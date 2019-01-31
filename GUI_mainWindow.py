@@ -41,11 +41,6 @@ class App(QMainWindow):
         #used for resizing the whole GUI after saving of the plot 
         self.resize(self.width()+1, self.height()+1)
         
-    def restartGUI(self):
-        #reset and restart the GUI --> is called by QPushButton in MyTableWidget
-        self.close()
-        self.__init__()
-        
         
 if __name__ == '__main__':
     
