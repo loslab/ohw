@@ -7,8 +7,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import argrelextrema
 
-#from matplotlib.figure import Figure
-
 from libraries import OFlowCalc, Filters, plotfunctions, helpfunctions, PeakDetection
 
 import moviepy.editor as mpy
@@ -43,7 +41,7 @@ class OHW():
         """
             reads desired inputvideo as np.array
             choose inputmethod based on file extension
-            --> populate self.imagestack? make clear it's the raw video data (now called rawImageStack)
+            --> populate self.rawImageStack
         """
         print("Reading images from path ", inputfolder)
         
@@ -158,28 +156,6 @@ class OHW():
         scale_width_px = scalebar.shape[0]
         scale_height_px = scalebar.shape[1]
         self.scaledImageStack[:,-1-scale_width_px:-1,-1-scale_height_px:-1] = scalebar        
-
-    def calculate_MVs_threaded(self, method = 'BM', **parameters):
-        """
-            calculates motionvectors MVs of imagestack based on method and parameters
-        """
-    
-        """
-            switch method:
-            
-            -blockmatch
-            -gunnar farnbäck
-            -lucas-kanade
-            
-            self.rawMVs = ...
-        """
-        
-        self.MV_parameters = parameters   #store parameters which were used for the calculation of MVs
-        
-        if method == 'BM':
-            self.thread_BM_stack = OFlowCalc.BM_stack_thread(self.scaledImageStack, **parameters)
-            self.thread_BM_stack.start()
-            #self.thread_BM_stack.finished.connect(self.finish_MVs_threaded)
     
     def calculate_MVs_thread(self, **parameters):
         self.thread_calculate_MVs = helpfunctions.turn_function_into_thread(self.calculate_MVs, emit_progSignal=True, **parameters)
@@ -223,43 +199,12 @@ class OHW():
         self.calc_TimeAveragedMotion()
         
         self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results
-        
-    """
-    def calculate_MVs(self, method = 'BM', progressSignal = None, **parameters):
-
-            calculates motionvectors MVs of imagestack based on method and parameters
-
-    
-
-            switch method:
-            
-            -blockmatch
-            -gunnar farnbäck
-            -lucas-kanade
-            
-            self.rawMVs = ...
-
-        
-        self.MV_parameters = parameters   #store parameters which were used for the calculation of MVs
-        
-        if method == 'BM':          
-            self.rawMVs = OFlowCalc.BM_stack(self.scaledImageStack, progressSignal, **parameters)
-    
-        self.unitMVs = (self.rawMVs / self.scalingfactor) * self.videoMeta["microns_per_pixel"] * (self.videoMeta["fps"] / self.MV_parameters["delay"])
-        self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame
-        
-        self.get_mean_absMotion()
-        self.calc_TimeAveragedMotion()
-        
-        self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results
-    """
-
     
     def save_heatmap(self, singleframe = False, *args, **kwargs):
         """
             saves either the selected frame (singleframe = framenumber) or the whole heatmap video (=False)
-        """    
-    
+        """
+        
         #prepare figure
         savefig_heatmaps, saveax_heatmaps = plt.subplots(1,1)
         savefig_heatmaps.set_size_inches(16, 12)
@@ -305,6 +250,8 @@ class OHW():
     def save_quiver(self, singleframe = False, *args, **kwargs):
         """
             saves either the selected frame (singleframe = framenumber) or the whole heatmap video (= False)
+            # todo: add option to clip arrows + adjust density of arrows
+            # todo: maybe move to helpfunctions?
         """
 
         # prepare MVs... needs refactoring as it's done twice!
