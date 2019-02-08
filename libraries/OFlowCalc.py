@@ -16,7 +16,6 @@ from PyQt5.QtCore import QThread, pyqtSignal
     - Blockmatch (BM_stack)
 
 """
-# filter has to go somewhere else!
 
 def LK_single(img_prev, img_curr):
     # insert cv2 code
@@ -70,71 +69,21 @@ def BM_getMV(patternToFind, searchRegion, max_shift, methodnr = 4):
     yMotion = top_left[1] - max_shift
     
     return xMotion, yMotion
-
-
-class BM_stack_thread(QThread):
-    progressSignal = pyqtSignal(float)    #int,int
-
-    def __init__(self, imageStack, blockwidth, delay, max_shift):
-        QThread.__init__(self)
-        #self.stop_flag = False
-        
-        self.MotionVectorsAll = None
-        self.imageStack = imageStack
-        self.blockwidth = blockwidth
-        self.delay = delay
-        self.max_shift = max_shift
-        
-    def run(self):       
-        print("Calculating Optical Flow of imagestack by means of Blockmatching")
-        starttime = time.time() #for benchmarking...
-
-        MotionVectorsAll = []
-        #AbsMotions = []
-        #MeanAbsMotions = []
-        #MaxMotions = []
-        
-        # for image in imageStack[:-2]:
-        #
-        #   scaledImages.append(cv2.resize(image,(scalingfactor,scalingfactor)))
-        # do resacling or whatever you want somewhere else!
-        total_frames = self.imageStack.shape[0] - self.delay
-        
-        for frame, (prev_img, curr_img) in enumerate(zip(self.imageStack, self.imageStack[self.delay:])):
-            # iterate pairwise over frames, total pairs: number_frames - delay
-            
-            MotionVectorsX, MotionVectorsY = BM_single(prev_img, curr_img, self.max_shift, self.blockwidth)
-            MotionVectorsAll.append((MotionVectorsX, MotionVectorsY))   # this can be definitely be done nicer with numpy
-            
-            self.progressSignal.emit((frame+1)/total_frames)
-
-        endtime = time.time()
-        print('Execution time in seconds:', (endtime - starttime))
-
-        self.MotionVectorsAll = np.array(MotionVectorsAll)    
     
-#def BM_stack(blockwidth, delay, max_shift, path, fps, save_folder, px_per_micron, filter_status, scalingfactor, imageStack):
-def BM_stack(imageStack, blockwidth, delay, max_shift):
+def BM_stack(imageStack, blockwidth, delay, max_shift, progressSignal = None):
     """
         gets optical flow of a complete imagestack, based on blockmatching
-        here should still be no units!
-        (so unit is px/frame)
+        unit is px/frame as no scale is given here yet
         blockwidth is width of square macroblock
         max_shift is maximum allowed movement
-        delay in frames between images to analyze        
+        delay in frames between images to analyze
+        when the qt signal progressSignal is provided, it is used to track the progress
     """
     print("Calculating Optical Flow of imagestack by means of Blockmatching")
     starttime = time.time() #for benchmarking...
 
     MotionVectorsAll = []
-    #AbsMotions = []
-    #MeanAbsMotions = []
-    #MaxMotions = []
-    
-    # for image in imageStack[:-2]:
-    #
-    #   scaledImages.append(cv2.resize(image,(scalingfactor,scalingfactor)))
-    # do resacling or whatever you want somewhere else!
+    total_frames = imageStack.shape[0] - delay
     
     for frame, (prev_img, curr_img) in enumerate(zip(imageStack, imageStack[delay:])):
         # iterate pairwise over frames, total pairs: number_frames - delay
@@ -142,9 +91,9 @@ def BM_stack(imageStack, blockwidth, delay, max_shift):
         MotionVectorsX, MotionVectorsY = BM_single(prev_img, curr_img, max_shift, blockwidth)
         MotionVectorsAll.append((MotionVectorsX, MotionVectorsY))   # this can be definitely be done nicer with numpy
         
-
-
-
+        if progressSignal != None:
+            progressSignal.emit((frame+1)/total_frames)
+        
     endtime = time.time()
     print('Execution time in seconds:', (endtime - starttime))
 
