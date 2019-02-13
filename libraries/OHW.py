@@ -200,7 +200,7 @@ class OHW():
         
         self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results
     
-    def save_heatmap(self, singleframe = False, *args, **kwargs):
+    def save_heatmap(self, singleframe = False, keyword = None, subfolder = None, *args, **kwargs):
         """
             saves either the selected frame (singleframe = framenumber) or the whole heatmap video (=False)
         """
@@ -218,8 +218,11 @@ class OHW():
         for l in cbar_heatmaps.ax.yaxis.get_ticklabels():
             l.set_weight("bold")
         saveax_heatmaps.set_title('Motion [µm/s]', fontsize = 16, fontweight = 'bold')
-
-        path_heatmaps = self.results_folder / "heatmap_results"
+        
+        if keyword == None:
+            path_heatmaps = self.results_folder / "heatmap_results"
+        elif keyword == 'batch':
+            path_heatmaps = subfolder / "heatmap_results"
         path_heatmaps.mkdir(parents = True, exist_ok = True) #create folder for results
         
         if singleframe != False:
@@ -247,7 +250,7 @@ class OHW():
         self.thread_save_heatmap = helpfunctions.turn_function_into_thread(self.save_heatmap, singleframe=False)
         return self.thread_save_heatmap
             
-    def save_quiver(self, singleframe = False, *args, **kwargs):
+    def save_quiver(self, singleframe = False, keyword = None, subfolder = None, *args, **kwargs):
         """
             saves either the selected frame (singleframe = framenumber) or the whole heatmap video (= False)
             # todo: add option to clip arrows + adjust density of arrows
@@ -274,8 +277,10 @@ class OHW():
         quiver_quivers = saveax_quivers.quiver(self.MotionCoordinatesX, self.MotionCoordinatesY, self.MotionX[0], self.MotionY[0], pivot='mid', color='r', units ="xy", scale = arrowscale)
         
         #saveax_quivers.set_title('Motion [µm/s]', fontsize = 16, fontweight = 'bold')
-
-        path_quivers = self.results_folder / "quiver_results"
+        if keyword == None:
+            path_quivers = self.results_folder / "quiver_results"
+        elif keyword == 'batch':
+            path_quivers = subfolder / "quiver_results"
         path_quivers.mkdir(parents = True, exist_ok = True) #create folder for results
         
         if singleframe != False:
@@ -371,11 +376,14 @@ class OHW():
     def exportStatistics(self):
         self.PeakDetection.exportStatistics(self.results_folder, self.inputpath, self.MV_parameters["blockwidth"], self.MV_parameters["delay"], self.videoMeta["fps"], self.MV_parameters["max_shift"], self.scalingfactor)#results_folder, inputpath, blockwidth, delay, fps, maxShift, scalingfactor):
     
-    def plot_beatingKinetics(self, mark_peaks = False, filename=None):
+    def plot_beatingKinetics(self, mark_peaks = False, filename=None, keyword=None):
+        if keyword == None:
+            filename = filename[0]
         if filename is None:
             filename=self.results_folder + 'beating_kinetics.png'
+                
         plotfunctions.plot_Kinetics(self.timeindex, self.mean_absMotions, self.PeakDetection.sorted_peaks, mark_peaks, filename)
-    
+  
     def calc_TimeAveragedMotion(self):
         """
             calculates time averaged motion for abs. motion x- and y-motion
