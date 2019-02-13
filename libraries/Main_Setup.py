@@ -671,7 +671,7 @@ class TableWidget(QWidget):
             
             #create a progressbar    
             self.progressbar_batch = QProgressBar(self)
-            self.progressbar_batch.setMaximum(9)  
+            self.progressbar_batch.setMaximum(100)  
             self.progressbar_batch.setValue(0)
             
             #Layout management
@@ -731,6 +731,7 @@ class TableWidget(QWidget):
             print('Starting the batch analysis...')
             print('These are your folders: ', self.batch_folders)
             self.button_addBatchFolder.setEnabled(False)
+            self.button_removeBatchFolder.setEnabled(False)
             self.button_batch_startAnalysis.setEnabled(False)
             
             if (self.results_folder_batch == ''):
@@ -740,22 +741,71 @@ class TableWidget(QWidget):
             
             #enable the stop button!
             self.button_batch_stopAnalysis.setEnabled(True)
-         
-            #### perform analysis for each folder:
+            
+            #create a thread for batch analysis:
+            self.thread_batchAnalysis = self.manage_batchAnalysis_thread()
+            self.thread_batchAnalysis.start()
+            self.thread_batchAnalysis.finished.connect(self.finish_batchAnalysis)
+            self.thread_batchAnalysis.progressSignal.connect(self.updateProgressBar_batch)
+               
+        def getMaximumSignals_batch(self):
+            #calculates the number of signals to be emitted
+            #needed for progressbar during batch analysis
+            count = 0
+            
+            #add 2 signals for reading data and calculating MVs
+            count += 2
+            
+            if self.batch_heatmap_status == True:
+                count += 1
+            
+            if self.batch_quiver_status == True:
+                count += 1
+            
+            #multiply this number by the number of batch folders to be evaluated
+            count_tot = count * len(self.batch_folders)
+            print('Total number of signals: %d' %count_tot)
+            
+            #return this number, needed during threading
+            return count_tot 
+        
+        def manage_batchAnalysis(self, progressSignal=None):
+            #number of signals to be emitted  
+            self.maxNumberSignals = self.getMaximumSignals_batch()
+            
+            #internal counter of current batch signals
+            self.count_batch_signals = 0               
+               
             for folder in self.batch_folders:
+                self.perform_batchAnalysis(folder, progressSignal)
                 print('Start Analysis for folder %s:' %folder)
+
+        def manage_batchAnalysis_thread(self):
+            current_batch_thread = helpfunctions.turn_function_into_thread(self.manage_batchAnalysis, emit_progSignal=True)
+            return current_batch_thread             
+ 
+        def perform_batchAnalysis(self, res_folder, progressSignal=None):
+            for folder in self.batch_folders:
+               
+                print('Start Analysis for folder %s:' %folder)
+            #### perform analysis for one folder:
                 current_ohw = OHW.OHW()
                 
                 # create a subfolder for the results 
-                save_subfolder = self.results_folder_batch / folder.split('/')[-1]
+               # save_subfolder = self.results_folder_batch / folder.split('/')[-1]
+                save_subfolder = str(pathlib.PureWindowsPath(self.results_folder_batch)) + '/' + res_folder.split('/')[-1] #+ '/results'
                 if not os.path.exists(str(save_subfolder)):
                     os.makedirs(str(save_subfolder))
                 current_ohw.results_folder = save_subfolder
-                
+
                 # read data
-                current_ohw.read_imagestack(folder)
+                current_ohw.read_imagestack(res_folder)
                 print('    ... finished reading data.')
-                
+                #progress signal for finishing reading data
+                if progressSignal != None:
+                    self.count_batch_signals += 1
+                    progressSignal.emit(self.count_batch_signals/self.maxNumberSignals)
+                    
                 # scale data if desired
                 if self.batch_scaling_status == True:
                     current_ohw.scale_ImageStack()
@@ -765,33 +815,59 @@ class TableWidget(QWidget):
                 # calculate MVs
                 current_ohw.calculate_MVs(blockwidth=self.blockwidth_batch, delay=self.delay_batch, max_shift=self.maxShift_batch)
                 print('    ... finished calculating motion vectors.')
-
+                #progress signal for finishing calc MVs
+                if progressSignal != None:
+                    self.count_batch_signals += 1
+                    progressSignal.emit(self.count_batch_signals/self.maxNumberSignals)
+             
                 # plot beating kinetics
                 current_filename = str(save_subfolder) +'/' + 'beating_kinetics.png'
-                current_ohw.plot_beatingKinetics(filename=current_filename)
+                current_ohw.plot_beatingKinetics(filename=current_filename, keyword='batch')
                 print('    ... finished plotting beating kinetics.')
+                
                 # create heatmap video if chosen by user
                 if self.batch_heatmap_status == True:
-                    current_ohw.save_heatmap()
+                    current_ohw.save_heatmap(subfolder=pathlib.Path(save_subfolder), keyword='batch')
                     print('    ... finished saving heatmaps.')
-                 
+                #progress signal for finishing heatmap data
+                    if progressSignal != None:
+                        self.count_batch_signals += 1
+                        progressSignal.emit(self.count_batch_signals/self.maxNumberSignals)
+
                 # create quiver video if chosen by user
                 if self.batch_quiver_status == True:
-                    current_ohw.save_quiver()
+                    current_ohw.save_quiver(subfolder=pathlib.Path(save_subfolder), keyword='batch')
                     print('    ... finished saving quivers.')
-                                    
+                    #progress signal for finishing quiver data
+                    if progressSignal != None:
+                        self.count_batch_signals += 1
+                        progressSignal.emit(self.count_batch_signals/self.maxNumberSignals)
+        
+        def finish_batchAnalysis(self):
+            print('Yeah we are done with this thread.')
+            self.progressbar_batch.setRange(0,1)
+            self.progressbar_batch.setValue(1)
+            
+            #prepare for another round of analysis:
+            self.button_batch_stopAnalysis.setEnabled(False)
+            self.button_batch_startAnalysis.setEnabled(True)
+            
         def on_stopBatchAnalysis(self):
-            print('currently not working... ')
-            return 
-#            #end the threads
-#            for thread in self.batch_threads:
-#                thread.endThread()
-#            
-#            #get ready for new analysis:
-#            self.button_batch_startAnalysis.setEnabled(True)
-#            self.button_batch_stopAnalysis.setEnabled(False)
-#            self.progressbar_batch.setValue(0)
-#            print('Threads are terminated. Ready for new analysis.')
+            self.thread_batchAnalysis.endThread()
+            
+            #get ready for new analysis:
+            self.button_batch_startAnalysis.setEnabled(True)
+            self.button_batch_stopAnalysis.setEnabled(False)
+            self.button_addBatchFolder.setEnabled(True)
+            self.progressbar_batch.setValue(0)
+            print('Threads are terminated. Ready for new analysis.')
+            
+            #display a message for successful stopping
+            msg_text = 'Analysis of multiple folders was stopped successfully. You can start again.' # to: ' + text_for_saving
+            msg_title = 'Successful'
+            msg = QMessageBox.information(self, msg_title, msg_text, QMessageBox.Ok)
+            if msg == QMessageBox.Ok:
+                pass  
             
         def on_addBatchFolder(self):
             folderDialog = MultipleFoldersByUser.MultipleFoldersDialog()
@@ -807,7 +883,7 @@ class TableWidget(QWidget):
                 #sobald erster Folder hinzugefügt wird 
                 self.button_batch_startAnalysis.setEnabled(True)
                 #self.results_folder_batch = os.path.dirname(os.path.dirname(chosen_folders[0]))
-                self.results_folder_batch = os.path.dirname(chosen_folders[0])
+                self.results_folder_batch = pathlib.Path(os.path.dirname(chosen_folders[0]))
                 
                  #display new results folder
                 current_folder = 'Current results folder: ' + str(pathlib.PureWindowsPath(self.results_folder_batch))
@@ -1061,14 +1137,20 @@ class TableWidget(QWidget):
                 self.OHW.scale_ImageStack()
             else:
                 self.OHW.scale_ImageStack(self.OHW.rawImageStack.shape[0][1])   # too hacky, refactor...
-            
+
             calculate_MVs_thread = self.OHW.calculate_MVs_thread(blockwidth = blockwidth, delay = delay, max_shift = maxShift)
             calculate_MVs_thread.start()
             calculate_MVs_thread.progressSignal.connect(self.updateMVProgressBar)
             calculate_MVs_thread.finished.connect(self.initialize_calculatedMVs)
-        
+              
         def updateMVProgressBar(self, value):
                 self.progressbar_MVs.setValue(value*100)
+
+        def updateProgressBar_batch(self, value):
+                self.progressbar_batch.setValue(value*100)
+                
+        def updateProgressBar(self, value):
+                self.progressbar_tab2.setValue(value*100)
         
         def initialize_calculatedMVs(self):
         
