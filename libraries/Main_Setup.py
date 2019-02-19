@@ -1122,11 +1122,17 @@ class TableWidget(QWidget):
             scalingfactor = self.OHW.scalingfactor
             scale_max = self.OHW.get_scale_maxMotion()
             
-            arrowscale = scale_max / (blockwidth * microns_per_pixel / scalingfactor) #0.07 previously
+            skipquivers = 2
+            distance_between_arrows = blockwidth * skipquivers
+            arrowscale = 1 / (distance_between_arrows / scale_max)
+            
             self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.OHW.scaledImageStack.shape[1], blockwidth), np.arange(blockwidth/2, self.OHW.scaledImageStack.shape[2], blockwidth))
             
+            self.qslice=(slice(None,None,skipquivers),slice(None,None,skipquivers))
+            qslice = self.qslice
+            
             self.imshow_quivers = self.ax_quivers.imshow(self.OHW.scaledImageStack[0], cmap = "gray", vmin = self.OHW.videoMeta["Blackval"], vmax = self.OHW.videoMeta["Whiteval"])
-            self.quiver_quivers = self.ax_quivers.quiver(self.MotionCoordinatesX, self.MotionCoordinatesY, self.MotionX[0], self.MotionY[0], pivot='mid', color='r', units ="xy", scale = arrowscale)    #adjust scale to max. movement and mpp value
+            self.quiver_quivers = self.ax_quivers.quiver(self.MotionCoordinatesX[qslice], self.MotionCoordinatesY[qslice], self.MotionX[0][qslice], self.MotionY[0][qslice], pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", scale = arrowscale, width = 3, headwidth = 2, headlength = 3) #adjust scale to max. movement   #width = blockwidth / 4?
             
             self.canvas_quivers.draw()
             self.tab4.layout.addWidget(self.canvas_quivers,  6,  2)
@@ -1159,7 +1165,7 @@ class TableWidget(QWidget):
         def updateQuiver(self, frame):
             #callback when slider is moved
             self.imshow_quivers.set_data(self.OHW.scaledImageStack[frame])
-            self.quiver_quivers.set_UVC(self.MotionX[frame], self.MotionY[frame])
+            self.quiver_quivers.set_UVC(self.MotionX[frame][self.qslice], self.MotionY[frame][self.qslice])
             self.canvas_quivers.draw()
 
         def on_saveHeatmapvideo(self):

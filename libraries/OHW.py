@@ -28,8 +28,8 @@ class OHW():
         self.scalingfactor = None
         self.MV_parameters = None   # dict for MV parameters
         self.results_folder = None  # folder for saving results
-        self.absMotions = None
-        self.mean_absMotions = None # for 1D-representation
+        self.absMotions = None  # absolute motions, in units
+        self.mean_absMotions = None # for 1D-representation, in units
         self.avg_absMotion = None # time averaged absolute motion
         self.avg_MotionX = None  # time averaged x-motion
         self.avg_MotionY = None  # time averaged y-motion
@@ -268,10 +268,14 @@ class OHW():
         saveax_quivers.axis('off')   
 
         scale_max = self.get_scale_maxMotion()       
-        arrowscale = scale_max / (self.MV_parameters["blockwidth"] * self.videoMeta["microns_per_pixel"] / self.scalingfactor) #0.07 previously
         
+        skipquivers = 2 # adjust to get desired arrow density
+        qslice=(slice(None,None,skipquivers),slice(None,None,skipquivers))
+        distance_between_arrows = blockwidth * skipquivers
+        arrowscale = 1 / (distance_between_arrows / scale_max)
+
         imshow_quivers = saveax_quivers.imshow(self.scaledImageStack[0], vmin = self.videoMeta["Blackval"], vmax = self.videoMeta["Whiteval"], cmap = "gray")
-        quiver_quivers = saveax_quivers.quiver(self.MotionCoordinatesX, self.MotionCoordinatesY, self.MotionX[0], self.MotionY[0], pivot='mid', color='r', units ="xy", scale = arrowscale)
+        quiver_quivers = saveax_quivers.quiver(self.MotionCoordinatesX[qslice], self.MotionCoordinatesY[qslice], self.MotionX[0][qslice], self.MotionY[0][qslice], pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", scale = arrowscale, width = 4, headwidth = 2, headlength = 3) #adjust scale to max. movement
         
         #saveax_quivers.set_title('Motion [µm/s]', fontsize = 16, fontweight = 'bold')
 
@@ -282,7 +286,7 @@ class OHW():
             # save only specified frame
 
             imshow_quivers.set_data(self.scaledImageStack[singleframe])
-            quiver_quivers.set_UVC(self.MotionX[singleframe], self.MotionY[singleframe])
+            quiver_quivers.set_UVC(self.MotionX[singleframe][qslice], self.MotionY[singleframe][qslice])
             
             quivers_filename = str(path_quivers / ('quiver_frame' + str(singleframe) + '.png'))
             savefig_quivers.savefig(quivers_filename,bbox_inches ="tight",pad_inches =0, dpi = 200)
@@ -293,7 +297,7 @@ class OHW():
 
                 frame = int(round(t*self.videoMeta["fps"]))
                 imshow_quivers.set_data(self.scaledImageStack[frame])
-                quiver_quivers.set_UVC(self.MotionX[frame], self.MotionY[frame])
+                quiver_quivers.set_UVC(self.MotionX[frame][qslice], self.MotionY[frame][qslice])
 
                 return mplfig_to_npimage(savefig_quivers) # RGB image of the figure
             
@@ -336,7 +340,7 @@ class OHW():
         
         max_motion_framenr = np.argmax(self.mean_absMotions)
         max_motion_frame = self.absMotions[max_motion_framenr]
-        scale_min, scale_maxMotion = np.percentile(max_motion_frame, (0.1, 95))
+        scale_min, scale_maxMotion = np.percentile(max_motion_frame, (0.1, 99))
         return scale_maxMotion
         
     def detect_peaks(self, ratio, number_of_neighbours):
