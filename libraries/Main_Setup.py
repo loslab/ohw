@@ -742,7 +742,8 @@ class TableWidget(QWidget):
             self.button_batch_stopAnalysis.setEnabled(True)
             
             #create a thread for batch analysis:
-            self.thread_batchAnalysis = self.manage_batchAnalysis_thread()
+            self.thread_batchAnalysis = self.perform_batchAnalysis_thread()
+    
             self.thread_batchAnalysis.start()
             self.thread_batchAnalysis.finished.connect(self.finish_batchAnalysis)
             self.thread_batchAnalysis.progressSignal.connect(self.updateProgressBar_batch)
@@ -768,22 +769,20 @@ class TableWidget(QWidget):
             #return this number, needed during threading
             return count_tot 
         
-        def manage_batchAnalysis(self, progressSignal=None):
-            #number of signals to be emitted  
+        def perform_batchAnalysis_thread(self):
+            current_batch_thread = helpfunctions.turn_function_into_thread(self.perform_batchAnalysis, emit_progSignal=True)
+            return current_batch_thread  
+ 
+        def perform_batchAnalysis(self, progressSignal=None):
+             #number of signals to be emitted  
             self.maxNumberSignals = self.getMaximumSignals_batch()
             
             #internal counter of current batch signals
             self.count_batch_signals = 0               
-               
-            for folder in self.batch_folders:
-                self.perform_batchAnalysis(folder, progressSignal)
-                print('Start Analysis for folder %s:' %folder)
 
-        def manage_batchAnalysis_thread(self):
-            current_batch_thread = helpfunctions.turn_function_into_thread(self.manage_batchAnalysis, emit_progSignal=True)
-            return current_batch_thread             
- 
-        def perform_batchAnalysis(self, res_folder, progressSignal=None):
+            print('Current folders for batch analysis:')
+            print(self.batch_folders)
+            
             for folder in self.batch_folders:
                
                 print('Start Analysis for folder %s:' %folder)
@@ -792,13 +791,13 @@ class TableWidget(QWidget):
                 
                 # create a subfolder for the results 
                # save_subfolder = self.results_folder_batch / folder.split('/')[-1]
-                save_subfolder = str(pathlib.PureWindowsPath(self.results_folder_batch)) + '/' + res_folder.split('/')[-1] #+ '/results'
+                save_subfolder = str(pathlib.PureWindowsPath(self.results_folder_batch)) + '/' + folder.split('/')[-1] #+ '/results'
                 if not os.path.exists(str(save_subfolder)):
                     os.makedirs(str(save_subfolder))
                 current_ohw.results_folder = save_subfolder
 
                 # read data
-                current_ohw.read_imagestack(res_folder)
+                current_ohw.read_imagestack(folder)
                 print('    ... finished reading data.')
                 #progress signal for finishing reading data
                 if progressSignal != None:
@@ -809,8 +808,8 @@ class TableWidget(QWidget):
                 if self.batch_scaling_status == True:
                     current_ohw.scale_ImageStack()
                 else:
-                    current_ohw.scale_ImageStack(current_ohw.rawImageStack.shape[0][1])   # too hacky, refactor...
-                
+                  #  current_ohw.scale_ImageStack(current_ohw.rawImageStack.shape[0][1])   # too hacky, refactor...
+                    current_ohw.scale_ImageStack(current_ohw.rawImageStack.shape[1])
                 # calculate MVs
                 current_ohw.calculate_MVs(blockwidth=self.blockwidth_batch, delay=self.delay_batch, max_shift=self.maxShift_batch)
                 print('    ... finished calculating motion vectors.')
@@ -1135,7 +1134,9 @@ class TableWidget(QWidget):
             if self.scaling_status == True:
                 self.OHW.scale_ImageStack()
             else:
-                self.OHW.scale_ImageStack(self.OHW.rawImageStack.shape[0][1])   # too hacky, refactor...
+
+                #self.OHW.scale_ImageStack(self.OHW.rawImageStack.shape[0][1])   # too hacky, refactor...
+                self.OHW.scale_ImageStack(self.OHW.rawImageStack.shape[1]) 
 
             calculate_MVs_thread = self.OHW.calculate_MVs_thread(blockwidth = blockwidth, delay = delay, max_shift = maxShift)
             calculate_MVs_thread.start()

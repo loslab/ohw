@@ -68,7 +68,7 @@ class OHW():
             
             self.rawImageStack = tifffile.imread(inputtifs, pattern = "")
             self.rawImageStack = self.rawImageStack.astype(np.float32)    #convert as cv2 needs float32 for templateMatching
-            
+     #       print('Shape of rawImageStack after loading tiffs: [%d, %d, %d]' %(self.rawImageStack.shape[0], self.rawImageStack.shape[1], self.rawImageStack.shape[2]))
             self.videoMeta["Blackval"], self.videoMeta["Whiteval"] = np.percentile(self.rawImageStack[0], (0.1, 99.9))  #set default values, will be overwritten by all values in videoinfos file
             
             #get_tif_meta (from first and second image, stored in imagej tag)
