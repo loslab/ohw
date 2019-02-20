@@ -5,21 +5,7 @@ from PyQt5.QtWidgets import QFileDialog
 import pathlib
 
 def chooseFolderByUser(message, input_folder=''):
-     #let the user choose a folder for saving
-     
-#TODO: uncomment before commit to GIT     
-#     if (input_folder != ''): 
-#         #create a new folder for saving:
-#         newfolder_name = (str(datetime.now())).replace(" ","_")[:-7].replace(":", ".") 
-#         path_newFolder = input_folder + '/results_' + newfolder_name
-#         pathlib.Path(str(path_newFolder)).mkdir(parents=True, exist_ok=True)
-#         
-#         #define starting path for UserDialog
-#         path = str((pathlib.Path(path_newFolder)).resolve())
-#         
-#     else:
-#         #define starting path for UserDialog
-#         path = str((pathlib.Path(__file__) / ".." / "..").resolve()) 
+    #let the user choose a folder for saving 
     if input_folder=='':
         path = str((pathlib.Path(__file__) / ".." / "..").resolve()) 
     else:

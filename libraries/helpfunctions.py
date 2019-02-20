@@ -2,18 +2,28 @@
 
 from matplotlib import pyplot as plt
 import numpy as np
-from PyQt5.QtCore import QThread
+from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtWidgets import QMessageBox
 from PIL import ImageDraw, ImageFont, Image
 
-def turn_function_into_thread(inputfunction, *arg, **kwargs):
+def turn_function_into_thread(inputfunction, emit_progSignal=False, *arg, **kwargs):
     class ThreadedFunction(QThread):
+        # create signal if wanted
+        if emit_progSignal == True:
+            progressSignal = pyqtSignal(float)
+        else:
+            progressSignal = False
+            
         def __init__(self, inputfunction, *arg, **kwargs):
             QThread.__init__(self)
             #self.stop_flag = False
 
         # run method gets called when we start the thread
         def run(self):
-            inputfunction(*arg, **kwargs)
+            inputfunction(progressSignal = self.progressSignal, *arg, **kwargs)
+        
+        def endThread(self):
+            self.terminate()
       
     return ThreadedFunction(inputfunction)
 
@@ -50,3 +60,13 @@ def create_scalebar(dimX_px, microns_per_pixel):
     
     output_scalebar = np.array(scalebar)
     return output_scalebar
+    
+def msgbox(self, message):
+    """
+        display message in QMessageBox
+    """
+    msg_text = message
+    msg_title = 'Successful'
+    msg = QMessageBox.information(self, msg_title, msg_text, QMessageBox.Ok)
+    if msg == QMessageBox.Ok:
+        pass  
