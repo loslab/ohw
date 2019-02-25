@@ -1201,7 +1201,7 @@ class TableWidget(QWidget):
                 saves the quivervideo
             """
 
-            save_quiver_thread = self.OHW.save_quiver_thread(singleframe = False)
+            save_quiver_thread = self.OHW.save_quiver_thread(singleframe = False, skipquivers = 4)
             save_quiver_thread.start()
             self.progressbar_quivers.setRange(0,0)
             save_quiver_thread.finished.connect(self.finish_saveQuivervideo)    
@@ -1222,7 +1222,7 @@ class TableWidget(QWidget):
             """     
             
             singleframe = self.slider_quiver.value()
-            self.OHW.save_quiver(singleframe = singleframe)
+            self.OHW.save_quiver(singleframe = singleframe, skipquivers = 4)
             
             helpfunctions.msgbox(self, 'Quiver of frame ' + str(singleframe) + ' was saved successfully')            
 

@@ -9,7 +9,7 @@ def plot_Kinetics(timeindex, mean_absMotions, Peaks, mark_peaks, file_name):
         plots graph for beating kinetics "EKG"
     """
     fig_kinetics, ax_kinetics = plt.subplots(1,1)
-    fig_kinetics.set_size_inches(16, 12)   
+    fig_kinetics.set_size_inches(11, 7) #16,12  
     
     ax_kinetics.plot(timeindex, mean_absMotions, '-', linewidth = 2) #self.fig_kinetics
     ax_kinetics.set_xlim(left = 0, right = timeindex[-1])
@@ -30,7 +30,7 @@ def plot_Kinetics(timeindex, mean_absMotions, Peaks, mark_peaks, file_name):
         ax_kinetics.plot(Peaks["t_peaks_low_sorted"], Peaks["peaks_low_sorted"], marker='o', ls="", ms=5, color='r' )
         ax_kinetics.plot(Peaks["t_peaks_high_sorted"], Peaks["peaks_high_sorted"], marker='^', ls="", ms=5, color='r' )  #easier plotting without for loop          
     
-    fig_kinetics.savefig(file_name[0], dpi = 100) #, bbox_inches = 'tight', pad_inches = 0.4)
+    fig_kinetics.savefig(file_name[0], dpi = 300, bbox_inches = 'tight') #, bbox_inches = 'tight', pad_inches = 0.4)
     
 
 def plot_TimeAveragedMotions(avg_absMotion, avg_MotionX, avg_MotionY, max_avgMotion, savefolder, file_ext):

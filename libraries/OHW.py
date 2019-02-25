@@ -247,17 +247,21 @@ class OHW():
         self.thread_save_heatmap = helpfunctions.turn_function_into_thread(self.save_heatmap, singleframe=False)
         return self.thread_save_heatmap
             
-    def save_quiver(self, singleframe = False, *args, **kwargs):
+    def save_quiver(self, singleframe = False, skipquivers = 1, *args, **kwargs):
         """
             saves either the selected frame (singleframe = framenumber) or the whole heatmap video (= False)
-            # todo: add option to clip arrows + adjust density of arrows
+            # adjust density of arrows by skipquivers
+            # todo: add option to clip arrows
             # todo: maybe move to helpfunctions?
         """
-
+        
         # prepare MVs... needs refactoring as it's done twice!
+        scale_max = self.get_scale_maxMotion2()   
         self.MV_zerofiltered = Filters.zeromotion_to_nan(self.unitMVs, copy=True)
-        self.MotionX = self.MV_zerofiltered[:,0,:,:]
-        self.MotionY = self.MV_zerofiltered[:,1,:,:]
+        self.MV_cutoff = Filters.cutoffMVs(self.MV_zerofiltered, max_length = scale_max, copy=True)
+        
+        self.MotionX = self.MV_cutoff[:,0,:,:]
+        self.MotionY = self.MV_cutoff[:,1,:,:]
 
         blockwidth = self.MV_parameters["blockwidth"]
         self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.scaledImageStack.shape[1], blockwidth), np.arange(blockwidth/2, self.scaledImageStack.shape[2], blockwidth))        
@@ -266,17 +270,15 @@ class OHW():
         savefig_quivers, saveax_quivers = plt.subplots(1,1)
         savefig_quivers.set_size_inches(16, 12)
         saveax_quivers.axis('off')   
-
-        scale_max = self.get_scale_maxMotion()       
+    
         
-        skipquivers = 2 # adjust to get desired arrow density
         qslice=(slice(None,None,skipquivers),slice(None,None,skipquivers))
         distance_between_arrows = blockwidth * skipquivers
         arrowscale = 1 / (distance_between_arrows / scale_max)
 
         imshow_quivers = saveax_quivers.imshow(self.scaledImageStack[0], vmin = self.videoMeta["Blackval"], vmax = self.videoMeta["Whiteval"], cmap = "gray")
-        quiver_quivers = saveax_quivers.quiver(self.MotionCoordinatesX[qslice], self.MotionCoordinatesY[qslice], self.MotionX[0][qslice], self.MotionY[0][qslice], pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", scale = arrowscale, width = 4, headwidth = 2, headlength = 3) #adjust scale to max. movement
-        
+        # adjust desired quiver plotstyles here!
+        quiver_quivers = saveax_quivers.quiver(self.MotionCoordinatesX[qslice], self.MotionCoordinatesY[qslice], self.MotionX[0][qslice], self.MotionY[0][qslice], pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", scale = arrowscale,  width = 4, headwidth = 3, headlength = 5, headaxislength = 5, minshaft =1.5) #width = 4, headwidth = 2, headlength = 3
         #saveax_quivers.set_title('Motion [µm/s]', fontsize = 16, fontweight = 'bold')
 
         path_quivers = self.results_folder / "quiver_results"
@@ -306,8 +308,8 @@ class OHW():
             animation = mpy.VideoClip(make_frame_mpl, duration=duration)
             animation.write_videofile(quivers_filename, fps=self.videoMeta["fps"])
 
-    def save_quiver_thread(self, singleframe):
-        self.thread_save_quiver = helpfunctions.turn_function_into_thread(self.save_quiver, singleframe=False)
+    def save_quiver_thread(self, singleframe, skipquivers):
+        self.thread_save_quiver = helpfunctions.turn_function_into_thread(self.save_quiver, singleframe=False, skipquivers=skipquivers)
         return self.thread_save_quiver            
             
     def save_MVs(self):
@@ -316,8 +318,8 @@ class OHW():
         """
         save_file = str(self.results_folder / 'rawMVs.npy')
         np.save(save_file, self.rawMVs)   #MotionVectorsAll
-        save_file_units = str(self.results_folder / 'absMotions.npy')
-        np.save(save_file_units, self.absMotions)
+        save_file_units = str(self.results_folder / 'unitMVs.npy')
+        np.save(save_file_units, self.unitMVs)
     
     def get_mean_absMotion(self):
         """
@@ -340,9 +342,20 @@ class OHW():
         
         max_motion_framenr = np.argmax(self.mean_absMotions)
         max_motion_frame = self.absMotions[max_motion_framenr]
-        scale_min, scale_maxMotion = np.percentile(max_motion_frame, (0.1, 99))
+        scale_min, scale_maxMotion = np.percentile(max_motion_frame, (0.1, 95))
         return scale_maxMotion
+    
+    def get_scale_maxMotion2(self):
+        """
+            returns maximum for scaling of heatmap + arrows in quiver
+            v2: takes all frames into account, select positions where motion > 0, max represents 80th percentile
+        """
         
+        #absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])
+        absMotions_flat = self.absMotions[self.absMotions>0].flatten()
+        scale_min, scale_maxMotion = np.percentile(absMotions_flat, (0, 80))   
+        return scale_maxMotion
+    
     def detect_peaks(self, ratio, number_of_neighbours):
         """
             peak detection in mean_absMotions

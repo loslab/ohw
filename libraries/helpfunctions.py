@@ -20,6 +20,7 @@ def turn_function_into_thread(inputfunction, emit_progSignal=False, *arg, **kwar
 
         # run method gets called when we start the thread
         def run(self):
+            #print("kwargs:", kwargs)
             inputfunction(progressSignal = self.progressSignal, *arg, **kwargs)
       
     return ThreadedFunction(inputfunction)
