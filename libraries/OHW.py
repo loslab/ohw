@@ -162,6 +162,7 @@ class OHW():
         return self.thread_calculate_MVs            
     
     def initialize_calculatedMVs(self):
+        self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results
         #self.rawMVs = self.thread_BM_stack.MotionVectorsAll
         
         self.unitMVs = (self.rawMVs / self.scalingfactor) * self.videoMeta["microns_per_pixel"] * (self.videoMeta["fps"] / self.MV_parameters["delay"])
@@ -170,7 +171,7 @@ class OHW():
         self.get_mean_absMotion()
         self.calc_TimeAveragedMotion()
         
-        self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results
+        
     
     def calculate_MVs(self, method = 'BM', progressSignal = None, **parameters):
         """
@@ -186,7 +187,7 @@ class OHW():
             
             self.rawMVs = ...
         """
-        
+        self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results        
         self.MV_parameters = parameters   #store parameters which were used for the calculation of MVs
         
         if method == 'BM':          
@@ -197,8 +198,6 @@ class OHW():
         
         self.get_mean_absMotion()
         self.calc_TimeAveragedMotion()
-        
-        self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results
     
     def save_heatmap(self, singleframe = False, *args, **kwargs):
         """
@@ -334,6 +333,7 @@ class OHW():
         filtered_absMotions[:,movement_mask] = np.nan
         self.mean_absMotions = np.nanmean(filtered_absMotions, axis=(1,2))
         self.timeindex = (np.arange(self.mean_absMotions.shape[0]) / self.videoMeta["fps"]).round(2)
+        np.save(str(self.results_folder / 'beating_kinetics.npy'),np.array([self.timeindex,self.mean_absMotions]))
     
     def get_scale_maxMotion(self):
         """

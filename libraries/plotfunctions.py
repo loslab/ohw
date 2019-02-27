@@ -13,6 +13,7 @@ def plot_Kinetics(timeindex, mean_absMotions, Peaks, mark_peaks, file_name):
     
     ax_kinetics.plot(timeindex, mean_absMotions, '-', linewidth = 2) #self.fig_kinetics
     ax_kinetics.set_xlim(left = 0, right = timeindex[-1])
+    ax_kinetics.set_ylim(bottom = 0)
     #fig_kinetics.subplots_adjust(bottom = 0.2)
     
     #self.ax.set_title('Beating kinetics', fontsize = 26)
@@ -20,10 +21,8 @@ def plot_Kinetics(timeindex, mean_absMotions, Peaks, mark_peaks, file_name):
     ax_kinetics.set_ylabel(u'Mean Absolute Motion [\xb5m/s]', fontsize = 22)
     ax_kinetics.tick_params(labelsize = 20)
     
-    ax_kinetics.spines['top'].set_linewidth(2)
-    ax_kinetics.spines['right'].set_linewidth(2)
-    ax_kinetics.spines['bottom'].set_linewidth(2)
-    ax_kinetics.spines['left'].set_linewidth(2)            
+    for side in ['top','right','bottom','left']:
+        ax_kinetics.spines[side].set_linewidth(2)              
     
     if (mark_peaks == True): #Peaks["t_peaks_low_sorted"] != None
         # plot peaks, low peaks are marked as triangles , high peaks are marked as circles         
