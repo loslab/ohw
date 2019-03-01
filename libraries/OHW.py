@@ -306,6 +306,19 @@ class OHW():
 
         path_quivers = self.results_folder / "quiver_results"
         path_quivers.mkdir(parents = True, exist_ok = True) #create folder for results
+
+        # parameters for cropping white border in output video
+        sizex, sizey = outputfigure.get_size_inches()*outputfigure.dpi
+        bbox = outputfigure.get_tightbbox(outputfigure.canvas.get_renderer())
+        bbox_bounds_px = np.round(np.asarray(bbox.extents*outputfigure.dpi)).astype(int)
+
+        # to do: introduce min/max to be on the safe side!
+        # reverse for np indexing
+        bbox_bounds_px[3] = sizey - bbox_bounds_px[1]#y1
+        bbox_bounds_px[1] = sizey - bbox_bounds_px[3]#y0
+
+        bbox_bounds_px[2] = sizex - bbox_bounds_px[0]#x1
+        bbox_bounds_px[0] = sizex - bbox_bounds_px[2]#x0
         
         # save video
         def make_frame_mpl(t):
@@ -319,7 +332,7 @@ class OHW():
             self.marker, = saveax_trace.plot(self.timeindex[frame],self.mean_absMotions[frame],'ro')
             self.marker.set_clip_on(False)
             
-            return mplfig_to_npimage(outputfigure)[150:1450,100:1950] # RGB image of the figure
+            return mplfig_to_npimage(outputfigure)[bbox_bounds_px[1]:bbox_bounds_px[3],bbox_bounds_px[0]:bbox_bounds_px[2]] # RGB image of the figure  #150:1450,100:1950
             # slicing here really hacky! find better solution!
             # find equivalent to bbox_inches='tight' in savefig
             # mplfig_to_npimage just uses barer canvas.tostring_rgb()
