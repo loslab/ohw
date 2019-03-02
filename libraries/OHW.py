@@ -78,7 +78,9 @@ class OHW():
                 self.get_videoinfos_file()
             
             self.results_folder = self.inputpath / "results"
-            
+        
+        self.videoMeta["fps"] = round(self.videoMeta["fps"], 1)
+        
         """
         # folder with imageseries (tif-only at the moment), read with tifffile
         if folder:

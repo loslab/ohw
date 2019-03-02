@@ -181,7 +181,7 @@ class TableWidget(QWidget):
             self.spinbox_blockwidth.setSingleStep(2)
             self.spinbox_blockwidth.setSuffix(' pixels')
             self.spinbox_blockwidth.setValue(16)
-            self.spinbox_delay.setRange(2,10)
+            self.spinbox_delay.setRange(1,10)
             self.spinbox_delay.setSuffix(' frames')
             self.spinbox_delay.setSingleStep(1)
             self.spinbox_delay.setValue(2)
