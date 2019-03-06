@@ -115,7 +115,7 @@ class TableWidget(QWidget):
             #button for changing the results folder
             self.button_change_resultsfolder = QPushButton('Change results folder ')
             self.button_change_resultsfolder.resize(self.button_change_resultsfolder.sizeHint())
-            self.button_change_resultsfolder.clicked.connect(self.on_change_resultsfolder)
+            self.button_change_resultsfolder.clicked.connect(self.on_changeResultsfolder)
             self.button_change_resultsfolder.setEnabled(False)
             
             #succeed-button
@@ -575,7 +575,7 @@ class TableWidget(QWidget):
             #button for adding folders
             self.button_addBatchFolder = QPushButton('Add folders...')
             self.button_addBatchFolder.resize(self.button_addBatchFolder.sizeHint())
-            self.button_addBatchFolder.clicked.connect(self.addBatchFolder)
+            self.button_addBatchFolder.clicked.connect(self.on_addBatchFolder)
             
             #dropdown for choosing folder to be removed
             self.combo_removefolder = QComboBox(self)
@@ -655,7 +655,7 @@ class TableWidget(QWidget):
             #button for aborting the analysis
             self.button_batch_stopAnalysis = QPushButton('Stop onging analysis')
             self.button_batch_stopAnalysis.resize(self.button_batch_stopAnalysis.sizeHint())
-            self.button_batch_stopAnalysis.clicked.connect(self.stopBatchAnalysis)
+            self.button_batch_stopAnalysis.clicked.connect(self.on_stopBatchAnalysis)
             self.button_batch_stopAnalysis.setEnabled(False)
             
             #label to display current results folder
@@ -665,7 +665,7 @@ class TableWidget(QWidget):
             #button for changing the results folder
             self.button_change_resultsfolder_batch = QPushButton('Change results folder ')
             self.button_change_resultsfolder_batch.resize(self.button_change_resultsfolder_batch.sizeHint())
-            self.button_change_resultsfolder_batch.clicked.connect(self.on_change_resultsfolder)
+            self.button_change_resultsfolder_batch.clicked.connect(self.on_changeResultsfolder)
             self.button_change_resultsfolder_batch.setEnabled(True)
             
             #create a progressbar    
@@ -746,7 +746,7 @@ class TableWidget(QWidget):
                 current_ohw = OHW.OHW()
                 
                 # create a subfolder for the results 
-                save_subfolder = self.results_folder_batch / folder
+                save_subfolder = self.results_folder_batch / folder.split('/')[-1]
                 if not os.path.exists(str(save_subfolder)):
                     os.makedirs(str(save_subfolder))
                 current_ohw.results_folder = save_subfolder
@@ -779,7 +779,7 @@ class TableWidget(QWidget):
                     current_ohw.save_quiver()
                     print('    ... finished saving quivers.')
                                     
-        def stopBatchAnalysis(self):
+        def on_stopBatchAnalysis(self):
             print('currently not working... ')
             return 
 #            #end the threads
@@ -792,7 +792,7 @@ class TableWidget(QWidget):
 #            self.progressbar_batch.setValue(0)
 #            print('Threads are terminated. Ready for new analysis.')
             
-        def addBatchFolder(self):
+        def on_addBatchFolder(self):
             folderDialog = MultipleFoldersByUser.MultipleFoldersDialog()
             chosen_folders = folderDialog.getSelection()
             
@@ -802,9 +802,15 @@ class TableWidget(QWidget):
                 self.combo_removefolder.addItem(item)
             self.button_removeBatchFolder.setEnabled(True)
             
-            if len(self.batch_folders)>0:
+            if len(self.batch_folders) > 0:
+                #sobald erster Folder hinzugefügt wird 
                 self.button_batch_startAnalysis.setEnabled(True)
-                self.results_folder_batch = os.path.dirname(os.path.dirname(chosen_folders[0]))
+                #self.results_folder_batch = os.path.dirname(os.path.dirname(chosen_folders[0]))
+                self.results_folder_batch = os.path.dirname(chosen_folders[0])
+                
+                 #display new results folder
+                current_folder = 'Current results folder: ' + str(pathlib.PureWindowsPath(self.results_folder_batch))
+                self.label_resultsfolder_batch.setText(current_folder)
                 
         def removeBatchFolder(self):
             print('Remove a folder..')
@@ -864,7 +870,7 @@ class TableWidget(QWidget):
             self.label_resultsfolder.setText(current_folder)
             self.button_change_resultsfolder.setEnabled(True)
         
-        def on_change_resultsfolder(self):
+        def on_changeResultsfolder(self):
             #choose a folder
             msg = 'Choose a new folder for saving your results'
             folderName = UserDialogs.chooseFolderByUser(msg)  
@@ -883,15 +889,14 @@ class TableWidget(QWidget):
                 
 
             elif self.sender() == self.button_change_resultsfolder_batch:
-                #change the batch results folder of the OHW class
+                #change the batch results folder!
                 self.results_folder_batch = pathlib.Path(folderName)
                 
                 #display new results folder
                 current_folder = 'Current results folder: ' + str(pathlib.PureWindowsPath(self.results_folder_batch))
                 self.label_resultsfolder_batch.setText(current_folder)
                 
-            print('New results folder:')
-            print(folderName)            
+            print('New results folder: %s' %folderName)            
             
         def on_loadFile(self):
             #choose a file
