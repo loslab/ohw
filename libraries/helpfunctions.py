@@ -22,6 +22,9 @@ def turn_function_into_thread(inputfunction, emit_progSignal=False, *arg, **kwar
         def run(self):
             #print("kwargs:", kwargs)
             inputfunction(progressSignal = self.progressSignal, *arg, **kwargs)
+        
+        def endThread(self):
+            self.terminate()
       
     return ThreadedFunction(inputfunction)
 

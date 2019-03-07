@@ -20,21 +20,23 @@ class OHW():
     def __init__(self):
         
         self.inputpath = None #
-        self.rawImageStack = None # array for raw imported imagestack
+        self.rawImageStack = None       # array for raw imported imagestack
         self.scaledImageStack = None
-        self.rawMVs = None  # array for raw motion vectors (MVs)
+        self.rawMVs = None              # array for raw motion vectors (MVs)
         self.videoMeta = {"microns_per_pixel":1,"fps":1,"blackval":0,"whiteval":None}   # dict of video metadata: microns_per_pixel, fps, blackval, whiteval, 
-        self.unitMVs = None # MVs in correct unit (microns)
+        self.unitMVs = None             # MVs in correct unit (microns)
         self.scalingfactor = None
-        self.MV_parameters = None   # dict for MV parameters
-        self.results_folder = None  # folder for saving results
-        self.absMotions = None  # absolute motions, in units
-        self.mean_absMotions = None # for 1D-representation, in units
-        self.avg_absMotion = None # time averaged absolute motion
-        self.avg_MotionX = None  # time averaged x-motion
-        self.avg_MotionY = None  # time averaged y-motion
-        self.max_avgMotion = None   # maximum of time averaged motions
-        self.timeindex = None   # time index for 1D-representation
+
+        self.MV_parameters = None       # dict for MV parameters
+        self.results_folder = None      # folder for saving results
+        self.absMotions = None
+        self.mean_absMotions = None     # for 1D-representation
+        self.avg_absMotion = None       # time averaged absolute motion
+        self.avg_MotionX = None         # time averaged x-motion
+        self.avg_MotionY = None         # time averaged y-motion
+        self.max_avgMotion = None       # maximum of time averaged motions
+        self.timeindex = None           # time index for 1D-representation
+
         self.PeakDetection = PeakDetection.PeakDetection()    # class which detects + saves peaks
        
     def read_imagestack(self, inputfolder, *args, **kwargs):
@@ -68,7 +70,7 @@ class OHW():
             
             self.rawImageStack = tifffile.imread(inputtifs, pattern = "")
             self.rawImageStack = self.rawImageStack.astype(np.float32)    #convert as cv2 needs float32 for templateMatching
-            
+     #       print('Shape of rawImageStack after loading tiffs: [%d, %d, %d]' %(self.rawImageStack.shape[0], self.rawImageStack.shape[1], self.rawImageStack.shape[2]))
             self.videoMeta["Blackval"], self.videoMeta["Whiteval"] = np.percentile(self.rawImageStack[0], (0.1, 99.9))  #set default values, will be overwritten by all values in videoinfos file
             
             #get_tif_meta (from first and second image, stored in imagej tag)
@@ -201,7 +203,7 @@ class OHW():
         self.get_mean_absMotion()
         self.calc_TimeAveragedMotion()
     
-    def save_heatmap(self, singleframe = False, *args, **kwargs):
+    def save_heatmap(self, singleframe = False, keyword = None, subfolder = None, *args, **kwargs):
         """
             saves either the selected frame (singleframe = framenumber) or the whole heatmap video (=False)
         """
@@ -219,8 +221,11 @@ class OHW():
         for l in cbar_heatmaps.ax.yaxis.get_ticklabels():
             l.set_weight("bold")
         saveax_heatmaps.set_title('Motion [µm/s]', fontsize = 16, fontweight = 'bold')
-
-        path_heatmaps = self.results_folder / "heatmap_results"
+        
+        if keyword == None:
+            path_heatmaps = self.results_folder / "heatmap_results"
+        elif keyword == 'batch':
+            path_heatmaps = subfolder / "heatmap_results"
         path_heatmaps.mkdir(parents = True, exist_ok = True) #create folder for results
         
         if singleframe != False:
@@ -350,7 +355,7 @@ class OHW():
         print("frames:", self.MotionX.shape[0], "1/fps:", 1/self.videoMeta["fps"])
         outputfigure.savefig(str(path_quivers / 'lastquiver3.png'))
     
-    def save_quiver(self, singleframe = False, skipquivers = 1, *args, **kwargs):
+    def save_quiver(self, singleframe = False, skipquivers = 1, keyword = None, subfolder = None, *args, **kwargs):
         """
             saves either the selected frame (singleframe = framenumber) or the whole heatmap video (= False)
             # adjust density of arrows by skipquivers
@@ -383,8 +388,10 @@ class OHW():
         # adjust desired quiver plotstyles here!
         quiver_quivers = saveax_quivers.quiver(self.MotionCoordinatesX[qslice], self.MotionCoordinatesY[qslice], self.MotionX[0][qslice], self.MotionY[0][qslice], pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", scale = arrowscale,  width = 4, headwidth = 3, headlength = 5, headaxislength = 5, minshaft =1.5) #width = 4, headwidth = 2, headlength = 3
         #saveax_quivers.set_title('Motion [µm/s]', fontsize = 16, fontweight = 'bold')
-
-        path_quivers = self.results_folder / "quiver_results"
+        if keyword == None:
+            path_quivers = self.results_folder / "quiver_results"
+        elif keyword == 'batch':
+            path_quivers = subfolder / "quiver_results"
         path_quivers.mkdir(parents = True, exist_ok = True) #create folder for results
         
         if singleframe != False:
@@ -492,11 +499,14 @@ class OHW():
     def exportStatistics(self):
         self.PeakDetection.exportStatistics(self.results_folder, self.inputpath, self.MV_parameters["blockwidth"], self.MV_parameters["delay"], self.videoMeta["fps"], self.MV_parameters["max_shift"], self.scalingfactor)#results_folder, inputpath, blockwidth, delay, fps, maxShift, scalingfactor):
     
-    def plot_beatingKinetics(self, mark_peaks = False, filename=None):
+    def plot_beatingKinetics(self, mark_peaks = False, filename=None, keyword=None):
+        if keyword == None:
+            filename = filename[0]
         if filename is None:
             filename=self.results_folder + 'beating_kinetics.png'
+                
         plotfunctions.plot_Kinetics(self.timeindex, self.mean_absMotions, self.PeakDetection.sorted_peaks, mark_peaks, filename)
-    
+  
     def calc_TimeAveragedMotion(self):
         """
             calculates time averaged motion for abs. motion x- and y-motion
@@ -516,7 +526,8 @@ class OHW():
     
     def plot_TimeAveragedMotions(self, file_ext):
         plotfunctions.plot_TimeAveragedMotions(self.avg_absMotion, self.avg_MotionX, self.avg_MotionY, self.max_avgMotion, self.results_folder, file_ext)
-    
+               
+            
 if __name__ == "__main__":
     OHW = OHW()
     #OHW.read_imagestack("..//sampleinput")
