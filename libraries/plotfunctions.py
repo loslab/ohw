@@ -4,6 +4,8 @@ from matplotlib import pyplot as plt
 import numpy as np
 import pathlib
 
+from libraries.helpfunctions import get_figure_size
+
 def plot_Kinetics(timeindex, mean_absMotions, Peaks, mark_peaks, file_name):
     """
         plots graph for beating kinetics "EKG"
@@ -37,7 +39,9 @@ def plot_TimeAveragedMotions(avg_absMotion, avg_MotionX, avg_MotionY, max_avgMot
     
     ###### abs-motion
     fig_avgAmp, ax_avg_Amp = plt.subplots(1,1)
-    fig_avgAmp.set_size_inches(16, 12)
+#    w,h = get_figure_size(avg_absMotion, 12)
+ #   fig_avgAmp.set_size_inches(w,h)
+    fig_avgAmp.set_size_inches(16,12)  
     imshow_Amp_avg = ax_avg_Amp.imshow(avg_absMotion, vmin = 0, vmax = max_avgMotion, cmap=colormap_for_all, interpolation="bilinear")
     cbar = fig_avgAmp.colorbar(imshow_Amp_avg)
     cbar.ax.tick_params(labelsize=16)     

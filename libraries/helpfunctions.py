@@ -6,6 +6,19 @@ from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import QMessageBox
 from PIL import ImageDraw, ImageFont, Image
 
+def get_figure_size(img, initial_val):
+    ratio = img.shape[0]/img.shape[1]
+    mini = min(img.shape[0], img.shape[1])
+    #if dim1 is shorter
+    if mini == img.shape[0]:
+        width = initial_val*ratio
+        height = initial_val
+    else:
+        width = initial_val
+        height = initial_val/ratio
+
+    return width, height
+
 def turn_function_into_thread(inputfunction, emit_progSignal=False, *arg, **kwargs):
     class ThreadedFunction(QThread):
         # create signal if wanted

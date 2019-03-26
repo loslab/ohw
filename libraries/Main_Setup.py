@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import QMainWindow, QCheckBox, QHBoxLayout, QLineEdit, QDou
 from PyQt5.QtGui import QIcon, QPixmap, QFont, QColor, QImage
 from PyQt5.QtCore import Qt
 
+
 from libraries import MultipleFoldersByUser, UserDialogs, Filters, helpfunctions
 from libraries import OHW
 
@@ -108,6 +109,12 @@ class TableWidget(QWidget):
             self.button_loadFile.resize(self.button_loadFile.sizeHint())
             self.button_loadFile.clicked.connect(self.on_loadFile)      
             
+            #Button for ROI selection
+            self.button_selectROI = QPushButton('Select a Region of Interest (ROI)')
+            self.button_selectROI.resize(self.button_selectROI.sizeHint())
+            self.button_selectROI.clicked.connect(self.on_selectROI)
+            self.button_selectROI.setEnabled(False)
+            
             #label to display current results folder
             self.label_resultsfolder = QLabel('Current results folder: ')
             self.label_resultsfolder.setFont(QFont("Times",weight=QFont.Bold))
@@ -148,9 +155,10 @@ class TableWidget(QWidget):
             self.tab1.layout.addWidget(self.button_succeed_tab1,    9,  0)
             self.tab1.layout.addWidget(label_display,               10, 0)
             self.tab1.layout.addWidget(self.label_chosen_image,     11, 0)
-            self.tab1.layout.addWidget(self.image,                  12, 0)
-            self.tab1.layout.addWidget(self.label_resultsfolder,    13, 0)
-            self.tab1.layout.addWidget(self.button_change_resultsfolder, 14,0)
+            self.tab1.layout.addWidget(self.button_selectROI,      12, 0)
+            self.tab1.layout.addWidget(self.image,                  13, 0)
+            self.tab1.layout.addWidget(self.label_resultsfolder,    14, 0)
+            self.tab1.layout.addWidget(self.button_change_resultsfolder, 15,0)
             
             self.tab1.setLayout(self.tab1.layout)
             
@@ -702,7 +710,47 @@ class TableWidget(QWidget):
             
             self.tab6.setLayout(self.tab6.layout)
 
-##################################
+###############################################################################
+        def on_selectROI(self):
+            """ select a ROI from the first image of the rawImageStack, calculation of MVs will be performed on ROI only after this 
+            """
+            widget_height = self.frameSize().height()
+            
+            #take the first image of rawImageStack and scale to fit on display
+            img = cv2.cvtColor(self.OHW.rawImageStack[0], cv2.COLOR_GRAY2RGB)      
+            hpercent = (widget_height / float(img.shape[1]))
+            wsize = int((float(img.shape[0]) * float(hpercent)))
+            image_scaled = cv2.resize(img, (wsize, widget_height))
+            
+            #convert to uint8 if needed
+            if img.dtype != 'uint8':
+                image_norm = image_scaled
+                image_norm = cv2.normalize(image_scaled, image_norm, 0, 1, cv2.NORM_MINMAX)*255
+                image_scaled = image_norm.astype(np.uint8)
+    
+            #open the ROI selection
+            r = cv2.selectROI('Press Enter to save the currently selected ROI:', image_scaled, fromCenter=False)
+            
+            #transform the coordinates back to match the image of original size
+            r_transf = [r[idx]/hpercent for idx in range(0,len(r))]
+            cv2.destroyAllWindows()
+            
+#            #Display cropped image
+#            color = (173,255,47)
+#            top_left = (int(r_transf[0]), int(r_transf[1]))
+#            bottom_right = (int(r_transf[0] + r_transf[2]), int(r_transf[1] + r_transf[3]))
+#            cv2.rectangle(img, top_left, bottom_right, color, 3)
+#            cv2.imshow("Choosen Region of Interest", img)
+#            cv2.waitKey(0)
+            
+            #create a stack of ROIs over all images
+            self.OHW.createROIImageStack(r_transf)
+            
+            self.display_firstImage(self.OHW.ROIImageStack[0])
+            
+            self.check_scaling.setEnabled(False)
+            self.scaling_status = False
+            
         def changeBatchSettings(self):
             if self.sender() == self.batch_spinbox_blockwidth:
                 self.blockwidth_batch = self.batch_spinbox_blockwidth.value()
@@ -738,7 +786,7 @@ class TableWidget(QWidget):
                 print('Batch analysis did not start correctly. Start again!')
                 return
             
-            #enable the stop button!
+            #enable the stop button
             self.button_batch_stopAnalysis.setEnabled(True)
             
             #create a thread for batch analysis:
@@ -809,7 +857,10 @@ class TableWidget(QWidget):
                     current_ohw.scale_ImageStack()
                 else:
                   #  current_ohw.scale_ImageStack(current_ohw.rawImageStack.shape[0][1])   # too hacky, refactor...
-                    current_ohw.scale_ImageStack(current_ohw.rawImageStack.shape[1])
+                    if current_ohw.ROIImageStack is not None:
+                        current_ohw.scale_ImageStack(current_ohw.ROIImageStack.shape[1], current_ohw.ROIImageStack[2])
+                    else: 
+                        current_ohw.scale_ImageStack(current_ohw.rawImageStack.shape[1], current_ohw.rawImageStack[2])     
                 # calculate MVs
                 current_ohw.calculate_MVs(blockwidth=self.blockwidth_batch, delay=self.delay_batch, max_shift=self.maxShift_batch)
                 print('    ... finished calculating motion vectors.')
@@ -931,9 +982,10 @@ class TableWidget(QWidget):
             # disable input field if videoinfos.txt available? if self.OHW.videoMeta['infofile_exists'] == True: ....
             
             # display first image and update controls
-            self.imshow_firstImage = self.ax_firstIm.imshow(self.OHW.rawImageStack[0], cmap = 'gray', vmin = self.OHW.videoMeta["Blackval"], vmax = self.OHW.videoMeta["Whiteval"])
-            self.canvas_firstImage.draw()            
-            self.tab1.layout.addWidget(self.canvas_firstImage, 12,0)
+            self.display_firstImage(self.OHW.rawImageStack[0])
+#            self.imshow_firstImage = self.ax_firstIm.imshow(self.OHW.rawImageStack[0], cmap = 'gray', vmin = self.OHW.videoMeta["Blackval"], vmax = self.OHW.videoMeta["Whiteval"])
+#            self.canvas_firstImage.draw()            
+#            self.tab1.layout.addWidget(self.canvas_firstImage, 13,0)
             
             inputpath = str('Chosen folder: ' + str(self.OHW.inputpath))
             self.label_chosen_image.setText(inputpath)
@@ -944,6 +996,7 @@ class TableWidget(QWidget):
             current_folder = 'Current results folder: ' + str(pathlib.PureWindowsPath(self.OHW.results_folder))
             self.label_resultsfolder.setText(current_folder)
             self.button_change_resultsfolder.setEnabled(True)
+            self.button_selectROI.setEnabled(True)
         
         def on_changeResultsfolder(self):
             #choose a folder
@@ -979,7 +1032,7 @@ class TableWidget(QWidget):
             fileName = UserDialogs.chooseFileByUser(msg)     
             
             #if 'cancel' was pressed: simply do nothing and wait for user to click another button
-            if (fileName == ''):
+            if (fileName[0] == ''):
                 return
                    
             read_imagestack_thread = self.OHW.read_imagestack_thread(fileName[0])
@@ -987,7 +1040,13 @@ class TableWidget(QWidget):
             #self.progressbar_loadStack.setFormat("loading Folder")  #is not displayed yet?
             self.progressbar_loadStack.setRange(0,0)
             read_imagestack_thread.finished.connect(self.finish_loadFile)
-        
+            
+        def display_firstImage(self, image):
+             # display first image and update controls
+            self.imshow_firstImage = self.ax_firstIm.imshow(image, cmap = 'gray', vmin = self.OHW.videoMeta["Blackval"], vmax = self.OHW.videoMeta["Whiteval"])
+            self.canvas_firstImage.draw()            
+            self.tab1.layout.addWidget(self.canvas_firstImage, 13,0) 
+
         def finish_loadFile(self):
             self.progressbar_loadStack.setRange(0,1)
             self.progressbar_loadStack.setValue(1)
@@ -995,11 +1054,12 @@ class TableWidget(QWidget):
             self.line_fps.setText(str(self.OHW.videoMeta['fps']))
             self.line_px_perMicron.setText(str(self.OHW.videoMeta['microns_per_pixel']))
             
-            # display first image and update controls
-            self.imshow_firstImage = self.ax_firstIm.imshow(self.OHW.rawImageStack[0], cmap = 'gray', vmin = self.OHW.videoMeta["Blackval"], vmax = self.OHW.videoMeta["Whiteval"])
-            self.canvas_firstImage.draw()            
-            self.tab1.layout.addWidget(self.canvas_firstImage, 12,0) 
-            
+            self.display_firstImage(self.OHW.rawImageStack[0])
+#            # display first image and update controls
+#            self.imshow_firstImage = self.ax_firstIm.imshow(self.OHW.rawImageStack[0], cmap = 'gray', vmin = self.OHW.videoMeta["Blackval"], vmax = self.OHW.videoMeta["Whiteval"])
+#            self.canvas_firstImage.draw()            
+#            self.tab1.layout.addWidget(self.canvas_firstImage, 13,0) 
+#            
             inputpath = str('Chosen file: ' + str(self.OHW.inputpath))
             self.label_chosen_image.setText(inputpath)
             self.button_getMVs.setEnabled(True)
@@ -1009,6 +1069,7 @@ class TableWidget(QWidget):
             current_folder = 'Current results folder: ' + str(pathlib.PureWindowsPath(self.OHW.results_folder))
             self.label_resultsfolder.setText(current_folder)
             self.button_change_resultsfolder.setEnabled(True)
+            self.button_selectROI.setEnabled(True)
         
         def changeBlockwidth(self):
             self.blockwidth = self.spinbox_blockwidth.value()
@@ -1133,11 +1194,13 @@ class TableWidget(QWidget):
             
             if self.scaling_status == True:
                 self.OHW.scale_ImageStack()
-            else:
-
-                #self.OHW.scale_ImageStack(self.OHW.rawImageStack.shape[0][1])   # too hacky, refactor...
-                self.OHW.scale_ImageStack(self.OHW.rawImageStack.shape[1]) 
-
+            else:                
+                #if ROI was selected, use ROI ImageStack
+                if self.OHW.ROIImageStack is not None:
+                    self.OHW.scale_ImageStack(self.OHW.ROIImageStack.shape[1], self.OHW.ROIImageStack.shape[2])
+                else: 
+                    self.OHW.scale_ImageStack(self.OHW.rawImageStack.shape[1], self.OHW.rawImageStack.shape[2])     
+                
             calculate_MVs_thread = self.OHW.calculate_MVs_thread(blockwidth = blockwidth, delay = delay, max_shift = maxShift)
             calculate_MVs_thread.start()
             calculate_MVs_thread.progressSignal.connect(self.updateMVProgressBar)
@@ -1253,7 +1316,7 @@ class TableWidget(QWidget):
             distance_between_arrows = blockwidth * skipquivers
             arrowscale = 1 / (distance_between_arrows / scale_max)
             
-            self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.OHW.scaledImageStack.shape[1], blockwidth), np.arange(blockwidth/2, self.OHW.scaledImageStack.shape[2], blockwidth))
+            self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.OHW.scaledImageStack.shape[2], blockwidth), np.arange(blockwidth/2, self.OHW.scaledImageStack.shape[1], blockwidth))
             
             self.qslice=(slice(None,None,skipquivers),slice(None,None,skipquivers))
             qslice = self.qslice

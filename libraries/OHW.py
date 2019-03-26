@@ -21,6 +21,7 @@ class OHW():
         
         self.inputpath = None #
         self.rawImageStack = None       # array for raw imported imagestack
+        self.ROIImageStack = None       # array for ROIs
         self.scaledImageStack = None
         self.rawMVs = None              # array for raw motion vectors (MVs)
         self.videoMeta = {"microns_per_pixel":1,"fps":1,"blackval":0,"whiteval":None}   # dict of video metadata: microns_per_pixel, fps, blackval, whiteval, 
@@ -135,15 +136,23 @@ class OHW():
         for key, value in videoinfos_file.items():
             self.videoMeta[key] = value
     
-    def scale_ImageStack(self, max_size = 1024):
+    def scale_ImageStack(self, max_size_w=1024, max_size_h=1024):
         """
             rescales input ImageStack
         """
-        print ("rescaling images to max. size of", max_size)
+      #  print ("rescaling images to max. size of", max_size)
+        print("shape of raw image stack: ", self.rawImageStack.shape)
         scaledImages = []
-        for image in self.rawImageStack:   #rawImageStack[:-2]
-            scaledImages.append(cv2.resize(image,(max_size,max_size)))
-        
+        if self.ROIImageStack is not None:
+            print('Use ROIImageStack for further processing.')
+            for image in self.ROIImageStack:
+                scaledImages.append(cv2.resize(image,(max_size_h,max_size_w)))
+                
+        else:
+            print('Use rawImageStack for further processing.')
+            for image in self.rawImageStack:   #rawImageStack[:-2]
+                scaledImages.append(cv2.resize(image,(max_size_h,max_size_w)))
+              
         self.scaledImageStack = np.array(scaledImages)
         self.scalingfactor = self.scaledImageStack[0].shape[0] / self.rawImageStack[0].shape[0]
         print("shape of scaled down image stack: ", self.scaledImageStack.shape)
@@ -211,7 +220,9 @@ class OHW():
         
         #prepare figure
         savefig_heatmaps, saveax_heatmaps = plt.subplots(1,1)
-        savefig_heatmaps.set_size_inches(16, 12)
+      #  w,h = helpfunctions.get_figure_size(self.scaledImageStack[0],initial_val=12)
+      #  savefig_heatmaps.set_size_inches(w,h)
+        savefig_heatmaps.set_size_inches(16,12) 
         saveax_heatmaps.axis('off')   
         
         scale_max = self.get_scale_maxMotion()
@@ -248,6 +259,7 @@ class OHW():
             heatmap_filename = str(path_heatmaps / 'heatmapvideo.mp4')
             duration = 1/self.videoMeta["fps"] * self.absMotions.shape[0]
             animation = mpy.VideoClip(make_frame_mpl, duration=duration)
+         #   animation.resize((1500,800))
             animation.write_videofile(heatmap_filename, fps=self.videoMeta["fps"])    
 
     def save_heatmap_thread(self, singleframe):
@@ -373,11 +385,17 @@ class OHW():
         self.MotionY = self.MV_cutoff[:,1,:,:]
 
         blockwidth = self.MV_parameters["blockwidth"]
-        self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.scaledImageStack.shape[1], blockwidth), np.arange(blockwidth/2, self.scaledImageStack.shape[2], blockwidth))        
+        print('Shape of scaledImageStack:')
+        print(self.scaledImageStack.shape[1])
+        print(self.scaledImageStack.shape[2])
+#        self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.scaledImageStack.shape[1], blockwidth), np.arange(blockwidth/2, self.scaledImageStack.shape[2], blockwidth))        
+        self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.scaledImageStack.shape[2], blockwidth), np.arange(blockwidth/2, self.scaledImageStack.shape[1], blockwidth))        
            
         #prepare figure
         savefig_quivers, saveax_quivers = plt.subplots(1,1)
-        savefig_quivers.set_size_inches(16, 12)
+        #w,h = helpfunctions.get_figure_size(self.scaledImageStack[0], initial_val=12)
+#        savefig_quivers.set_size_inches(w,h)
+        savefig_quivers.set_size_inches(16,12)
         saveax_quivers.axis('off')   
     
         
@@ -386,8 +404,16 @@ class OHW():
         arrowscale = 1 / (distance_between_arrows / scale_max)
 
         imshow_quivers = saveax_quivers.imshow(self.scaledImageStack[0], vmin = self.videoMeta["Blackval"], vmax = self.videoMeta["Whiteval"], cmap = "gray")
+
+        print('Size of quiver data:')
+        print(self.MotionCoordinatesX.shape)
+        print(self.MotionCoordinatesY.shape)
+        print(self.MotionX[0].shape)
+        print(self.MotionY[0].shape)
+        
         # adjust desired quiver plotstyles here!
         quiver_quivers = saveax_quivers.quiver(self.MotionCoordinatesX[qslice], self.MotionCoordinatesY[qslice], self.MotionX[0][qslice], self.MotionY[0][qslice], pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", scale = arrowscale,  width = 4, headwidth = 3, headlength = 5, headaxislength = 5, minshaft =1.5) #width = 4, headwidth = 2, headlength = 3
+
         #saveax_quivers.set_title('Motion [µm/s]', fontsize = 16, fontweight = 'bold')
         if keyword == None:
             path_quivers = self.results_folder / "quiver_results"
@@ -402,7 +428,7 @@ class OHW():
             quiver_quivers.set_UVC(self.MotionX[singleframe][qslice], self.MotionY[singleframe][qslice])
             
             quivers_filename = str(path_quivers / ('quiver_frame' + str(singleframe) + '.png'))
-            savefig_quivers.savefig(quivers_filename,bbox_inches ="tight",pad_inches =0, dpi = 200)
+            savefig_quivers.savefig(quivers_filename, bbox_inches ="tight", pad_inches = 0, dpi = 200)
         
         else:
         # save video
@@ -527,12 +553,22 @@ class OHW():
     
     def plot_TimeAveragedMotions(self, file_ext):
         plotfunctions.plot_TimeAveragedMotions(self.avg_absMotion, self.avg_MotionX, self.avg_MotionY, self.max_avgMotion, self.results_folder, file_ext)
-               
+    
+    def createROIImageStack(self, r):
+        #r are coordinates of rectangular that was selected as ROI
+        print(r)
+        self.ROIImageStack = []
+        for idx in range(0, self.rawImageStack.shape[0]):
+            image_ROI = self.rawImageStack[idx][int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])]
+            self.ROIImageStack.append(image_ROI)
+        self.ROIImageStack = np.asarray(self.ROIImageStack)
+      #  self.ROIImageStack = [img[int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])] for img in self.rawImageStack.tolist()]
+      #  self.ROIImageStack = np.asarray(self.ROIImageStack)
             
 if __name__ == "__main__":
     OHW = OHW()
     #OHW.read_imagestack("..//sampleinput")
     #OHW.read_imagestack("..//sampleinput//samplemov.mov")
-    OHW.read_imagestack("..//sampleinput//sampleavi.avi")
-    OHW.scale_ImageStack()
-    OHW.calculate_MVs(blockwidth = 16, delay = 2, max_shift = 7)
+#    OHW.read_imagestack("..//sampleinput//sampleavi.avi")
+#    OHW.scale_ImageStack()
+#    OHW.calculate_MVs(blockwidth = 16, delay = 2, max_shift = 7)
