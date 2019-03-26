@@ -4,6 +4,7 @@ import os, sys
 import time
 import pathlib
 import glob
+import cv2
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -1316,7 +1317,7 @@ class TableWidget(QWidget):
             distance_between_arrows = blockwidth * skipquivers
             arrowscale = 1 / (distance_between_arrows / scale_max)
             
-            self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.OHW.scaledImageStack.shape[2], blockwidth), np.arange(blockwidth/2, self.OHW.scaledImageStack.shape[1], blockwidth))
+            self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.OHW.scaledImageStack.shape[2]-blockwidth/2, blockwidth)+1, np.arange(blockwidth/2, self.OHW.scaledImageStack.shape[1]-blockwidth/2+1, blockwidth))  #changed arange range, double check!
             
             self.qslice=(slice(None,None,skipquivers),slice(None,None,skipquivers))
             qslice = self.qslice
