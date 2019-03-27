@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import argrelextrema
-
+from PyQt5.QtWidgets import QMessageBox
 from libraries import OFlowCalc, Filters, plotfunctions, helpfunctions, PeakDetection
 
 import moviepy.editor as mpy
@@ -40,6 +40,9 @@ class OHW():
 
         self.PeakDetection = PeakDetection.PeakDetection()    # class which detects + saves peaks
        
+        #store exceptions that appear
+        self.exceptions = None
+        
     def read_imagestack(self, inputfolder, *args, **kwargs):
         """
             reads desired inputvideo as np.array
@@ -68,7 +71,17 @@ class OHW():
             # directory with .tifs
             print("... which is a folder")
             inputtifs = list(self.inputpath.glob('*.tif'))  # or use sorted instead of list
+            print("number of tifs: {}".format(len(inputtifs)))
             
+            #directory contains no .tifs: warning message and proceed
+            if len(inputtifs) == 0:
+               # raise Exception('.tif error')
+                self.exceptions = []
+                self.exceptions.append(Exception('.tif error'))
+                return
+            
+            #directory contains .tifs:
+            self.exceptions = None
             self.rawImageStack = tifffile.imread(inputtifs, pattern = "")
             self.rawImageStack = self.rawImageStack.astype(np.float32)    #convert as cv2 needs float32 for templateMatching
      #       print('Shape of rawImageStack after loading tiffs: [%d, %d, %d]' %(self.rawImageStack.shape[0], self.rawImageStack.shape[1], self.rawImageStack.shape[2]))

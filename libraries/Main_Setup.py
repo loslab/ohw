@@ -960,6 +960,10 @@ class TableWidget(QWidget):
                 self.button_removeBatchFolder.setEnabled(True)
 
         def on_loadFolder(self, grid):
+            #change button color if not already done
+            self.button_succeed_tab1.setStyleSheet("background-color: IndianRed")
+            self.progressbar_loadStack.setValue(0)
+            
             #choose a folder
             msg = 'Choose an input folder containing a sequence of .tif-images'
             folderName = UserDialogs.chooseFolderByUser(msg)  
@@ -967,14 +971,30 @@ class TableWidget(QWidget):
             #if 'cancel' was pressed: simply do nothing and wait for user to click another button
             if (folderName == ''):
                 return
-            
-            read_imagestack_thread = self.OHW.read_imagestack_thread(folderName)
-            read_imagestack_thread.start()
-            #self.progressbar_loadStack.setFormat("loading Folder")  #is not displayed yet?
-            self.progressbar_loadStack.setRange(0,0)
-            read_imagestack_thread.finished.connect(self.finish_loadFolder)
+            try:
+                self.read_imagestack_thread = self.OHW.read_imagestack_thread(folderName)
+                self.read_imagestack_thread.start()
+                #self.progressbar_loadStack.setFormat("loading Folder")  #is not displayed yet?
+                self.progressbar_loadStack.setRange(0,0)
+                self.read_imagestack_thread.finished.connect(self.finish_loadFolder)
+            except Exception:
+                pass 
                         
         def finish_loadFolder(self):
+            #if problems with tif files occurred:
+            if self.OHW.exceptions!=None:
+                #display a message for missing .tif files
+                 msg_text = 'No .tif files were found in the chosen folder. Choose another folder or file.' # to: ' + text_for_saving
+                 msg_title = 'Error - no .tif files found'
+                 msg = QMessageBox.warning(self, msg_title, msg_text, QMessageBox.Ok)
+                 if msg == QMessageBox.Ok:
+                     #stop the thread
+                     self.read_imagestack_thread.endThread()
+                     self.progressbar_loadStack.setMaximum(1)
+                     self.progressbar_loadStack.setValue(0)
+                     return
+                 
+            #if no problems occurred: 
             self.progressbar_loadStack.setRange(0,1)
             self.progressbar_loadStack.setValue(1)
             
@@ -1028,6 +1048,10 @@ class TableWidget(QWidget):
             print('New results folder: %s' %folderName)            
             
         def on_loadFile(self):
+            #change button color if not already done
+            self.button_succeed_tab1.setStyleSheet("background-color: IndianRed")
+            self.progressbar_loadStack.setValue(0)
+            
             #choose a file
             msg = 'Choose an input file of type .mp4, .avi, .mov'
             fileName = UserDialogs.chooseFileByUser(msg)     
@@ -1188,6 +1212,9 @@ class TableWidget(QWidget):
                 pass
         
         def on_getMVs(self):
+            #disable button to not cause interference between different calculations
+            self.button_getMVs.setEnabled(False)
+            
             #get current parameters entered by user
             blockwidth = self.changeBlockwidth()
             maxShift = self.changeMaxShift()
@@ -1250,6 +1277,9 @@ class TableWidget(QWidget):
             #enable saving time averaged motion
             self.button_save_timeMotion.setEnabled(True)
 
+            #enable new calculation of motion vectors
+            self.button_getMVs.setEnabled(True)
+            
         def initialize_kinetics(self):
             """
                 initializes graph for beating kinetics "EKG"
