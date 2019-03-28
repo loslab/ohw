@@ -42,6 +42,7 @@ class OHW():
        
         #store exceptions that appear
         self.exceptions = None
+        self.isROI_OHW = False
         
     def read_imagestack(self, inputfolder, *args, **kwargs):
         """
@@ -71,7 +72,7 @@ class OHW():
             # directory with .tifs
             print("... which is a folder")
             inputtifs = list(self.inputpath.glob('*.tif'))  # or use sorted instead of list
-            print("number of tifs: {}".format(len(inputtifs)))
+     #       print("number of tifs: {}".format(len(inputtifs)))
             
             #directory contains no .tifs: warning message and proceed
             if len(inputtifs) == 0:
@@ -190,14 +191,13 @@ class OHW():
     def initialize_calculatedMVs(self):
         self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results
         #self.rawMVs = self.thread_BM_stack.MotionVectorsAll
-        
+       # print('in initalia_calcMVS')
+        #print(self.rawMVs.shape)
         self.unitMVs = (self.rawMVs / self.scalingfactor) * self.videoMeta["microns_per_pixel"] * (self.videoMeta["fps"] / self.MV_parameters["delay"])
         self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame
-        
+    
         self.get_mean_absMotion()
         self.calc_TimeAveragedMotion()
-        
-        
     
     def calculate_MVs(self, method = 'BM', progressSignal = None, **parameters):
         """
@@ -216,9 +216,8 @@ class OHW():
         self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results        
         self.MV_parameters = parameters   #store parameters which were used for the calculation of MVs
         
-        if method == 'BM':          
+        if method == 'BM':   
             self.rawMVs = OFlowCalc.BM_stack(self.scaledImageStack, progressSignal = progressSignal, **parameters)
-    
         # these are double! also in initialize_calculatedMVs, remove from here if it does not conflict...
         self.unitMVs = (self.rawMVs / self.scalingfactor) * self.videoMeta["microns_per_pixel"] * (self.videoMeta["fps"] / self.MV_parameters["delay"])
         self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame

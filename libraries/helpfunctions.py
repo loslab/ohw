@@ -36,6 +36,9 @@ def turn_function_into_thread(inputfunction, emit_progSignal=False, *arg, **kwar
             #print("kwargs:", kwargs)
             inputfunction(progressSignal = self.progressSignal, *arg, **kwargs)
         
+        def isAlive(self):
+            self.isAlive()
+            
         def endThread(self):
             self.terminate()
       
