@@ -823,8 +823,6 @@ class TableWidget(QWidget):
         def on_chooseROI(self, current_index):
             """ choose a ROI for displaying and analyzing results in beating_kinetics, heatmaps and quiverplots
             """
-            print("Let's choose the best ROI") 
-       #     current_name = self.sender().currentText()    
             if current_index == 0:
                 self.current_dataset = self.OHW
             #self.current_ROI is specified as ROI_nr, index in self.ROI_OHWs!
@@ -834,16 +832,15 @@ class TableWidget(QWidget):
                 print(self.ROI_names[self.current_ROI_idx])
             
             if self.sender() == self.ekg_combobox:
-                print('Lets display the correct ekg')
                 self.current_dataset.initialize_calculatedMVs()
                 self.initialize_kinetics()
             
             elif self.sender() == self.advanced_combobox:
-                print('Lets display the correct heatmaps')
                 self.initialize_MV_graphs()
             
             elif self.sender() == self.timeavg_combobox:
                 self.initializeTimeAveragedMotion()
+                
         def on_selectROI(self):
             """ select a ROI from the first image of the rawImageStack, calculation of MVs will be performed on ROI only after this 
             """
@@ -1436,7 +1433,8 @@ class TableWidget(QWidget):
                         cal_MVs_thread.start()
                         self.ready = False
                         cal_MVs_thread.progressSignal.connect(self.updateMVProgressBar)
-                        cal_MVs_thread.finished.connect(self.initialize_calculatedMVs)
+                        #initialize_calculatedMVs only for the full image, for the ROIs on-the-fly
+                        #cal_MVs_thread.finished.connect(self.initialize_calculatedMVs)
 
 #                #always calculate the full image
                 self.OHW.scale_ImageStack(self.OHW.rawImageStack.shape[1], self.OHW.rawImageStack.shape[2])     
