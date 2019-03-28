@@ -5,7 +5,7 @@ import time
 import pathlib
 import glob
 import cv2
-
+import configparser
 import copy
 from matplotlib.lines import Line2D
 import matplotlib.patches as patches
@@ -23,6 +23,11 @@ from libraries import OHW
 class TableWidget(QWidget):
         def __init__(self, parent):   
             super(QWidget, self).__init__(parent)
+            
+            #read config file
+            self.config = configparser.ConfigParser()
+            self.config.read('config.ini')
+         
             self.layout = QGridLayout(self)
  
             # create OHW object to work with motion vectors
@@ -83,8 +88,8 @@ class TableWidget(QWidget):
             self.line_fps = QLineEdit()
             self.line_px_perMicron = QLineEdit()
 
-            self.line_px_perMicron.setText('1.5374')
-            self.line_fps.setText('17.49105135069209')
+            self.line_px_perMicron.setText(self.config['DEFAULT VALUES']['px_per_micron'])
+            self.line_fps.setText(self.config['DEFAULT VALUES']['fps'])
             self.line_px_perMicron.textChanged.connect(self.changePxPerMicron)
             self.line_fps.textChanged.connect(self.changeFPS)            
             
@@ -245,13 +250,13 @@ class TableWidget(QWidget):
             self.spinbox_blockwidth.setRange(2,128)
             self.spinbox_blockwidth.setSingleStep(2)
             self.spinbox_blockwidth.setSuffix(' pixels')
-            self.spinbox_blockwidth.setValue(16)
+            self.spinbox_blockwidth.setValue(int(self.config['DEFAULT VALUES']['blockwidth']))
             self.spinbox_delay.setRange(1,10)
             self.spinbox_delay.setSuffix(' frames')
             self.spinbox_delay.setSingleStep(1)
-            self.spinbox_delay.setValue(2)
+            self.spinbox_delay.setValue(int(self.config['DEFAULT VALUES']['delay']))
             self.spinbox_maxShift.setSuffix(' pixels')
-            self.spinbox_maxShift.setValue(7)
+            self.spinbox_maxShift.setValue(int(self.config['DEFAULT VALUES']['maxShift']))
 
             #if value of box is changed
             self.spinbox_blockwidth.valueChanged.connect(self.changeBlockwidth)
@@ -1122,12 +1127,21 @@ class TableWidget(QWidget):
             
             #choose a folder
             msg = 'Choose an input folder containing a sequence of .tif-images'
-            folderName = UserDialogs.chooseFolderByUser(msg)  
+            try:
+                folderName = UserDialogs.chooseFolderByUser(message=msg, input_folder=self.config['LAST SESSION']['input_folder'])  
+            except Exception:
+                folderName = UserDialogs.chooseFolderByUser(message=msg)
             
             #if 'cancel' was pressed: simply do nothing and wait for user to click another button
             if (folderName == ''):
                 return
             try:
+                #save changes to config file!
+                self.config.set("LAST SESSION", "input_folder", str((pathlib.Path(folderName) / "..").resolve()))
+                with open('config.ini', 'w') as configfile:
+                    self.config.write(configfile)
+                
+                #read imagestack
                 self.read_imagestack_thread = self.OHW.read_imagestack_thread(folderName)
                 self.read_imagestack_thread.start()
                 #self.progressbar_loadStack.setFormat("loading Folder")  #is not displayed yet?
@@ -1178,7 +1192,7 @@ class TableWidget(QWidget):
         def on_changeResultsfolder(self):
             #choose a folder
             msg = 'Choose a new folder for saving your results'
-            folderName = UserDialogs.chooseFolderByUser(msg)  
+            folderName = UserDialogs.chooseFolderByUser(msg, input_folder=self.input_folder)#, input_folder=self.config['LAST SESSION']['results_folder'])  
             
             #if 'cancel' was pressed: simply do nothing and wait for user to click another button
             if (folderName == ''):
@@ -1187,6 +1201,7 @@ class TableWidget(QWidget):
             if self.sender() == self.button_change_resultsfolder:
                 #change the results folder of the OHW class
                 self.OHW.results_folder = pathlib.Path(folderName)
+                
                 #change the results folder for all OHW
                 if len(self.ROI_OHWs) is not 0:
                     for ROI_nr in range(0,len(self.ROI_OHWs)):
@@ -1213,12 +1228,19 @@ class TableWidget(QWidget):
             
             #choose a file
             msg = 'Choose an input file of type .mp4, .avi, .mov'
-            fileName = UserDialogs.chooseFileByUser(msg)     
-            
+            try:
+                fileName = UserDialogs.chooseFileByUser(message=msg, input_folder=self.config['LAST SESSION']['input_folder'])  
+            except Exception:
+                fileName = UserDialogs.chooseFileByUser(message=msg)
+                
             #if 'cancel' was pressed: simply do nothing and wait for user to click another button
             if (fileName[0] == ''):
                 return
-                   
+            #save changes to config file!
+            self.config.set("LAST SESSION", "input_folder", str((pathlib.Path(fileName[0]) / "..").resolve()))
+            with open('config.ini', 'w') as configfile:
+                self.config.write(configfile)
+                    
             read_imagestack_thread = self.OHW.read_imagestack_thread(fileName[0])
             read_imagestack_thread.start()
             #self.progressbar_loadStack.setFormat("loading Folder")  #is not displayed yet?

@@ -6,4 +6,6 @@ REM START THE SETUP
 @echo on
 call %anaconda_folder%
 call conda env create -f OHW.YML
+call activate OHW
+call python create_config_file.py
 pause
