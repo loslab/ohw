@@ -58,4 +58,3 @@ if __name__ == '__main__':
     app.aboutToQuit.connect(app.deleteLater)
     heartware_gui = App()    
     app.exec_()
-   
