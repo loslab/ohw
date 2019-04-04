@@ -55,7 +55,7 @@ class OHW():
         self.inputpath = pathlib.Path(inputfolder)
         
         if self.inputpath.is_file():
-            print("... which is a single file")
+        #    print("... which is a single file")
             
             self.rawImageStack, self.videoMeta["fps"] = self.read_videofile(str(self.inputpath))
             
@@ -70,7 +70,7 @@ class OHW():
             
         elif self.inputpath.is_dir():
             # directory with .tifs
-            print("... which is a folder")
+     #       print("... which is a folder")
             inputtifs = list(self.inputpath.glob('*.tif'))  # or use sorted instead of list
      #       print("number of tifs: {}".format(len(inputtifs)))
             
@@ -155,22 +155,22 @@ class OHW():
             rescales input ImageStack
         """
       #  print ("rescaling images to max. size of", max_size)
-        print("shape of raw image stack: ", self.rawImageStack.shape)
+     #   print("shape of raw image stack: ", self.rawImageStack.shape)
         scaledImages = []
         if self.ROIImageStack is not None:
-            print('Use ROIImageStack for further processing.')
+         #   print('Use ROIImageStack for further processing.')
             for image in self.ROIImageStack:
                 scaledImages.append(cv2.resize(image,(max_size_h,max_size_w)))
                 
         else:
-            print('Use rawImageStack for further processing.')
+        #    print('Use rawImageStack for further processing.')
             for image in self.rawImageStack:   #rawImageStack[:-2]
                 scaledImages.append(cv2.resize(image,(max_size_h,max_size_w)))
               
         self.scaledImageStack = np.array(scaledImages)
         self.scalingfactor = self.scaledImageStack[0].shape[0] / self.rawImageStack[0].shape[0]
-        print("shape of scaled down image stack: ", self.scaledImageStack.shape)
-        print("scalingfactor: ", self.scalingfactor)
+   #     print("shape of scaled down image stack: ", self.scaledImageStack.shape)
+   #     print("scalingfactor: ", self.scalingfactor)
     
     def plot_scalebar(self):
         """
@@ -380,6 +380,10 @@ class OHW():
         print("frames:", self.MotionX.shape[0], "1/fps:", 1/self.videoMeta["fps"])
         outputfigure.savefig(str(path_quivers / 'lastquiver3.png'))
     
+    def save_quivervid3_thread(self, skipquivers):
+        self.thread_save_quivervid3 = helpfunctions.turn_function_into_thread(self.save_quivervid3, skipquivers=skipquivers)
+        return self.thread_save_quivervid3
+    
     def save_quiver(self, singleframe = False, skipquivers = 1, keyword = None, subfolder = None, *args, **kwargs):
         """
             saves either the selected frame (singleframe = framenumber) or the whole heatmap video (= False)
@@ -397,9 +401,9 @@ class OHW():
         self.MotionY = self.MV_cutoff[:,1,:,:]
 
         blockwidth = self.MV_parameters["blockwidth"]
-        print('Shape of scaledImageStack:')
-        print(self.scaledImageStack.shape[1])
-        print(self.scaledImageStack.shape[2])
+     #   print('Shape of scaledImageStack:')
+     #   print(self.scaledImageStack.shape[1])
+     #   print(self.scaledImageStack.shape[2])
 #        self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.scaledImageStack.shape[1], blockwidth), np.arange(blockwidth/2, self.scaledImageStack.shape[2], blockwidth))        
         self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.scaledImageStack.shape[2], blockwidth), np.arange(blockwidth/2, self.scaledImageStack.shape[1], blockwidth))        
            

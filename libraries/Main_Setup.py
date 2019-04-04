@@ -13,11 +13,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 
-from PyQt5.QtWidgets import QMainWindow, QHeaderView, QCheckBox, QHBoxLayout, QLineEdit, QTableWidget, QTableWidgetItem, QDoubleSpinBox, QStyle, QSlider, QSizePolicy, QAction, QTextEdit, QMessageBox, QComboBox, QProgressBar, QSpinBox, QFileDialog, QTabWidget, QWidget, QLabel, QVBoxLayout, QGridLayout, QPushButton, QApplication, QDesktopWidget 
+from PyQt5.QtWidgets import QMainWindow, QHeaderView, QCheckBox, QHBoxLayout, QLineEdit, QTableWidget, QTableWidgetItem, QDoubleSpinBox, QStyle, QSlider, QSizePolicy, QAction, QTextEdit, QMessageBox, QComboBox, QProgressBar, QSpinBox, QFileDialog, QTabWidget, QWidget, QLabel, QVBoxLayout, QGridLayout, QPushButton, QApplication, QDesktopWidget, QDialogButtonBox
 from PyQt5.QtGui import QIcon, QPixmap, QFont, QColor, QImage
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
  
-from libraries import MultipleFoldersByUser, UserDialogs, Filters, helpfunctions
+from libraries import MultipleFoldersByUser, UserDialogs, Filters, helpfunctions, QuiverExportOptions
 from libraries import OHW
 
 class TableWidget(QWidget):
@@ -32,7 +32,6 @@ class TableWidget(QWidget):
  
             # create OHW object to work with motion vectors
             self.OHW = OHW.OHW()
- 
             # Initialize tab screen
             self.tabs = QTabWidget()
             # Add tabs to widget        
@@ -44,7 +43,7 @@ class TableWidget(QWidget):
 
             self.plotted_peaks = False
             
-            self.tab1 = QWidget()	
+            self.tab1 = QWidget()    
             self.tab2 = QWidget()
             self.tab3 = QWidget()
             self.tab4 = QWidget()
@@ -68,6 +67,18 @@ class TableWidget(QWidget):
             self.ROI_names = []
             self.ROI_OHWs = []
             
+            #default values for quiver export
+       #     self.config.getboolean(section='DEFAULT QUIVER SETTINGS', option='one_view')
+            self.quiver_settings = {}# self.config['DEFAULT QUIVER SETTINGS']
+            for item in ['one_view', 'three_views', 'show_scalebar']:
+                self.quiver_settings[item] = self.config.getboolean(section='DEFAULT QUIVER SETTINGS', option=item)
+             
+            for item in ['quiver_density']:
+                self.quiver_settings[item] = self.config.getint(section='DEFAULT QUIVER SETTINGS', option=item)
+        
+            for item in ['video_length']:
+                self.quiver_settings[item] = self.config.getfloat(section='DEFAULT QUIVER SETTINGS', option=item)
+        
  ########### fill the first tab ##################
             info_loadFile = QTextEdit()
             info_loadFile.setText('In this tab you choose the input folder. If a videoinfos.txt file is found, the information is processed automatically. Otherwise, please enter the framerate and pixel per microns.')
@@ -455,7 +466,7 @@ class TableWidget(QWidget):
             label_quivers.setFont(QFont("Times",weight=QFont.Bold))
 
             #Button for starting the creation of heatmaps and heatmap video
-            self.button_heatmaps_video = QPushButton('Create Heatmap Video')
+            self.button_heatmaps_video = QPushButton('Export Heatmap Video')
             self.button_heatmaps_video.resize(self.button_heatmaps_video.sizeHint())
             self.button_heatmaps_video.clicked.connect(self.on_saveHeatmapvideo)            
             #is disabled, enabled after successful calculation of MotionVectors
@@ -508,9 +519,14 @@ class TableWidget(QWidget):
             self.ax_heatmaps.axis('off')
             
             self.canvas_heatmap = FigureCanvas(self.fig_heatmaps)
-
+            
+            #button for changing the quiver export settings
+            self.button_change_quiverSettings = QPushButton('Change quiver export settings')
+            self.button_change_quiverSettings.resize(self.button_change_quiverSettings.sizeHint())
+            self.button_change_quiverSettings.clicked.connect(self.on_change_quiverSettings)
+            
             #Button for starting the creation of quiver plots and quiver video
-            self.button_quivers_video = QPushButton('Create quiver video')
+            self.button_quivers_video = QPushButton('Export quiver video')
             self.button_quivers_video.resize(self.button_quivers_video.sizeHint())
             self.button_quivers_video.clicked.connect(self.on_saveQuivervideo)
             #is disabled, enabled after successful calculation of MotionVectors
@@ -552,6 +568,7 @@ class TableWidget(QWidget):
             self.tab4.layout.addWidget(self.advanced_combobox,      2,  0)
             self.tab4.layout.addWidget(label_heatmaps,              3,  colHeatmap)
             self.tab4.layout.addWidget(label_quivers,               3,  colQuiver)
+            self.tab4.layout.addWidget(self.button_change_quiverSettings, 2, colQuiver)
             self.tab4.layout.addWidget(self.button_heatmaps_video,  4,  colHeatmap)
             self.tab4.layout.addWidget(self.button_quivers_video,   4,  colQuiver)
             self.tab4.layout.addWidget(self.progressbar_heatmaps,   5,  colHeatmap)
@@ -1138,8 +1155,7 @@ class TableWidget(QWidget):
             try:
                 #save changes to config file!
                 self.config.set("LAST SESSION", "input_folder", str((pathlib.Path(folderName) / "..").resolve()))
-                with open('config.ini', 'w') as configfile:
-                    self.config.write(configfile)
+                self.save_to_config()
                 
                 #read imagestack
                 self.read_imagestack_thread = self.OHW.read_imagestack_thread(folderName)
@@ -1238,9 +1254,8 @@ class TableWidget(QWidget):
                 return
             #save changes to config file!
             self.config.set("LAST SESSION", "input_folder", str((pathlib.Path(fileName[0]) / "..").resolve()))
-            with open('config.ini', 'w') as configfile:
-                self.config.write(configfile)
-                    
+            self.save_to_config()
+            
             read_imagestack_thread = self.OHW.read_imagestack_thread(fileName[0])
             read_imagestack_thread.start()
             #self.progressbar_loadStack.setFormat("loading Folder")  #is not displayed yet?
@@ -1260,7 +1275,7 @@ class TableWidget(QWidget):
             
             #create frame
             frame = patches.Rectangle((0,0),ROI.shape[1],ROI.shape[0],linewidth=2,edgecolor='k',facecolor='none')
-        	# Add the patch to the Axes
+            # Add the patch to the Axes
             ax_ROI.add_patch(frame)
             
             # canvas_ROI.drawRectangle([0,0, ROI.shape[1], ROI.shape[0]])
@@ -1580,14 +1595,16 @@ class TableWidget(QWidget):
             self.fig_quivers.set_size_inches(16,12)
             self.ax_quivers.axis('off')
             self.canvas_quivers = FigureCanvas(self.fig_quivers)
-            #draw_scalebar = False
-            #draw_scalebar = True
+            
             if not self.current_dataset.isROI_OHW:
-                #only draw scalebar if it is the full image
-                self.current_dataset.plot_scalebar()
-           # if draw_scalebar:
-            #    self.current_dataset.plot_scalebar()
-
+                if self.quiver_settings['show_scalebar']:
+                    #only draw scalebar if it is the full image and if specified in the quiver settings
+                    self.current_dataset.plot_scalebar()
+                    
+                else:
+                    #remove scalebar by recalculating the scaled imagestack
+                    self.current_dataset.scale_ImageStack(self.OHW.rawImageStack.shape[1], self.OHW.rawImageStack.shape[2])
+ 
             self.MV_zerofiltered = Filters.zeromotion_to_nan(self.current_dataset.unitMVs, copy=True)
             self.MotionX = self.MV_zerofiltered[:,0,:,:]
             self.MotionY = self.MV_zerofiltered[:,1,:,:]
@@ -1598,7 +1615,7 @@ class TableWidget(QWidget):
             scalingfactor = self.current_dataset.scalingfactor
             scale_max = self.current_dataset.get_scale_maxMotion()
             
-            skipquivers = 2
+            skipquivers =  int(self.quiver_settings['quiver_density'])
             distance_between_arrows = blockwidth * skipquivers
             arrowscale = 1 / (distance_between_arrows / scale_max)
             
@@ -1648,6 +1665,9 @@ class TableWidget(QWidget):
             """
                 saves the heatmpavideo
             """
+            #reset the color of success-button
+            self.button_succeed_heatmaps.setStyleSheet("background-color: IndianRed")
+            self.progressbar_heatmaps.setValue(0)
             
             save_heatmap_thread = self.current_dataset.save_heatmap_thread(singleframe = False)
             save_heatmap_thread.start()
@@ -1655,7 +1675,6 @@ class TableWidget(QWidget):
             save_heatmap_thread.finished.connect(self.finish_saveHeatmapvideo)
         
         def finish_saveHeatmapvideo(self):
-
             self.progressbar_heatmaps.setRange(0,1)
             self.progressbar_heatmaps.setValue(1)
             helpfunctions.msgbox(self, 'Heatmap video was saved successfully')
@@ -1672,12 +1691,61 @@ class TableWidget(QWidget):
             
             helpfunctions.msgbox(self, 'Heatmap of frame ' + str(singleframe) + ' was saved successfully')
         
+        def on_change_quiverSettings(self):
+            #calculate maximum video length
+          #  del self.quiver_settings['video_length']
+            self.quiver_settings['video_length'] = str(1/self.current_dataset.videoMeta["fps"] * self.current_dataset.absMotions.shape[0])
+
+            # open new window and let user change export settings
+            self.settingsWindow = QuiverExportOptions.QuiverExportOptions(prevSettings = self.quiver_settings)
+            self.settingsWindow.table_widget.got_settings.connect(self.save_quiver_settings)
+            self.settingsWindow.show()
+            
+        def save_quiver_settings(self, settings):
+            """
+                receive the signals from quiver settings changed by user
+            """
+            self.quiver_settings = settings
+            
+            #save quiver settings to config.ini:
+            #convert to string suitable for configparser
+            for item in ['one_view', 'three_views', 'show_scalebar']:
+                self.config.set("DEFAULT QUIVER SETTINGS", option=item, value=str(self.quiver_settings[item]).lower())
+            for item in ['quiver_density', 'video_length']:
+                self.config.set("DEFAULT QUIVER SETTINGS", option=item, value=str(self.quiver_settings[item]))
+            
+            self.save_to_config()
+            
+            #initialize MV_graphs again
+            self.initialize_MV_graphs()
+            
+        def save_to_config(self):
+            with open('config.ini', 'w') as configfile:
+                self.config.write(configfile)
+                
         def on_saveQuivervideo(self):
             """
                 saves the quivervideo
             """
+            #reset the color of success-button
+            self.button_succeed_quivers.setStyleSheet("background-color: IndianRed")
+            self.progressbar_quivers.setValue(0)
             
-            self.current_dataset.save_quivervid3(skipquivers = 2)
+            if self.quiver_settings['one_view']:
+                #export one view quivers
+                save_quiver1_thread = self.current_dataset.save_quiver_thread(singleframe = False, skipquivers = int(self.quiver_settings['quiver_density']))
+                save_quiver1_thread.start()
+                self.progressbar_quivers.setRange(0,0)
+                save_quiver1_thread.finished.connect(self.finish_saveQuivervideo)
+                              
+            if self.quiver_settings['three_views']:
+                #export three views quivers
+                save_quiver3_thread = self.current_dataset.save_quivervid3_thread(skipquivers = int(self.quiver_settings['quiver_density']))
+                save_quiver3_thread.start()
+                self.progressbar_quivers.setRange(0,0)
+                save_quiver3_thread.finished.connect(self.finish_saveQuivervideo)
+                
+ #           self.current_dataset.save_quivervid3(skipquivers = 2)
             """
             save_quiver_thread = self.OHW.save_quiver_thread(singleframe = False, skipquivers = 4)
             save_quiver_thread.start()
@@ -1697,11 +1765,11 @@ class TableWidget(QWidget):
             
         def on_saveQuiver(self):
             """
-                saves either the selected frame (singleframe = framenumber) or the whole heatmap video
+                saves either the selected frame (singleframe = framenumber)
             """     
             
             singleframe = self.slider_quiver.value()
-            self.current_dataset.save_quiver(singleframe = singleframe, skipquivers = 4)
+            self.current_dataset.save_quiver(singleframe = singleframe, skipquivers = int(self.quiver_settings['quiver_density']))
             
             helpfunctions.msgbox(self, 'Quiver of frame ' + str(singleframe) + ' was saved successfully')            
 
