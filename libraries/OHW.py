@@ -5,6 +5,7 @@ import tifffile
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
 from scipy.signal import argrelextrema
 from PyQt5.QtWidgets import QMessageBox
 from libraries import OFlowCalc, Filters, plotfunctions, helpfunctions, PeakDetection
@@ -278,7 +279,7 @@ class OHW():
         self.thread_save_heatmap = helpfunctions.turn_function_into_thread(self.save_heatmap, singleframe=False)
         return self.thread_save_heatmap
     
-    def save_quivervid3(self, skipquivers = 1, *args, **kwargs):
+    def save_quivervid3(self, skipquivers = 1, t_cut = 0, *args, **kwargs):
         """
             saves a video with the normal beating, beating + quivers and velocity trace
         """
@@ -296,7 +297,8 @@ class OHW():
         #prepare figure
         outputfigure = plt.figure(figsize=(14,10), dpi = 150)#figsize=(6.5,12)
 
-        gs = outputfigure.add_gridspec(3, 2)
+        gs = gridspec.GridSpec(3,2, figure=outputfigure)
+       # add_gridspec(3, 2)
         gs.tight_layout(outputfigure)
         plt.tight_layout()
         
@@ -376,15 +378,20 @@ class OHW():
         quivers_filename = str(path_quivers / 'quivervideo3.mp4')
         duration = 1/self.videoMeta["fps"] * self.MotionX.shape[0]
         animation = mpy.VideoClip(make_frame_mpl, duration=duration)
-        animation.write_videofile(quivers_filename, fps=self.videoMeta["fps"])
+        
+        #cut clip if desired by user
+        animation_to_save = self.cut_clip(clip_full=animation, t_cut=t_cut)
+       
+        animation_to_save.write_videofile(quivers_filename, fps=self.videoMeta["fps"])
+            
         print("frames:", self.MotionX.shape[0], "1/fps:", 1/self.videoMeta["fps"])
         outputfigure.savefig(str(path_quivers / 'lastquiver3.png'))
     
-    def save_quivervid3_thread(self, skipquivers):
-        self.thread_save_quivervid3 = helpfunctions.turn_function_into_thread(self.save_quivervid3, skipquivers=skipquivers)
+    def save_quivervid3_thread(self, skipquivers, t_cut):
+        self.thread_save_quivervid3 = helpfunctions.turn_function_into_thread(self.save_quivervid3, skipquivers=skipquivers, t_cut=t_cut)
         return self.thread_save_quivervid3
     
-    def save_quiver(self, singleframe = False, skipquivers = 1, keyword = None, subfolder = None, *args, **kwargs):
+    def save_quiver(self, singleframe = False, skipquivers = 1, t_cut = 0, keyword = None, subfolder = None, *args, **kwargs):
         """
             saves either the selected frame (singleframe = framenumber) or the whole heatmap video (= False)
             # adjust density of arrows by skipquivers
@@ -459,12 +466,30 @@ class OHW():
             quivers_filename = str(path_quivers / 'quivervideo.mp4')
             duration = 1/self.videoMeta["fps"] * self.MotionX.shape[0]
             animation = mpy.VideoClip(make_frame_mpl, duration=duration)
-            animation.write_videofile(quivers_filename, fps=self.videoMeta["fps"])
-
-    def save_quiver_thread(self, singleframe, skipquivers):
-        self.thread_save_quiver = helpfunctions.turn_function_into_thread(self.save_quiver, singleframe=False, skipquivers=skipquivers)
-        return self.thread_save_quiver            
             
+            #cut clip if desired by user
+            animation_to_save = self.cut_clip(clip_full=animation, t_cut=t_cut)
+            
+            animation_to_save.write_videofile(quivers_filename, fps=self.videoMeta["fps"])
+
+    def save_quiver_thread(self, singleframe, skipquivers, t_cut):
+        self.thread_save_quiver = helpfunctions.turn_function_into_thread(self.save_quiver, singleframe=False, skipquivers=skipquivers, t_cut=t_cut)
+        return self.thread_save_quiver
+            
+    def cut_clip(self, clip_full, t_cut=0):
+        #if user chose to cut the clip after t_cut seconds:
+        t_cut = round(t_cut, 2)
+        
+        if t_cut is not 0:
+            print('t_cut is of type:')
+            print(t_cut)
+            print(type(t_cut))
+            #t_cut is the end of the clip in seconds of the original clip
+            return clip_full.subclip(t_start=0, t_end=t_cut)
+        
+        else:
+            return clip_full
+    
     def save_MVs(self):
         """
             saves raw MVs as npy file

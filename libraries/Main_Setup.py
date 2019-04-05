@@ -1334,16 +1334,16 @@ class TableWidget(QWidget):
             return self.maxShift
         
         def changeFPS(self):
-            self.OHW.videoMeta['fps'] = np.float(self.line_fps.text())
+            self.OHW.videoMeta['fps'] = float(self.line_fps.text())
             if len(self.ROI_OHWs) is not 0:
                 for ROI_nr in range(0,len(self.ROI_OHWs)):
-                    self.ROI_OHWs[ROI_nr].videoMeta['fps'] = np.float(self.line_fps.text())
+                    self.ROI_OHWs[ROI_nr].videoMeta['fps'] = float(self.line_fps.text())
         
         def changePxPerMicron(self):
-            self.OHW.videoMeta['microns_per_pixel'] = np.float(self.line_px_perMicron.text())
+            self.OHW.videoMeta['microns_per_pixel'] = float(self.line_px_perMicron.text())
             if len(self.ROI_OHWs) is not 0:
                 for ROI_nr in range(0,len(self.ROI_OHWs)):
-                    self.ROI_OHWs[ROI_nr].videoMeta['fps'] = np.float(self.line_fps.text())
+                    self.ROI_OHWs[ROI_nr].videoMeta['fps'] = float(self.line_fps.text())
     
         def on_detectPeaks(self):
             #detect peaks and draw them as EKG
@@ -1493,7 +1493,8 @@ class TableWidget(QWidget):
         def initialize_calculatedMVs(self):
             if not hasattr(self, 'current_dataset'):
                 self.current_dataset = self.OHW
-                
+            print('Current fps is: {}'.format(self.current_dataset.videoMeta['fps']))
+            
             self.current_dataset.initialize_calculatedMVs()
           #  self.OHW.initialize_calculatedMVs()
             #set the succeed button to green:
@@ -1533,6 +1534,9 @@ class TableWidget(QWidget):
             #set ready for next thread
             self.ready = True
             
+            #get the current video length and save it to the quiver settings
+            self.quiver_settings['video_length'] = str(1/self.current_dataset.videoMeta["fps"] * self.current_dataset.absMotions.shape[0])
+
         def initialize_kinetics(self):
             """
                 initializes graph for beating kinetics "EKG"
@@ -1733,14 +1737,14 @@ class TableWidget(QWidget):
             
             if self.quiver_settings['one_view']:
                 #export one view quivers
-                save_quiver1_thread = self.current_dataset.save_quiver_thread(singleframe = False, skipquivers = int(self.quiver_settings['quiver_density']))
+                save_quiver1_thread = self.current_dataset.save_quiver_thread(singleframe = False, skipquivers = int(self.quiver_settings['quiver_density']), t_cut=float(self.quiver_settings['video_length']))
                 save_quiver1_thread.start()
                 self.progressbar_quivers.setRange(0,0)
                 save_quiver1_thread.finished.connect(self.finish_saveQuivervideo)
                               
             if self.quiver_settings['three_views']:
                 #export three views quivers
-                save_quiver3_thread = self.current_dataset.save_quivervid3_thread(skipquivers = int(self.quiver_settings['quiver_density']))
+                save_quiver3_thread = self.current_dataset.save_quivervid3_thread(skipquivers = int(self.quiver_settings['quiver_density']), t_cut=float(self.quiver_settings['video_length']))
                 save_quiver3_thread.start()
                 self.progressbar_quivers.setRange(0,0)
                 save_quiver3_thread.finished.connect(self.finish_saveQuivervideo)

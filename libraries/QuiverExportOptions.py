@@ -82,13 +82,17 @@ class QuiverExportOptions_TableWidget(QWidget):
         self.spinbox_quiverDensity.valueChanged.connect(self.change_status)
         
         label_cutVideo = QLabel('Cut video after ')
-        self.spinbox_cutVideo = QSpinBox()
-        self.spinbox_cutVideo.setRange(0, float(self.settings['video_length']))
-        self.spinbox_cutVideo.setSingleStep(0.01)
-        self.spinbox_cutVideo.setSuffix(' seconds')
-        self.spinbox_cutVideo.setValue(float(self.settings['video_length']))
-        self.spinbox_cutVideo.valueChanged.connect(self.change_status)
-        
+#        self.spinbox_cutVideo = QSpinBox()
+#        self.spinbox_cutVideo.setRange(0, float(self.settings['video_length']))
+#        self.spinbox_cutVideo.setSingleStep(0.01)
+#        self.spinbox_cutVideo.setSuffix(' seconds')
+#        self.spinbox_cutVideo.setValue(float(self.settings['video_length']))
+#        self.spinbox_cutVideo.valueChanged.connect(self.change_status)
+#        
+        self.lineedit_cutVideo = QLineEdit()
+        self.lineedit_cutVideo.setText(self.settings['video_length'])
+        self.lineedit_cutVideo.textChanged.connect(self.change_status)
+                   
         #supported views
         label_views = QLabel('Supported View(s):')
         label_views.setFont(QFont("Times",weight=QFont.Bold))
@@ -119,7 +123,7 @@ class QuiverExportOptions_TableWidget(QWidget):
         self.tab1.layout.addWidget(label_spinbox_quiverDensity,  1,  0)
         self.tab1.layout.addWidget(self.spinbox_quiverDensity,   1,  1)
         self.tab1.layout.addWidget(label_cutVideo,               2,  0)
-        self.tab1.layout.addWidget(self.spinbox_cutVideo,        2,  1)
+        self.tab1.layout.addWidget(self.lineedit_cutVideo,       2,  1)
         self.tab1.layout.addWidget(self.check_showScalebar,      3,  0)
         self.tab1.layout.addWidget(label_views,                  4,  0)
         self.tab1.layout.addWidget(self.check_useOneView,        5,  0)
@@ -141,8 +145,8 @@ class QuiverExportOptions_TableWidget(QWidget):
             self.settings['show_scalebar'] = self.check_showScalebar.isChecked()
         elif self.sender() == self.spinbox_quiverDensity:
             self.settings['quiver_density'] = self.spinbox_quiverDensity.value()
-        elif self.sender() == self.spinbox_cutVideo:
-            self.settings['video_length'] = str(self.spinbox_cutVideo.value())
+        elif self.sender() == self.lineedit_cutVideo:
+            self.settings['video_length'] = str(self.lineedit_cutVideo.text())
 
     def on_saveSettings(self):
         """
