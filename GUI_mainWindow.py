@@ -25,7 +25,7 @@ class App(QMainWindow):
         self.show()
     
     def center(self):
-        #method for centering the app on the scren
+        #method for centering the app on the screen
         qr = self.frameGeometry()
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
