@@ -859,6 +859,10 @@ class TableWidget(QWidget):
             
             elif self.sender() == self.advanced_combobox:
                 self.initialize_MV_graphs()
+                self.button_succeed_heatmaps.setStyleSheet("background-color: IndianRed")
+                self.button_succeed_quivers.setStyleSheet("background-color: IndianRed")
+                self.progressbar_heatmaps.setValue(0)
+                self.progressbar_quivers.setValue(0)
             
             elif self.sender() == self.timeavg_combobox:
                 self.initializeTimeAveragedMotion()
@@ -909,9 +913,7 @@ class TableWidget(QWidget):
                 r       coordinates returned by cv2.selectROI
             """
             self.ROI_coordinates.append(r)
-            
-            print(len(self.ROI_coordinates))
-                       
+          
             self.ROI_OHWs = []
             for nr_ROI in range(0, len(self.ROI_coordinates)):
                 #create new OHW object for each ROI
@@ -991,8 +993,7 @@ class TableWidget(QWidget):
             
             #multiply this number by the number of batch folders to be evaluated
             count_tot = count * len(self.batch_folders)
-            print('Total number of signals: %d' %count_tot)
-            
+           
             #return this number, needed during threading
             return count_tot 
         
@@ -1493,10 +1494,9 @@ class TableWidget(QWidget):
         def initialize_calculatedMVs(self):
             if not hasattr(self, 'current_dataset'):
                 self.current_dataset = self.OHW
-            print('Current fps is: {}'.format(self.current_dataset.videoMeta['fps']))
+      #      print('Current fps is: {}'.format(self.current_dataset.videoMeta['fps']))
             
             self.current_dataset.initialize_calculatedMVs()
-          #  self.OHW.initialize_calculatedMVs()
             #set the succeed button to green:
             self.button_succeed_MVs.setStyleSheet("background-color: YellowGreen")
                 
@@ -1506,7 +1506,7 @@ class TableWidget(QWidget):
             self.button_saveKinetics.setEnabled(True)
             self.button_heatmaps_video.setEnabled(True)
             self.button_quivers_video.setEnabled(True)
-            
+                       
             #create sliders for heatmaps and quivers
             self.tab4.layout.addWidget(self.label_slider_info,      9,0)
             self.tab4.layout.addWidget(self.label_slider_quivers,   9,2)
@@ -1720,6 +1720,9 @@ class TableWidget(QWidget):
             
             self.save_to_config()
             
+            #close the settings window
+            self.settingsWindow.close()
+            
             #initialize MV_graphs again
             self.initialize_MV_graphs()
             
@@ -1749,7 +1752,6 @@ class TableWidget(QWidget):
                 self.progressbar_quivers.setRange(0,0)
                 save_quiver3_thread.finished.connect(self.finish_saveQuivervideo)
                 
- #           self.current_dataset.save_quivervid3(skipquivers = 2)
             """
             save_quiver_thread = self.OHW.save_quiver_thread(singleframe = False, skipquivers = 4)
             save_quiver_thread.start()
@@ -1771,10 +1773,17 @@ class TableWidget(QWidget):
             """
                 saves either the selected frame (singleframe = framenumber)
             """     
+            singleframe = int(self.slider_quiver.value())
             
-            singleframe = self.slider_quiver.value()
-            self.current_dataset.save_quiver(singleframe = singleframe, skipquivers = int(self.quiver_settings['quiver_density']))
+            #save the different views if chosen by the user
+            if self.quiver_settings['one_view']:
+
+                self.current_dataset.save_quiver(singleframe = singleframe, skipquivers = int(self.quiver_settings['quiver_density']))
             
+            if self.quiver_settings['three_views']:
+                self.current_dataset.save_quivervid3(singleframe = singleframe, skipquivers = int(self.quiver_settings['quiver_density']))
+            
+            #display a message
             helpfunctions.msgbox(self, 'Quiver of frame ' + str(singleframe) + ' was saved successfully')            
 
         def slider_heatmaps_valueChanged(self):

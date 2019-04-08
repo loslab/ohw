@@ -56,11 +56,6 @@ class QuiverExportOptions_TableWidget(QWidget):
             self.settings = {}
             
         self.settings = previousSettings
-#        self.settings['one_view'] = False
-#        self.settings['three_views'] = False
-#        self.settings['show_scalebar'] = True
-#        self.settings['quiver_density'] = 2
-#        self.settings['video_length'] = videoLength
         
         self.show()
         
@@ -78,17 +73,12 @@ class QuiverExportOptions_TableWidget(QWidget):
         self.spinbox_quiverDensity = QSpinBox()
         self.spinbox_quiverDensity.setRange(2, 10)
         self.spinbox_quiverDensity.setSingleStep(2)
+        self.spinbox_quiverDensity.lineEdit().setReadOnly(True)
         self.spinbox_quiverDensity.setValue(int(self.settings['quiver_density']))
         self.spinbox_quiverDensity.valueChanged.connect(self.change_status)
         
         label_cutVideo = QLabel('Cut video after ')
-#        self.spinbox_cutVideo = QSpinBox()
-#        self.spinbox_cutVideo.setRange(0, float(self.settings['video_length']))
-#        self.spinbox_cutVideo.setSingleStep(0.01)
-#        self.spinbox_cutVideo.setSuffix(' seconds')
-#        self.spinbox_cutVideo.setValue(float(self.settings['video_length']))
-#        self.spinbox_cutVideo.valueChanged.connect(self.change_status)
-#        
+       
         self.lineedit_cutVideo = QLineEdit()
         self.lineedit_cutVideo.setText(self.settings['video_length'])
         self.lineedit_cutVideo.textChanged.connect(self.change_status)
@@ -155,10 +145,11 @@ class QuiverExportOptions_TableWidget(QWidget):
 
         self.got_settings.emit(self.settings)
         
-        self.close()
+#        self.close()
+#        self.parentWidget.close()
      #   self.parent.close()
 #        mainWidget = self.findMainWindow()
- #       mainWidget.close()
+#        mainWidget.close()
         
     def findMainWindow(self): #-> typing.Union[QMainWindow, None]:
         # Global function to find the (open) QMainWindow in application
