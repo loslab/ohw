@@ -153,7 +153,7 @@ class TableWidget(QWidget):
             self.slider_whiteval.valueChanged.connect(self.change_blackWhiteVal)
             
             #reset the black and white values
-            self.button_reset_blackWhiteVal = QPushButton('Reset the black and white value')
+            self.button_reset_blackWhiteVal = QPushButton('Reset black and white value')
             self.button_reset_blackWhiteVal.resize(self.button_reset_blackWhiteVal.sizeHint())
             self.button_reset_blackWhiteVal.clicked.connect(self.on_resetBlackWhiteVal)
             
