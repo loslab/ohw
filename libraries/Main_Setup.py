@@ -133,6 +133,30 @@ class TableWidget(QWidget):
             self.button_loadFile.resize(self.button_loadFile.sizeHint())
             self.button_loadFile.clicked.connect(self.on_loadFile)      
             
+            #create sliders to change the blackval and whiteval of the image
+            self.label_slider_blackval = QLabel('Black value: ')
+            self.slider_blackval = QSlider(Qt.Vertical)
+            self.slider_blackval.setMinimum(0)
+            self.slider_blackval.setMaximum(100)
+            self.slider_blackval.setValue(0)
+            #self.slider_blackval.setTickPosition(QSlider.TicksBelow)
+            #self.slider_blackval.setTickInterval(5)
+            self.slider_blackval.valueChanged.connect(self.change_blackWhiteVal)
+            
+            self.label_slider_whiteval = QLabel('White value: ')
+            self.slider_whiteval = QSlider(Qt.Vertical)
+            self.slider_whiteval.setMinimum(0)
+            self.slider_whiteval.setMaximum(100)
+            self.slider_whiteval.setValue(0)
+            #self.slider_whiteval.setTickPosition(QSlider.TicksBelow)
+            #self.slider_whiteval.setTickInterval(5)
+            self.slider_whiteval.valueChanged.connect(self.change_blackWhiteVal)
+            
+            #reset the black and white values
+            self.button_reset_blackWhiteVal = QPushButton('Reset black and white value')
+            self.button_reset_blackWhiteVal.resize(self.button_reset_blackWhiteVal.sizeHint())
+            self.button_reset_blackWhiteVal.clicked.connect(self.on_resetBlackWhiteVal)
+            
             #label to display current results folder
             self.label_resultsfolder = QLabel('Current results folder: ')
             self.label_resultsfolder.setFont(QFont("Times",weight=QFont.Bold))
@@ -158,15 +182,17 @@ class TableWidget(QWidget):
             self.progressbar_loadStack.setMaximum(1)  
             self.progressbar_loadStack.setValue(0)
             
+            col_left = 0
+            col_right =  0, 1, 2
             self.tab1.layout = QGridLayout(self)
             self.tab1.layout.setSpacing(25)
-            self.tab1.layout.addWidget(self.button_reset,           1,  1)
+            self.tab1.layout.addWidget(self.button_reset,           1,  1, 1, 2)
             self.tab1.layout.addWidget(info_loadFile,               1,  0)
             self.tab1.layout.addWidget(label_loadFile,              2,  0)            
             self.tab1.layout.addWidget(self.label_fps,              4,  0)
-            self.tab1.layout.addWidget(self.line_fps,               4,  1)
+            self.tab1.layout.addWidget(self.line_fps,               4,  1, 1, 2)
             self.tab1.layout.addWidget(self.label_px_per_micron,    5,  0)
-            self.tab1.layout.addWidget(self.line_px_perMicron,      5,  1)
+            self.tab1.layout.addWidget(self.line_px_perMicron,      5,  1, 1, 2)
             self.tab1.layout.addWidget(self.button_loadFolder,      6,  0)
             self.tab1.layout.addWidget(self.button_loadFile,        7,  0)
             self.tab1.layout.addWidget(self.progressbar_loadStack,  8,  0)
@@ -176,8 +202,8 @@ class TableWidget(QWidget):
           #  self.tab1.layout.addWidget(self.button_selectROI,       12, 0)
            # self.tab1.layout.addWidget(self.button_manageROIs,      13, 0)
             self.tab1.layout.addWidget(self.image,                  14, 0)
-            self.tab1.layout.addWidget(self.label_resultsfolder,    15, 0)
-            self.tab1.layout.addWidget(self.button_change_resultsfolder, 15,0)
+            self.tab1.layout.addWidget(self.label_resultsfolder,    19, 0)
+            self.tab1.layout.addWidget(self.button_change_resultsfolder, 20,0)
             
             self.tab1.setLayout(self.tab1.layout)
 
@@ -1189,11 +1215,11 @@ class TableWidget(QWidget):
             self.line_px_perMicron.setText(str(self.OHW.videoMeta['microns_per_pixel']))            
             # disable input field if videoinfos.txt available? if self.OHW.videoMeta['infofile_exists'] == True: ....
             
+            self.add_sliders_blackWhiteVal()
+            self.on_resetBlackWhiteVal()
+            
             # display first image and update controls
-            self.display_firstImage(self.OHW.rawImageStack[0])
-#            self.imshow_firstImage = self.ax_firstIm.imshow(self.OHW.rawImageStack[0], cmap = 'gray', vmin = self.OHW.videoMeta["Blackval"], vmax = self.OHW.videoMeta["Whiteval"])
-#            self.canvas_firstImage.draw()            
-#            self.tab1.layout.addWidget(self.canvas_firstImage, 13,0)
+            self.display_firstImage(self.OHW.rawImageStack[0])            
             
             inputpath = str('Chosen folder: ' + str(self.OHW.inputpath))
             self.label_chosen_image.setText(inputpath)
@@ -1206,6 +1232,28 @@ class TableWidget(QWidget):
             self.button_change_resultsfolder.setEnabled(True)
             self.button_selectROI.setEnabled(True)
         
+        def add_sliders_blackWhiteVal(self):
+            """ add sliders for black and white value adaption to the tab, store original values
+            """
+            #store the original black and white values
+            self.blackval_orig = self.OHW.videoMeta["Blackval"]
+            self.whiteval_orig = self.OHW.videoMeta["Whiteval"]
+
+            #update slider information
+            self.slider_blackval.setMaximum(self.OHW.videoMeta["Whiteval"])
+            self.slider_whiteval.setMinimum(self.OHW.videoMeta["Blackval"])
+            self.slider_whiteval.setMaximum(self.OHW.videoMeta["Whiteval"]*3)
+            self.slider_blackval.setValue(self.OHW.videoMeta["Blackval"])
+            self.slider_whiteval.setValue(self.OHW.videoMeta["Whiteval"])
+            
+            #add sliders 
+            self.tab1.layout.addWidget(self.label_slider_blackval,  12,1)
+            self.tab1.layout.addWidget(self.slider_blackval,        13,1, 3, 1)
+            self.tab1.layout.addWidget(self.label_slider_whiteval,  12,2)
+            self.tab1.layout.addWidget(self.slider_whiteval,        13,2, 3, 1)
+            
+            self.tab1.layout.addWidget(self.button_reset_blackWhiteVal, 19, 1, 1, 2)
+            
         def on_changeResultsfolder(self):
             #choose a folder
             msg = 'Choose a new folder for saving your results'
@@ -1269,6 +1317,35 @@ class TableWidget(QWidget):
             self.canvas_firstImage.draw()            
             self.tab1.layout.addWidget(self.canvas_firstImage, 14,0) 
 
+        def change_blackWhiteVal(self):          
+            """ change the black and white values saved for image display
+            """
+            #save the new values to videoMeta
+            self.OHW.videoMeta["Blackval"] = self.slider_blackval.value()
+            self.OHW.videoMeta["Whiteval"] = self.slider_whiteval.value()
+#            
+#            #set allowed whitevals and blackvals            
+            self.slider_blackval.setMaximum(self.OHW.videoMeta["Whiteval"])
+            self.slider_whiteval.setMinimum(self.OHW.videoMeta["Blackval"])
+            
+            self.display_firstImage(image=self.OHW.rawImageStack[0])
+
+        def on_resetBlackWhiteVal(self):
+            """ resets the image display back to the original values
+            """
+             #save the new values to videoMeta
+            self.OHW.videoMeta["Blackval"] = self.blackval_orig
+            self.OHW.videoMeta["Whiteval"] = self.whiteval_orig
+            
+            self.slider_blackval.setValue(self.blackval_orig)
+            self.slider_whiteval.setValue(self.whiteval_orig)
+#            
+#            #set allowed whitevals and blackvals            
+#            self.slider_blackval.setMaximum(current_whiteval)
+#            self.slider_whiteval.setMinimum(current_blackval)
+            
+            self.display_firstImage(image=self.OHW.rawImageStack[0])
+            
         def display_ROI(self, ROI, ROI_nr, row):
             fig_ROI, ax_ROI = plt.subplots(1,1)
             ax_ROI.axis('off')
@@ -1311,6 +1388,9 @@ class TableWidget(QWidget):
 #            self.canvas_firstImage.draw()            
 #            self.tab1.layout.addWidget(self.canvas_firstImage, 13,0) 
 #            
+            self.add_sliders_blackWhiteVal()
+            self.on_resetBlackWhiteVal()
+            
             inputpath = str('Chosen file: ' + str(self.OHW.inputpath))
             self.label_chosen_image.setText(inputpath)
             self.button_getMVs.setEnabled(True)
