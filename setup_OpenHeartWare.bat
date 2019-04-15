@@ -5,7 +5,5 @@ SET anaconda_folder=C:\ProgramData\Anaconda3\Scripts\activate.bat
 REM START THE SETUP
 @echo on
 call %anaconda_folder%
-call conda env create -f OHW.YML
-call activate OHW
-call python create_config_file.py
+call conda env create -f OHW.yml
 pause
