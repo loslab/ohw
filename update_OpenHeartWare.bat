@@ -7,5 +7,4 @@ windir%\System32\cmd.exe "/K"
 @echo on
 call "%anaconda_folder%"
 call conda env update -f=ohw.yml
-call python libraries\create_config_file.py
 pause
