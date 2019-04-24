@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from matplotlib import pyplot as plt
+import cv2
 import numpy as np
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import QMessageBox
@@ -87,3 +88,22 @@ def msgbox(self, message):
     msg = QMessageBox.information(self, msg_title, msg_text, QMessageBox.Ok)
     if msg == QMessageBox.Ok:
         pass  
+        
+def scale_ImageStack(imageStack, px_longest = 1024):
+    """
+        rescales imageStack such that longest side equals px_longest
+    """
+    w, h = imageStack.shape[1], imageStack.shape[2]
+    longest_side = max(w,h)
+    scalingfactor = px_longest/longest_side
+    
+    
+    scaledImages = []
+    for image in imageStack:
+        scaledImages.append(cv2.resize(image, None, fx = scalingfactor, fy = scalingfactor))
+
+    scaledImageStack = np.array(scaledImages)
+    print("shape of scaled down image stack: ", scaledImageStack.shape)
+    print("scalingfactor: ", scalingfactor)
+    
+    return scaledImageStack, scalingfactor

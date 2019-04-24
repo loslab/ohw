@@ -528,7 +528,7 @@ class OHW():
         """
         # move into filter module in future?
         summed_absMotions = np.sum(self.absMotions, axis = 0)  # select only points in array with nonzero movement
-        movement_mask = summed_absMotions == 0
+        movement_mask = (summed_absMotions == 0)
         
         filtered_absMotions = np.copy(self.absMotions)
         filtered_absMotions[:,movement_mask] = np.nan
