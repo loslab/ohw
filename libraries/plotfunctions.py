@@ -32,7 +32,7 @@ def plot_Kinetics(timeindex, mean_absMotions, Peaks=None, mark_peaks=False, file
         ax_kinetics.plot(Peaks["t_peaks_high_sorted"], Peaks["peaks_high_sorted"], marker='^', ls="", ms=5, color='r' )  #easier plotting without for loop          
     
     if file_name != None:
-        fig_kinetics.savefig(file_name, dpi = 300, bbox_inches = 'tight') #, bbox_inches = 'tight', pad_inches = 0.4)
+        fig_kinetics.savefig(str(file_name), dpi = 300, bbox_inches = 'tight') #, bbox_inches = 'tight', pad_inches = 0.4)
     return fig_kinetics, ax_kinetics
 
 def plot_TimeAveragedMotions(avg_absMotion, avg_MotionX, avg_MotionY, max_avgMotion, savefolder, file_ext):

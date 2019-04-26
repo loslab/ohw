@@ -1529,7 +1529,7 @@ class TableWidget(QWidget):
             self.initialize_kinetics()
             
             # fill graphs with data from first frame
-            #self.initialize_MV_graphs()
+            self.initialize_MV_graphs()
                         
             # initialize time averaged motion
             #self.initializeTimeAveragedMotion()
@@ -1564,13 +1564,9 @@ class TableWidget(QWidget):
             
         def initialize_MV_graphs(self):
             print("initialize MV graphs")
-            # initialize heatmaps, display first frame
+            # initialize heatmaps, display first frame           
             
-            #max_motion = self.mean_maxMotion
-            #scale_max = np.mean(self.OHW.absMotions)    #should be mean of 1d-array of max motions
-            #scale_max = np.mean(np.max(self.OHW.absMotions,axis=(1,2)))
-            
-            scale_max = self.current_dataset.get_scale_maxMotion()
+            scale_max = self.current_dataset.get_scale_maxMotion2()
             
             self.imshow_heatmaps = self.ax_heatmaps.imshow(self.current_dataset.absMotions[0], vmin = 0, vmax = scale_max, cmap = 'jet', interpolation = 'bilinear')
             self.slider_heatmaps.setMaximum(self.current_dataset.absMotions.shape[0]-1)
@@ -1586,7 +1582,9 @@ class TableWidget(QWidget):
             
             self.canvas_heatmap.draw()
             self.tab4.layout.addWidget(self.canvas_heatmap, 8, 0)
-                       
+            
+            '''
+            
             # initialize quivers, display first frame
             #new figure
             # display figures for quivers in Canvas
@@ -1628,6 +1626,8 @@ class TableWidget(QWidget):
             
             self.canvas_quivers.draw()
             self.tab4.layout.addWidget(self.canvas_quivers,  8,  2)
+            
+            '''
 
         def on_saveMVs(self):
             """

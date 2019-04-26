@@ -211,12 +211,20 @@ class PeakDetection():
         save_file = str(results_folder / 'EKG.xlsx')
         workbook_ekg.save(save_file)
     
-    def exportStatistics(self, results_folder, inputpath, blockwidth, delay, fps, maxShift, scalingfactor):
+    def exportStatistics(self, analysis_meta):
         font_bold = Font(bold=True)                     
         workbook_statistics = Workbook()
         
         sheet = workbook_statistics.active
         sheet.Name = 'Statistics'
+        
+        inputpath = analysis_meta["inputpath"]
+        results_folder = analysis_meta["results_folder"]
+        scalingfactor = analysis_meta["scalingfactor"]
+        blockwidth = analysis_meta["MV_parameters"]["blockwidth"]
+        delay = analysis_meta["MV_parameters"]["delay"]
+        max_shift = analysis_meta["MV_parameters"]["max_shift"]
+        
         
         #add the used parameters
         sheet.append(['Evaluated file/ folder: ', str(inputpath)])
@@ -224,8 +232,8 @@ class PeakDetection():
         sheet.append(['scaling factor for calculation: ', scalingfactor, 'rel. to input'])
         sheet.append(['width of macroblocks ', blockwidth, 'pixels'])
         sheet.append(['delay between images', delay, 'frames'])
-        sheet.append(['framerate', fps, 'frames/sec'])
-        sheet.append(['maximum allowed movement ', maxShift, 'pixels'])
+        #sheet.append(['framerate', fps, 'frames/sec']) #really needed?
+        sheet.append(['maximum allowed movement ', max_shift, 'pixels'])
         
         #add the statistical results         
         sheet.append([''])
@@ -236,7 +244,7 @@ class PeakDetection():
         sheet.append(['mean contraction interval', self.time_intervals["contraction_interval_mean"], self.time_intervals["contraction_interval_std"], 'sec'])
         sheet.append(['mean relaxation interval', self.time_intervals["relaxation_interval_mean"], self.time_intervals["relaxation_interval_std"], 'sec'])
         sheet.append(['mean interval between contraction and relaxation', self.time_intervals["contr_relax_interval_mean"], self.time_intervals["contr_relax_interval_std"], 'sec'])
-        sheet.append(['heart rate', self.bpm["bpm_mean"], self.bpm["bpm_std"], 'beats/min'])
+        sheet.append(['beating rate', self.bpm["bpm_mean"], self.bpm["bpm_std"], 'beats/min'])
              
         #turn some cells'style to bold
         bold_cells = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A10', 'A11', 'A12', 'A13', 'A14', 'A15', 'A16', 'B10', 'C2','C10', 'D10']

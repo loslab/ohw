@@ -78,6 +78,18 @@ def create_scalebar(dimX_px, microns_per_pixel):
     
     output_scalebar = np.array(scalebar)
     return output_scalebar
+
+def insert_scalebar(imageStack, videometa, analysis_meta):
+    '''
+        inserts scalebar into imageStack (3D-Array)
+        take care: modifies imageStack
+    '''
+    sizeX = imageStack.shape[1]
+    resolution_units = videometa["microns_per_pixel"] / analysis_meta["scalingfactor"]
+    scalebar = helpfunctions.create_scalebar(sizeX,resolution_units)*(videometa["Whiteval"]/255)    #/255 works, check again...
+    scale_width_px = scalebar.shape[0]
+    scale_height_px = scalebar.shape[1]
+    imageStack[:,-1-scale_width_px:-1,-1-scale_height_px:-1] = scalebar    
     
 def msgbox(self, message):
     """

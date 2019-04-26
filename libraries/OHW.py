@@ -29,7 +29,7 @@ class OHW():
         self.rawMVs = None              # array for raw motion vectors (MVs)
         self.unitMVs = None             # MVs in correct unit (microns)
 
-        self.MV_parameters = None       # dict for MV parameters
+        #self.MV_parameters = None       # dict for MV parameters
         
         # bundle these parameters in dict?
         self.absMotions = None          # absolulte motions, either from MVs or from intensity
@@ -51,30 +51,36 @@ class OHW():
     
     def import_video(self, inputpath, *args, **kwargs):        
         self.rawImageStack, self.videometa = videoreader.import_video(inputpath)
-        self.set_results_folder()
+        self.set_auto_results_folder()
         
     def import_video_thread(self, inputpath):
         self.thread_import_video = helpfunctions.turn_function_into_thread(self.import_video, emit_progSignal = True, inputpath = inputpath)
         return self.thread_import_video       
         
     def set_video(self, rawImageStack, videometa):
+        '''
+        set video data + metadata directly instead of importing whole video again
+        '''
         self.rawImageStack, self.videometa = rawImageStack, videometa
-        self.set_results_folder()    
+        self.set_auto_results_folder()    
     
-    def set_results_folder(self):
+    def set_auto_results_folder(self):
         # set results folder
         inputpath = self.videometa["inputpath"]        
         if self.videometa["input_type"] == 'videofile':
             self.analysis_meta["results_folder"] = inputpath.parent / ("results_" + str(inputpath.stem) )
         else:
             self.analysis_meta["results_folder"] = inputpath.parent / "results"
-            
+        self.analysis_meta["inputpath"] = inputpath
+         
     def set_analysisImageStack(self, px_longest = None, roi = None):
-        """
+        '''
+            specifies resolution + roi of video to be analyzed
             px_longest: resolution of longest side
-            px_longest = None: take orig resolution
+            if px_longest = None: original resolution is used
             roi: specify region of interest, coordinates of rectangular that was selected as ROI in unmodified coordinates
-        """
+        '''
+        
         self.analysis_meta.update({'px_longest': px_longest, 'roi': roi, "scalingfactor":1})
         
         self.analysisImageStack = self.rawImageStack
@@ -118,7 +124,10 @@ class OHW():
         self.thread_calculate_motion = helpfunctions.turn_function_into_thread(self.calculate_motion, emit_progSignal=True, **parameters)
         return self.thread_calculate_motion 
     
-    def initialize_motion(self):      
+    def initialize_motion(self):
+        '''
+            calculate 2D & 1D data representations after motion determination
+        '''
         
         #distinguish between MVs and motion here
         
@@ -149,27 +158,19 @@ class OHW():
     def save_MVs(self):
         """
             saves raw MVs as npy file
+            ... replace with functions which pickles all data in class?
         """
         results_folder = self.analysis_meta["results_folder"]
         results_folder.mkdir(parents = True, exist_ok = True) #create folder for results if it doesn't exist
         
         save_file = str(results_folder / 'rawMVs.npy')
-        np.save(save_file, self.rawMVs)   #MotionVectorsAll
+        np.save(save_file, self.rawMVs)
         save_file_units = str(results_folder / 'unitMVs.npy')
         np.save(save_file_units, self.unitMVs)            
 
-    def plot_scalebar(self):
-        """
-            plots scalebar onto np-array
-        """
-        # move to other module
-        sizeX = self.scaledImageStack.shape[1]
-        resolution_units = self.videometa["microns_per_pixel"] / self.scalingfactor
-        scalebar = helpfunctions.create_scalebar(sizeX,resolution_units)*(self.videometa["Whiteval"]/255)    #Oli
-        scale_width_px = scalebar.shape[0]
-        scale_height_px = scalebar.shape[1]
-        self.scaledImageStack[:,-1-scale_width_px:-1,-1-scale_height_px:-1] = scalebar                 
-    
+    #def plot_scalebar(self):
+    # moved to module: helpfunctions.insert_scalebar(imageStack, videometa, analysis_meta)
+             
     def save_heatmap(self, singleframe = False, keyword = None, subfolder = None, *args, **kwargs):
         """
             saves either the selected frame (singleframe = framenumber) or the whole heatmap video (=False)
@@ -192,7 +193,7 @@ class OHW():
         saveax_heatmaps.set_title('Motion [µm/s]', fontsize = 16, fontweight = 'bold')
         
         if keyword == None:
-            path_heatmaps = self.results_folder / "heatmap_results"
+            path_heatmaps = self.analysis_meta["results_folder"]/ "heatmap_results"
         elif keyword == 'batch':
             path_heatmaps = subfolder / "heatmap_results"
         path_heatmaps.mkdir(parents = True, exist_ok = True) #create folder for results
@@ -283,7 +284,7 @@ class OHW():
         quiver_quivers = saveax_quivers.quiver(self.MotionCoordinatesX[qslice], self.MotionCoordinatesY[qslice], self.MotionX[0][qslice], self.MotionY[0][qslice], pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", scale = arrowscale,  width = 4, headwidth = 3, headlength = 5, headaxislength = 5, minshaft =1.5) #width = 4, headwidth = 2, headlength = 3
         #saveax_quivers.set_title('Motion [µm/s]', fontsize = 16, fontweight = 'bold')
 
-        path_quivers = self.results_folder / "quiver_results"
+        path_quivers = self.analysis_meta["results_folder"] / "quiver_results"
         path_quivers.mkdir(parents = True, exist_ok = True) #create folder for results
 
         # parameters for cropping white border in output video
@@ -405,7 +406,7 @@ class OHW():
 
         #saveax_quivers.set_title('Motion [µm/s]', fontsize = 16, fontweight = 'bold')
         if keyword == None:
-            path_quivers = self.results_folder / "quiver_results"
+            path_quivers = self.analysis_meta["results_folder"] / "quiver_results"
         elif keyword == 'batch':
             path_quivers = subfolder / "quiver_results"
         path_quivers.mkdir(parents = True, exist_ok = True) #create folder for results
@@ -456,18 +457,15 @@ class OHW():
         else:
             return clip_full
     
-    def save_MVs(self):
-        """
-            saves raw MVs as npy file
-        """
-        save_file = str(self.results_folder / 'rawMVs.npy')
-        np.save(save_file, self.rawMVs)   #MotionVectorsAll
-        save_file_units = str(self.results_folder / 'unitMVs.npy')
-        np.save(save_file_units, self.unitMVs)
-    
     def get_scale_maxMotion(self):
         """
+            --> deprecated
             returns maximum for scaling of heatmap + arrows in quiver
+            selects frame with max motion (= one pixel), picks 95th percentile in this frame as scale max
+            ... find better metric
+            #max_motion = self.mean_maxMotion
+            #scale_max = np.mean(self.OHW.absMotions)    #should be mean of 1d-array of max motions
+            #scale_max = np.mean(np.max(self.OHW.absMotions,axis=(1,2)))
         """
         
         max_motion_framenr = np.argmax(self.mean_absMotions)
@@ -481,7 +479,6 @@ class OHW():
             v2: takes all frames into account, select positions where motion > 0, max represents 80th percentile
         """
         
-        #absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])
         absMotions_flat = self.absMotions[self.absMotions>0].flatten()
         scale_min, scale_maxMotion = np.percentile(absMotions_flat, (0, 80))   
         return scale_maxMotion
@@ -510,19 +507,19 @@ class OHW():
         return self.PeakDetection.bpm
     
     def export_peaks(self):
-        self.PeakDetection.export_peaks(self.results_folder)
+        self.PeakDetection.export_peaks(self.analysis_meta["results_folder"])
     
     def exportEKG_CSV(self):
-        self.PeakDetection.exportEKG_CSV(self.results_folder)
+        self.PeakDetection.exportEKG_CSV(self.analysis_meta["results_folder"])
     
     def exportStatistics(self):
-        self.PeakDetection.exportStatistics(self.results_folder, self.inputpath, self.MV_parameters["blockwidth"], self.MV_parameters["delay"], self.videometa["fps"], self.MV_parameters["max_shift"], self.scalingfactor)#results_folder, inputpath, blockwidth, delay, fps, maxShift, scalingfactor):
+        self.PeakDetection.exportStatistics(self.analysis_meta)
     
     def plot_beatingKinetics(self, mark_peaks = False, filename=None, keyword=None):
         if keyword == None:
             filename = filename[0]
         if filename is None:
-            filename=self.results_folder + 'beating_kinetics.png'
+            filename=self.analysis_meta["results_folder"]/ 'beating_kinetics.png'
                 
         plotfunctions.plot_Kinetics(self.timeindex, self.mean_absMotions, self.PeakDetection.sorted_peaks, mark_peaks, filename)
   
@@ -544,7 +541,7 @@ class OHW():
         self.max_avgMotion = np.max ([self.avg_absMotion, self.avg_MotionX, self.avg_MotionY]) # avg_absMotion should be enough
     
     def plot_TimeAveragedMotions(self, file_ext):
-        plotfunctions.plot_TimeAveragedMotions(self.avg_absMotion, self.avg_MotionX, self.avg_MotionY, self.max_avgMotion, self.results_folder, file_ext)
+        plotfunctions.plot_TimeAveragedMotions(self.avg_absMotion, self.avg_MotionX, self.avg_MotionY, self.max_avgMotion, self.analysis_meta["results_folder"], file_ext)
     
     def createROIImageStack(self, r):
         #r are coordinates of rectangular that was selected as ROI
