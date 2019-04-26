@@ -1445,7 +1445,7 @@ class TableWidget(QWidget):
             #allowed file types:
             file_types = "PNG (*.png);;JPEG (*.jpeg);;TIFF (*.tiff);;BMP(*.bmp);; Scalable Vector Graphics (*.svg)"
             #let the user choose a folder from the starting path
-            path = str(pathlib.PureWindowsPath(self.current_dataset.results_folder / 'beating_kinetics.PNG'))
+            path = str(pathlib.PureWindowsPath(self.current_dataset.analysis_meta["results_folder"] / 'beating_kinetics.PNG'))
             filename_save = QFileDialog.getSaveFileName(None, 'Choose a folder and enter a filename', path, file_types)
 
             #if 'cancel' was pressed: simply do nothing and wait for user to click another button
@@ -1512,7 +1512,6 @@ class TableWidget(QWidget):
             if not hasattr(self, 'current_dataset'):
                 self.current_dataset = self.OHW
             
-            #self.current_dataset.initialize_calculatedMVs()
             self.current_dataset.initialize_motion()
             
             #set the succeed button to green:
@@ -1527,7 +1526,7 @@ class TableWidget(QWidget):
             self.slider_heatmaps.setEnabled(True)
             self.slider_quiver.setEnabled(True)
             
-            #self.initialize_kinetics()
+            self.initialize_kinetics()
             
             # fill graphs with data from first frame
             #self.initialize_MV_graphs()
@@ -1557,29 +1556,11 @@ class TableWidget(QWidget):
             
             self.fig_kinetics, self.ax_kinetics = plotfunctions.plot_Kinetics(self.current_dataset.timeindex, self.current_dataset.mean_absMotions, Peaks=None, mark_peaks=False, file_name=None)#'test.png'           
             
-            #plt.subplots(1,1)
-            #self.fig_kinetics.set_size_inches(16,12)
-            
             self.canvas_kinetics = FigureCanvas(self.fig_kinetics)  
             self.fig_kinetics.subplots_adjust(bottom = 0.2)            
-            '''
-            self.previous_plot = self.ax_kinetics.plot(self.current_dataset.timeindex, self.current_dataset.mean_absMotions, '-', linewidth = 2)
-            self.ax_kinetics.set_xlim(left = 0, right = self.current_dataset.timeindex[-1])
-            self.fig_kinetics.subplots_adjust(bottom = 0.2)
             
-            #self.ax.set_title('Beating kinetics', fontsize = 26)
-            self.ax_kinetics.set_xlabel('t [s]', fontsize = 22)
-            self.ax_kinetics.set_ylabel(u'Mean Absolute Motion [\xb5m/s]', fontsize = 18)
-            self.ax_kinetics.tick_params(labelsize = 20)
-            
-            self.ax_kinetics.spines['top'].set_linewidth(2)
-            self.ax_kinetics.spines['right'].set_linewidth(2)
-            self.ax_kinetics.spines['bottom'].set_linewidth(2)
-            self.ax_kinetics.spines['left'].set_linewidth(2)            
-            '''
-            
+            self.tab3.layout.addWidget(self.canvas_kinetics, 7,0)
             self.canvas_kinetics.draw()
-            self.tab3.layout.addWidget(self.canvas_kinetics,    7,0)
             
         def initialize_MV_graphs(self):
             print("initialize MV graphs")

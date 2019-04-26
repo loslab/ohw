@@ -24,19 +24,15 @@ class OHW():
     """
     def __init__(self):
         
-        """
-        self.inputpath = None #
         self.rawImageStack = None       # array for raw imported imagestack
-        self.ROIImageStack = None       # array for ROIs
-        self.scaledImageStack = None
+        #self.ROIImageStack = None      # array for ROIs
         self.rawMVs = None              # array for raw motion vectors (MVs)
-        self.videoMeta = {"microns_per_pixel":1,"fps":1,"blackval":0,"whiteval":None}   # dict of video metadata: microns_per_pixel, fps, blackval, whiteval, 
         self.unitMVs = None             # MVs in correct unit (microns)
-        self.scalingfactor = None
 
         self.MV_parameters = None       # dict for MV parameters
-        self.results_folder = None      # folder for saving results
-        self.absMotions = None
+        
+        # bundle these parameters in dict?
+        self.absMotions = None          # absolulte motions, either from MVs or from intensity
         self.mean_absMotions = None     # for 1D-representation
         self.avg_absMotion = None       # time averaged absolute motion
         self.avg_MotionX = None         # time averaged x-motion
@@ -47,9 +43,10 @@ class OHW():
         self.PeakDetection = PeakDetection.PeakDetection()    # class which detects + saves peaks
        
         #store exceptions that appear
-        self.exceptions = None
-        self.isROI_OHW = False
-        """
+        #self.exceptions = None
+        #self.isROI_OHW = False
+        
+        self.videometa = {}   # dict of video metadata: microns_per_pixel, fps, blackval, whiteval, 
         self.analysis_meta = {"date": datetime.datetime.now(), "version": __version__}
     
     def import_video(self, inputpath, *args, **kwargs):        
@@ -123,14 +120,14 @@ class OHW():
     
     def initialize_motion(self):      
         
-        #distinguish between MVs and motion only here
+        #distinguish between MVs and motion here
         
         scalingfactor, delay = self.analysis_meta["scalingfactor"], self.analysis_meta["MV_parameters"]["delay"]
         self.unitMVs = (self.rawMVs / scalingfactor) * self.videometa["microns_per_pixel"] * (self.videometa["fps"] / delay)
         self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame        
     
-        #self.get_mean_absMotion()
-        #self.calc_TimeAveragedMotion()
+        self.get_mean_absMotion()
+        self.calc_TimeAveragedMotion()
     
     def get_mean_absMotion(self):
         """
@@ -141,11 +138,13 @@ class OHW():
         summed_absMotions = np.sum(self.absMotions, axis = 0)  # select only points in array with nonzero movement
         movement_mask = (summed_absMotions == 0)
         
-        filtered_absMotions = np.copy(self.absMotions)
+        filtered_absMotions = np.copy(self.absMotions) #copy needed, don't influence absMotions
         filtered_absMotions[:,movement_mask] = np.nan
         self.mean_absMotions = np.nanmean(filtered_absMotions, axis=(1,2))
-        self.timeindex = (np.arange(self.mean_absMotions.shape[0]) / self.videoMeta["fps"]).round(2)
-        np.save(str(self.results_folder / 'beating_kinetics.npy'), np.array([self.timeindex,self.mean_absMotions]))
+        
+        self.analysis_meta["results_folder"].mkdir(parents = True, exist_ok = True) #create folder for results if it doesn't exist
+        self.timeindex = (np.arange(self.mean_absMotions.shape[0]) / self.videometa["fps"]).round(2)
+        np.save(str(self.analysis_meta["results_folder"] / 'beating_kinetics.npy'), np.array([self.timeindex,self.mean_absMotions]))
         
     def save_MVs(self):
         """
@@ -165,54 +164,11 @@ class OHW():
         """
         # move to other module
         sizeX = self.scaledImageStack.shape[1]
-        resolution_units = self.videoMeta["microns_per_pixel"] / self.scalingfactor
-        scalebar = helpfunctions.create_scalebar(sizeX,resolution_units)*(self.videoMeta["Whiteval"]/255)    #Oli
+        resolution_units = self.videometa["microns_per_pixel"] / self.scalingfactor
+        scalebar = helpfunctions.create_scalebar(sizeX,resolution_units)*(self.videometa["Whiteval"]/255)    #Oli
         scale_width_px = scalebar.shape[0]
         scale_height_px = scalebar.shape[1]
-        self.scaledImageStack[:,-1-scale_width_px:-1,-1-scale_height_px:-1] = scalebar        
-    
-    def calculate_MVs_thread(self, **parameters):
-        self.thread_calculate_MVs = helpfunctions.turn_function_into_thread(self.calculate_MVs, emit_progSignal=True, **parameters)
-        return self.thread_calculate_MVs            
-    
-    '''
-    def initialize_calculatedMVs(self):
-        self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results
-        #self.rawMVs = self.thread_BM_stack.MotionVectorsAll
-       # print('in initalia_calcMVS')
-        #print(self.rawMVs.shape)
-        self.unitMVs = (self.rawMVs / self.scalingfactor) * self.videoMeta["microns_per_pixel"] * (self.videoMeta["fps"] / self.MV_parameters["delay"])
-        self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame
-    
-        self.get_mean_absMotion()
-        self.calc_TimeAveragedMotion()
-    '''
-    
-    def calculate_MVs(self, method = 'BM', progressSignal = None, **parameters):
-        """
-            calculates motionvectors MVs of imagestack based on method and parameters
-        """
-    
-        """
-            switch method:
-            
-            -blockmatch
-            -gunnar farnbäck
-            -lucas-kanade
-            
-            self.rawMVs = ...
-        """
-        self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results        
-        self.MV_parameters = parameters   #store parameters which were used for the calculation of MVs
-        
-        if method == 'BM':   
-            self.rawMVs = OFlowCalc.BM_stack(self.scaledImageStack, progressSignal = progressSignal, **parameters)
-        # these are double! also in initialize_calculatedMVs, remove from here if it does not conflict...
-        self.unitMVs = (self.rawMVs / self.scalingfactor) * self.videoMeta["microns_per_pixel"] * (self.videoMeta["fps"] / self.MV_parameters["delay"])
-        self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame
-        
-        self.get_mean_absMotion()
-        self.calc_TimeAveragedMotion()
+        self.scaledImageStack[:,-1-scale_width_px:-1,-1-scale_height_px:-1] = scalebar                 
     
     def save_heatmap(self, singleframe = False, keyword = None, subfolder = None, *args, **kwargs):
         """
@@ -252,16 +208,16 @@ class OHW():
         # save video
             def make_frame_mpl(t):
 
-                frame = int(round(t*self.videoMeta["fps"]))
+                frame = int(round(t*self.videometa["fps"]))
                 imshow_heatmaps.set_data(self.absMotions[frame])
 
                 return mplfig_to_npimage(savefig_heatmaps) # RGB image of the figure
             
             heatmap_filename = str(path_heatmaps / 'heatmapvideo.mp4')
-            duration = 1/self.videoMeta["fps"] * self.absMotions.shape[0]
+            duration = 1/self.videometa["fps"] * self.absMotions.shape[0]
             animation = mpy.VideoClip(make_frame_mpl, duration=duration)
          #   animation.resize((1500,800))
-            animation.write_videofile(heatmap_filename, fps=self.videoMeta["fps"])    
+            animation.write_videofile(heatmap_filename, fps=self.videometa["fps"])    
 
     def save_heatmap_thread(self, singleframe):
         self.thread_save_heatmap = helpfunctions.turn_function_into_thread(self.save_heatmap, singleframe=False)
@@ -316,13 +272,13 @@ class OHW():
         #saveax_quivers.axis('off')   
     
         ###### prepare video axis
-        imshow_video = saveax_video.imshow(self.scaledImageStack[0], vmin = self.videoMeta["Blackval"], vmax = self.videoMeta["Whiteval"], cmap = "gray")
+        imshow_video = saveax_video.imshow(self.scaledImageStack[0], vmin = self.videometa["Blackval"], vmax = self.videometa["Whiteval"], cmap = "gray")
         
         qslice=(slice(None,None,skipquivers),slice(None,None,skipquivers))
         distance_between_arrows = blockwidth * skipquivers
         arrowscale = 1 / (distance_between_arrows / scale_max)
                
-        imshow_quivers = saveax_quivers.imshow(self.scaledImageStack[0], vmin = self.videoMeta["Blackval"], vmax = self.videoMeta["Whiteval"], cmap = "gray")
+        imshow_quivers = saveax_quivers.imshow(self.scaledImageStack[0], vmin = self.videometa["Blackval"], vmax = self.videometa["Whiteval"], cmap = "gray")
         # adjust desired quiver plotstyles here!
         quiver_quivers = saveax_quivers.quiver(self.MotionCoordinatesX[qslice], self.MotionCoordinatesY[qslice], self.MotionX[0][qslice], self.MotionY[0][qslice], pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", scale = arrowscale,  width = 4, headwidth = 3, headlength = 5, headaxislength = 5, minshaft =1.5) #width = 4, headwidth = 2, headlength = 3
         #saveax_quivers.set_title('Motion [µm/s]', fontsize = 16, fontweight = 'bold')
@@ -359,7 +315,7 @@ class OHW():
             # save video
             def make_frame_mpl(t):
                 #calculate the current frame number:
-                frame = int(round(t*self.videoMeta["fps"]))
+                frame = int(round(t*self.videometa["fps"]))
                 
  #               if len(self.timeindex) > frame:
  #                   print('Frame: {}, Timeindex: {}'.format(frame, self.timeindex[frame]))
@@ -388,13 +344,13 @@ class OHW():
                 # call adjust_bbox to save only the given area
             
             quivers_filename = str(path_quivers / 'quivervideo3.mp4')
-            duration = 1/self.videoMeta["fps"] * self.MotionX.shape[0]
+            duration = 1/self.videometa["fps"] * self.MotionX.shape[0]
             animation = mpy.VideoClip(make_frame_mpl, duration=duration)
             
             #cut clip if desired by user
             animation_to_save = self.cut_clip(clip_full=animation, t_cut=t_cut)
            
-            animation_to_save.write_videofile(quivers_filename, fps=self.videoMeta["fps"])
+            animation_to_save.write_videofile(quivers_filename, fps=self.videometa["fps"])
             
 
     def save_quivervid3_thread(self, skipquivers, t_cut):
@@ -436,7 +392,7 @@ class OHW():
         distance_between_arrows = blockwidth * skipquivers
         arrowscale = 1 / (distance_between_arrows / scale_max)
 
-        imshow_quivers = saveax_quivers.imshow(self.scaledImageStack[0], vmin = self.videoMeta["Blackval"], vmax = self.videoMeta["Whiteval"], cmap = "gray")
+        imshow_quivers = saveax_quivers.imshow(self.scaledImageStack[0], vmin = self.videometa["Blackval"], vmax = self.videometa["Whiteval"], cmap = "gray")
 
 #        print('Size of quiver data:')
 #        print(self.MotionCoordinatesX.shape)
@@ -467,7 +423,7 @@ class OHW():
         # save video
             def make_frame_mpl(t):
 
-                frame = int(round(t*self.videoMeta["fps"]))
+                frame = int(round(t*self.videometa["fps"]))
                 imshow_quivers.set_data(self.scaledImageStack[frame])
                 try:
                     quiver_quivers.set_UVC(self.MotionX[frame][qslice], self.MotionY[frame][qslice])
@@ -477,13 +433,13 @@ class OHW():
                 return mplfig_to_npimage(savefig_quivers) # RGB image of the figure
             
             quivers_filename = str(path_quivers / 'quivervideo.mp4')
-            duration = 1/self.videoMeta["fps"] * self.MotionX.shape[0]
+            duration = 1/self.videometa["fps"] * self.MotionX.shape[0]
             animation = mpy.VideoClip(make_frame_mpl, duration=duration)
             
             #cut clip if desired by user
             animation_to_save = self.cut_clip(clip_full=animation, t_cut=t_cut)
             
-            animation_to_save.write_videofile(quivers_filename, fps=self.videoMeta["fps"])
+            animation_to_save.write_videofile(quivers_filename, fps=self.videometa["fps"])
 
     def save_quiver_thread(self, singleframe, skipquivers, t_cut):
         self.thread_save_quiver = helpfunctions.turn_function_into_thread(self.save_quiver, singleframe=False, skipquivers=skipquivers, t_cut=t_cut)
@@ -509,21 +465,6 @@ class OHW():
         save_file_units = str(self.results_folder / 'unitMVs.npy')
         np.save(save_file_units, self.unitMVs)
     
-    def get_mean_absMotion(self):
-        """
-            calculates movement mask (eliminates all pixels where no movement occurs through all frames)
-            applies mask to absMotions and calculate mean motion per frame
-        """
-        # move into filter module in future?
-        summed_absMotions = np.sum(self.absMotions, axis = 0)  # select only points in array with nonzero movement
-        movement_mask = (summed_absMotions == 0)
-        
-        filtered_absMotions = np.copy(self.absMotions)
-        filtered_absMotions[:,movement_mask] = np.nan
-        self.mean_absMotions = np.nanmean(filtered_absMotions, axis=(1,2))
-        self.timeindex = (np.arange(self.mean_absMotions.shape[0]) / self.videoMeta["fps"]).round(2)
-        np.save(str(self.results_folder / 'beating_kinetics.npy'), np.array([self.timeindex,self.mean_absMotions]))
-            
     def get_scale_maxMotion(self):
         """
             returns maximum for scaling of heatmap + arrows in quiver
@@ -575,7 +516,7 @@ class OHW():
         self.PeakDetection.exportEKG_CSV(self.results_folder)
     
     def exportStatistics(self):
-        self.PeakDetection.exportStatistics(self.results_folder, self.inputpath, self.MV_parameters["blockwidth"], self.MV_parameters["delay"], self.videoMeta["fps"], self.MV_parameters["max_shift"], self.scalingfactor)#results_folder, inputpath, blockwidth, delay, fps, maxShift, scalingfactor):
+        self.PeakDetection.exportStatistics(self.results_folder, self.inputpath, self.MV_parameters["blockwidth"], self.MV_parameters["delay"], self.videometa["fps"], self.MV_parameters["max_shift"], self.scalingfactor)#results_folder, inputpath, blockwidth, delay, fps, maxShift, scalingfactor):
     
     def plot_beatingKinetics(self, mark_peaks = False, filename=None, keyword=None):
         if keyword == None:
@@ -600,7 +541,7 @@ class OHW():
         absMotionY = np.abs(MotionY)
         self.avg_MotionY = np.nanmean(absMotionY, axis = 0)
 
-        self.max_avgMotion = np.max ([self.avg_absMotion, self.avg_MotionX, self.avg_MotionY])    
+        self.max_avgMotion = np.max ([self.avg_absMotion, self.avg_MotionX, self.avg_MotionY]) # avg_absMotion should be enough
     
     def plot_TimeAveragedMotions(self, file_ext):
         plotfunctions.plot_TimeAveragedMotions(self.avg_absMotion, self.avg_MotionX, self.avg_MotionY, self.max_avgMotion, self.results_folder, file_ext)
@@ -618,8 +559,3 @@ class OHW():
             
 if __name__ == "__main__":
     OHW = OHW()
-    #OHW.read_imagestack("..//sampleinput")
-    #OHW.read_imagestack("..//sampleinput//samplemov.mov")
-#    OHW.read_imagestack("..//sampleinput//sampleavi.avi")
-#    OHW.scale_ImageStack()
-#    OHW.calculate_MVs(blockwidth = 16, delay = 2, max_shift = 7)
