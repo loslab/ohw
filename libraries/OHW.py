@@ -8,18 +8,23 @@ import matplotlib.pyplot as plt
 from matplotlib import gridspec
 from scipy.signal import argrelextrema
 from PyQt5.QtWidgets import QMessageBox
-from libraries import OFlowCalc, Filters, plotfunctions, helpfunctions, PeakDetection
+import datetime
+from libraries import OFlowCalc, Filters, plotfunctions, helpfunctions, PeakDetection, videoreader
 
 import moviepy.editor as mpy
 from moviepy.video.io.bindings import mplfig_to_npimage
 
+__version__ = "0.2-dev" #store in main python module?
+
 class OHW():
     """
         main class of OpenHeartWare
-        bundles MVs + parameters 
+        bundles analysis (algorithm + parameters + ROI + MVs)
+        --> in future: can be saved to reuse
     """
     def __init__(self):
         
+        """
         self.inputpath = None #
         self.rawImageStack = None       # array for raw imported imagestack
         self.ROIImageStack = None       # array for ROIs
@@ -44,135 +49,116 @@ class OHW():
         #store exceptions that appear
         self.exceptions = None
         self.isROI_OHW = False
-        
-    def read_imagestack(self, inputfolder, *args, **kwargs):
         """
-            reads desired inputvideo as np.array
-            choose inputmethod based on file extension
-            --> populate self.rawImageStack
-        """
-        print("Reading images from path ", inputfolder)
-        
-        self.inputpath = pathlib.Path(inputfolder)
-        
-        if self.inputpath.is_file():
-        #    print("... which is a single file")
-            
-            self.rawImageStack, self.videoMeta["fps"] = self.read_videofile(str(self.inputpath))
-            
-            dtype = self.rawImageStack[0,0,0].dtype
-
-            
-            self.videoMeta["microns_per_pixel"] = 1
-            
-            self.videoMeta["Blackval"], self.videoMeta["Whiteval"] = np.percentile(self.rawImageStack[0], (0.1, 99.9))
-
-            self.results_folder = self.inputpath.parent / ("results_" + str(self.inputpath.stem) )
-            
-        elif self.inputpath.is_dir():
-            # directory with .tifs
-     #       print("... which is a folder")
-            inputtifs = list(self.inputpath.glob('*.tif'))  # or use sorted instead of list
-     #       print("number of tifs: {}".format(len(inputtifs)))
-            
-            #directory contains no .tifs: warning message and proceed
-            if len(inputtifs) == 0:
-               # raise Exception('.tif error')
-                self.exceptions = []
-                self.exceptions.append(Exception('.tif error'))
-                return
-            
-            #directory contains .tifs:
-            self.exceptions = None
-            self.rawImageStack = tifffile.imread(inputtifs, pattern = "")
-            self.rawImageStack = self.rawImageStack.astype(np.float32)    #convert as cv2 needs float32 for templateMatching
-     #       print('Shape of rawImageStack after loading tiffs: [%d, %d, %d]' %(self.rawImageStack.shape[0], self.rawImageStack.shape[1], self.rawImageStack.shape[2]))
-            self.videoMeta["Blackval"], self.videoMeta["Whiteval"] = np.percentile(self.rawImageStack[0], (0.1, 99.9))  #set default values, will be overwritten by all values in videoinfos file
-            
-            #get_tif_meta (from first and second image, stored in imagej tag)
-            if (self.inputpath / "videoinfos.txt").is_file():
-                # set metadata from file if videoinfos.txt exists
-                print("videoinfos.txt exists in inputfolder, reading parameters.")
-                self.get_videoinfos_file()
-            
-            self.results_folder = self.inputpath / "results"
-        
-        self.videoMeta["fps"] = round(self.videoMeta["fps"], 1)
-        
-        """
-        # folder with imageseries (tif-only at the moment), read with tifffile
-        if folder:
-            if videoinfos file
-                read videoinfos from file
-                set non-specified values to default values (easier: set all to default and change new ones) (auto-adj. black-white)
-            elif info in tiftag
-                read infos from tag
-                set non-specified values to default values (auto-adj. black-white)
-            else 
-                use default values
-                auto-adj. black-white
+        self.analysis_meta = {"date": datetime.datetime.now(), "version": __version__}
     
-        # single movie file, use cv2 as reader
-        if file:
-        """
+    def import_video(self, inputpath, *args, **kwargs):        
+        self.rawImageStack, self.videometa = videoreader.import_video(inputpath)
+        self.set_results_folder()
+        
+    def import_video_thread(self, inputpath):
+        self.thread_import_video = helpfunctions.turn_function_into_thread(self.import_video, emit_progSignal = True, inputpath = inputpath)
+        return self.thread_import_video       
+        
+    def set_video(self, rawImageStack, videometa):
+        self.rawImageStack, self.videometa = rawImageStack, videometa
+        self.set_results_folder()    
     
-    def read_imagestack_thread(self, inputfolder):
-        self.thread_read_imagestack = helpfunctions.turn_function_into_thread(self.read_imagestack, emit_progSignal = True, inputfolder = inputfolder)
-        return self.thread_read_imagestack
-    
-    def read_videofile(self, inputpath):
-        cap = cv2.VideoCapture(inputpath)
-
-        frameCount = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        videofps = cap.get(cv2.CAP_PROP_FPS)
-
-        rawImageStack = np.empty((frameCount, frameHeight, frameWidth), np.dtype('uint8'))
-
-        fc = 0
-        ret = True
-
-        while (fc < frameCount  and ret):
-            ret, frame = cap.read()
-            rawImageStack[fc] = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            fc += 1
-
-        cap.release()
-        return rawImageStack, videofps
-    
-    def get_videoinfos_file(self):
-        """
-            reads dict from file videoinfos.txt and sets values in videoMeta
-        """
-        filereader = (self.inputpath / "videoinfos.txt").open("r")
-        videoinfos_file = eval(filereader.read())
-        filereader.close()
-        for key, value in videoinfos_file.items():
-            self.videoMeta[key] = value
-    
-    def scale_ImageStack(self, max_size_w=1024, max_size_h=1024):
-        """
-            rescales input ImageStack
-        """
-      #  print ("rescaling images to max. size of", max_size)
-     #   print("shape of raw image stack: ", self.rawImageStack.shape)
-        scaledImages = []
-        if self.ROIImageStack is not None:
-         #   print('Use ROIImageStack for further processing.')
-            for image in self.ROIImageStack:
-                scaledImages.append(cv2.resize(image,(max_size_h,max_size_w)))
-                
+    def set_results_folder(self):
+        # set results folder
+        inputpath = self.videometa["inputpath"]        
+        if self.videometa["input_type"] == 'videofile':
+            self.analysis_meta["results_folder"] = inputpath.parent / ("results_" + str(inputpath.stem) )
         else:
-        #    print('Use rawImageStack for further processing.')
-            for image in self.rawImageStack:   #rawImageStack[:-2]
-                scaledImages.append(cv2.resize(image,(max_size_h,max_size_w)))
-              
-        self.scaledImageStack = np.array(scaledImages)
-        self.scalingfactor = self.scaledImageStack[0].shape[0] / self.rawImageStack[0].shape[0]
-   #     print("shape of scaled down image stack: ", self.scaledImageStack.shape)
-   #     print("scalingfactor: ", self.scalingfactor)
+            self.analysis_meta["results_folder"] = inputpath.parent / "results"
+            
+    def set_analysisImageStack(self, px_longest = None, roi = None):
+        """
+            px_longest: resolution of longest side
+            px_longest = None: take orig resolution
+            roi: specify region of interest, coordinates of rectangular that was selected as ROI in unmodified coordinates
+        """
+        self.analysis_meta.update({'px_longest': px_longest, 'roi': roi, "scalingfactor":1})
+        
+        self.analysisImageStack = self.rawImageStack
+        # select roi
+        if roi != None:
+            self.analysisImageStack = self.analysisImageStack[:,int(roi[1]):int(roi[1]+roi[3]), int(roi[0]):int(roi[0]+roi[2])]
+            pass
+        
+        # rescale input
+        # take original resoltuion if no other specified
+        if px_longest != None:
+            self.analysisImageStack, self.analysis_meta["scalingfactor"] = helpfunctions.scale_ImageStack(self.analysisImageStack, px_longest=px_longest)
+
+    def calculate_motion(self, method = 'BM', progressSignal = None, **parameters):
+        """
+            calculates motion (either motionvectors MVs or absolute motion) of imagestack based 
+            on specified method and parameters
+
+            allowed methods:
+            -BM: blockmatch
+            -GF: gunnar farnbäck
+            -LK: lucas-kanade
+            -MM: musclemotion
+        """
+        #self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results        
+
+        #store parameters which were used for the calculation of MVs
+        self.analysis_meta.update({'Motion_method': method, 'MV_parameters': parameters})
+        
+        if method == 'BM':   
+            self.rawMVs = OFlowCalc.BM_stack(self.analysisImageStack, progressSignal = progressSignal, **parameters)#adjust self.scaledImageStack...
+        elif method == 'GF':
+            pass
+        elif method == 'LK':
+            pass
+        elif method == 'MM':
+            # self.absMotions = ...
+            pass
+
+    def calculate_motion_thread(self, **parameters):
+        self.thread_calculate_motion = helpfunctions.turn_function_into_thread(self.calculate_motion, emit_progSignal=True, **parameters)
+        return self.thread_calculate_motion 
     
+    def initialize_motion(self):      
+        
+        #distinguish between MVs and motion only here
+        
+        scalingfactor, delay = self.analysis_meta["scalingfactor"], self.analysis_meta["MV_parameters"]["delay"]
+        self.unitMVs = (self.rawMVs / scalingfactor) * self.videometa["microns_per_pixel"] * (self.videometa["fps"] / delay)
+        self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame        
+    
+        #self.get_mean_absMotion()
+        #self.calc_TimeAveragedMotion()
+    
+    def get_mean_absMotion(self):
+        """
+            calculates movement mask (eliminates all pixels where no movement occurs through all frames)
+            applies mask to absMotions and calculate mean motion per frame
+        """
+        # move into filter module in future?
+        summed_absMotions = np.sum(self.absMotions, axis = 0)  # select only points in array with nonzero movement
+        movement_mask = (summed_absMotions == 0)
+        
+        filtered_absMotions = np.copy(self.absMotions)
+        filtered_absMotions[:,movement_mask] = np.nan
+        self.mean_absMotions = np.nanmean(filtered_absMotions, axis=(1,2))
+        self.timeindex = (np.arange(self.mean_absMotions.shape[0]) / self.videoMeta["fps"]).round(2)
+        np.save(str(self.results_folder / 'beating_kinetics.npy'), np.array([self.timeindex,self.mean_absMotions]))
+        
+    def save_MVs(self):
+        """
+            saves raw MVs as npy file
+        """
+        results_folder = self.analysis_meta["results_folder"]
+        results_folder.mkdir(parents = True, exist_ok = True) #create folder for results if it doesn't exist
+        
+        save_file = str(results_folder / 'rawMVs.npy')
+        np.save(save_file, self.rawMVs)   #MotionVectorsAll
+        save_file_units = str(results_folder / 'unitMVs.npy')
+        np.save(save_file_units, self.unitMVs)            
+
     def plot_scalebar(self):
         """
             plots scalebar onto np-array
@@ -189,6 +175,7 @@ class OHW():
         self.thread_calculate_MVs = helpfunctions.turn_function_into_thread(self.calculate_MVs, emit_progSignal=True, **parameters)
         return self.thread_calculate_MVs            
     
+    '''
     def initialize_calculatedMVs(self):
         self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results
         #self.rawMVs = self.thread_BM_stack.MotionVectorsAll
@@ -199,6 +186,7 @@ class OHW():
     
         self.get_mean_absMotion()
         self.calc_TimeAveragedMotion()
+    '''
     
     def calculate_MVs(self, method = 'BM', progressSignal = None, **parameters):
         """

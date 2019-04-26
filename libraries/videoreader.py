@@ -24,6 +24,7 @@ def import_video(inputpath):
     else:
         rawImageStack, videometa = read_videofile(inputpath)
 
+    videometa["inputpath"] = inputpath
     print('videometa:', videometa)
     return rawImageStack, videometa
     
@@ -41,13 +42,12 @@ def read_imagestack(inputpath, *args, **kwargs):
     videometa['frameCount']=len(inputtifs)
     videometa['frameWidth']=rawImageStack.shape[1]
     videometa['frameHeight']=rawImageStack.shape[2]
-    videometa["results_folder"] = inputpath.parent / "results"
+    videometa["input_type"] = 'tifstack'
     
-    if ('Blackval' and 'Whiteval') not in videometa.keys():
+    if ('Blackval' or 'Whiteval') not in videometa.keys():
         videometa["Blackval"], videometa["Whiteval"] = np.percentile(rawImageStack[0], (0.1, 99.9))  #set default values if no infos defined in videoinfos file
     
-    if 'fps' in videometa.keys():
-        videometa["fps"] = round(videometa["fps"], 1)# round fps to 1 digit
+    videometa["fps"] = round(videometa["fps"], 1)# round fps to 1 digit
 
     return rawImageStack, videometa
     
@@ -55,7 +55,7 @@ def get_videoinfos_file(inputpath):
     """
         reads dict from file videoinfos.txt and sets values in videometa
     """
-    videometa = {}
+    videometa = {"fps":1,"microns_per_pixel":1}
     path_videoinfos = inputpath.parent / "videoinfos.txt"
     if path_videoinfos.is_file():
         # set metadata from file if videoinfos.txt exists
@@ -80,11 +80,6 @@ def read_videofile(inputpath):
     frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     videofps = cap.get(cv2.CAP_PROP_FPS)
     
-    videometa = {'frameCount':frameCount,'frameWidth':frameWidth,'frameHeight':frameHeight,'fps':videofps}
-    #self.videoMeta["microns_per_pixel"] = 1
-    #self.videoMeta["Blackval"], self.videoMeta["Whiteval"] = np.percentile(self.rawImageStack[0], (0.1, 99.9))
-    videometa["results_folder"] = inputpath.parent / ("results_" + str(inputpath.stem) )
-    
     rawImageStack = np.empty((frameCount, frameHeight, frameWidth), np.dtype('uint8'))
 
     fc = 0
@@ -93,7 +88,11 @@ def read_videofile(inputpath):
     while (fc < frameCount  and ret):
         ret, frame = cap.read()
         rawImageStack[fc] = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        fc += 1
+        fc += 1    
+    
+    videometa = {'frameCount':frameCount,'frameWidth':frameWidth,'frameHeight':frameHeight,'fps':videofps,'microns_per_pixel':1}
+    videometa["Blackval"], videometa["Whiteval"] = np.percentile(rawImageStack[0], (0.1, 99.9))
+    videometa["input_type"] = 'videofile'
 
     cap.release()
     return rawImageStack, videometa

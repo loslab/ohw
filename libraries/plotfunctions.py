@@ -6,7 +6,7 @@ import pathlib
 
 from libraries.helpfunctions import get_figure_size
 
-def plot_Kinetics(timeindex, mean_absMotions, Peaks, mark_peaks, file_name):
+def plot_Kinetics(timeindex, mean_absMotions, Peaks=None, mark_peaks=False, file_name=None):
     """
         plots graph for beating kinetics "EKG"
     """
@@ -31,8 +31,9 @@ def plot_Kinetics(timeindex, mean_absMotions, Peaks, mark_peaks, file_name):
         ax_kinetics.plot(Peaks["t_peaks_low_sorted"], Peaks["peaks_low_sorted"], marker='o', ls="", ms=5, color='r' )
         ax_kinetics.plot(Peaks["t_peaks_high_sorted"], Peaks["peaks_high_sorted"], marker='^', ls="", ms=5, color='r' )  #easier plotting without for loop          
     
-    fig_kinetics.savefig(file_name, dpi = 300, bbox_inches = 'tight') #, bbox_inches = 'tight', pad_inches = 0.4)
-    
+    if file_name != None:
+        fig_kinetics.savefig(file_name, dpi = 300, bbox_inches = 'tight') #, bbox_inches = 'tight', pad_inches = 0.4)
+    return fig_kinetics, ax_kinetics
 
 def plot_TimeAveragedMotions(avg_absMotion, avg_MotionX, avg_MotionY, max_avgMotion, savefolder, file_ext):
     colormap_for_all = "jet"    #"inferno"
