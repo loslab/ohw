@@ -119,3 +119,30 @@ def scale_ImageStack(imageStack, px_longest = 1024):
     print("scalingfactor: ", scalingfactor)
     
     return scaledImageStack, scalingfactor
+    
+def get_scale_maxMotion(absMotions, mean_absMotions):
+    """
+        --> deprecated
+        returns maximum for scaling of heatmap + arrows in quiver
+        selects frame with max motion (= one pixel), picks 95th percentile in this frame as scale max
+        ... find better metric
+        #max_motion = self.mean_maxMotion
+        #scale_max = np.mean(self.OHW.absMotions)    #should be mean of 1d-array of max motions
+        #scale_max = np.mean(np.max(self.OHW.absMotions,axis=(1,2)))
+    """
+    
+    max_motion_framenr = np.argmax(mean_absMotions)
+    max_motion_frame = absMotions[max_motion_framenr]
+    scale_min, scale_maxMotion = np.percentile(max_motion_frame, (0.1, 95))
+    return scale_maxMotion
+
+def get_scale_maxMotion2(absMotions):
+    """
+        returns maximum for scaling of heatmap + arrows in quiver
+        input absMotions: 3D ndarray (framenr/Motion(x/y))
+        v2: takes all frames into account, select positions where motion > 0, max represents 80th percentile
+    """
+    
+    absMotions_flat = absMotions[absMotions>0].flatten()
+    scale_min, scale_maxMotion = np.percentile(absMotions_flat, (0, 80))   
+    return scale_maxMotion

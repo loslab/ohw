@@ -1566,7 +1566,7 @@ class TableWidget(QWidget):
             print("initialize MV graphs")
             # initialize heatmaps, display first frame           
             
-            scale_max = self.current_dataset.get_scale_maxMotion2()
+            scale_max = helpfunctions.get_scale_maxMotion2(self.current_dataset.absMotions) #decide on which scale to use
             
             self.imshow_heatmaps = self.ax_heatmaps.imshow(self.current_dataset.absMotions[0], vmin = 0, vmax = scale_max, cmap = 'jet', interpolation = 'bilinear')
             self.slider_heatmaps.setMaximum(self.current_dataset.absMotions.shape[0]-1)
@@ -1583,7 +1583,6 @@ class TableWidget(QWidget):
             self.canvas_heatmap.draw()
             self.tab4.layout.addWidget(self.canvas_heatmap, 8, 0)
             
-            '''
             
             # initialize quivers, display first frame
             #new figure
@@ -1592,7 +1591,7 @@ class TableWidget(QWidget):
             self.fig_quivers.set_size_inches(16,12)
             self.ax_quivers.axis('off')
             self.canvas_quivers = FigureCanvas(self.fig_quivers)
-            
+            '''
             if not self.current_dataset.isROI_OHW:
                 if self.quiver_settings['show_scalebar']:
                     #only draw scalebar if it is the full image and if specified in the quiver settings
@@ -1601,33 +1600,38 @@ class TableWidget(QWidget):
                 else:
                     #remove scalebar by recalculating the scaled imagestack
                     self.current_dataset.scale_ImageStack(self.OHW.rawImageStack.shape[1], self.OHW.rawImageStack.shape[2])
- 
-            self.MV_zerofiltered = Filters.zeromotion_to_nan(self.current_dataset.unitMVs, copy=True)
-            self.MotionX = self.MV_zerofiltered[:,0,:,:]
-            self.MotionY = self.MV_zerofiltered[:,1,:,:]
-            self.slider_quiver.setMaximum(self.MotionX.shape[0]-1)
+            '''
 
-            blockwidth = self.current_dataset.MV_parameters["blockwidth"]
+            self.slider_quiver.setMaximum(self.current_dataset.mean_absMotions.shape[0]-1)# or introduce new variable which counts the amount of motion timepoints
+
+            blockwidth = self.current_dataset.analysis_meta["MV_parameters"]["blockwidth"]
             microns_per_pixel = self.current_dataset.videometa["microns_per_pixel"]
-            scalingfactor = self.current_dataset.scalingfactor
-            scale_max = self.current_dataset.get_scale_maxMotion()
+            scalingfactor = self.current_dataset.analysis_meta["scalingfactor"]
+            scale_max = helpfunctions.get_scale_maxMotion2(self.current_dataset.absMotions)
             
             skipquivers =  int(self.quiver_settings['quiver_density'])
             distance_between_arrows = blockwidth * skipquivers
             arrowscale = 1 / (distance_between_arrows / scale_max)
             
-            self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.current_dataset.scaledImageStack.shape[2]-blockwidth/2, blockwidth)+1, np.arange(blockwidth/2, self.current_dataset.scaledImageStack.shape[1]-blockwidth/2+1, blockwidth))  #changed arange range, double check!
+            #self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.current_dataset.scaledImageStack.shape[2]-blockwidth/2, blockwidth)+1, np.arange(blockwidth/2, self.current_dataset.scaledImageStack.shape[1]-blockwidth/2+1, blockwidth))  #changed arange range, double check!
             
             self.qslice=(slice(None,None,skipquivers),slice(None,None,skipquivers))
             qslice = self.qslice
             
-            self.imshow_quivers = self.ax_quivers.imshow(self.current_dataset.scaledImageStack[0], cmap = "gray", vmin = self.current_dataset.videometa["Blackval"], vmax = self.current_dataset.videometa["Whiteval"])
-            self.quiver_quivers = self.ax_quivers.quiver(self.MotionCoordinatesX[qslice], self.MotionCoordinatesY[qslice], self.MotionX[0][qslice], self.MotionY[0][qslice], pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", scale = arrowscale, width = 3, headwidth = 2, headlength = 3) #adjust scale to max. movement   #width = blockwidth / 4?
+            self.imshow_quivers = self.ax_quivers.imshow(
+                    self.current_dataset.analysisImageStack[0], cmap = "gray", 
+                    vmin = self.current_dataset.videometa["Blackval"], vmax = self.current_dataset.videometa["Whiteval"])
+            self.quiver_quivers = self.ax_quivers.quiver(
+                    self.current_dataset.MotionCoordinatesX[qslice], 
+                    self.current_dataset.MotionCoordinatesY[qslice], 
+                    self.current_dataset.MotionX[0][qslice], 
+                    self.current_dataset.MotionY[0][qslice], 
+                    pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", 
+                    scale = arrowscale, width = 3, headwidth = 2, headlength = 3) #adjust scale to max. movement   #width = blockwidth / 4?
             
             self.canvas_quivers.draw()
             self.tab4.layout.addWidget(self.canvas_quivers,  8,  2)
-            
-            '''
+
 
         def on_saveMVs(self):
             """
@@ -1656,8 +1660,8 @@ class TableWidget(QWidget):
  
         def updateQuiver(self, frame):
             #callback when slider is moved
-            self.imshow_quivers.set_data(self.current_dataset.scaledImageStack[frame])
-            self.quiver_quivers.set_UVC(self.MotionX[frame][self.qslice], self.MotionY[frame][self.qslice])
+            self.imshow_quivers.set_data(self.current_dataset.analysisImageStack[frame])    #introduce a displayImageStack here?
+            self.quiver_quivers.set_UVC(self.current_dataset.MotionX[frame][self.qslice], self.current_dataset.MotionY[frame][self.qslice])
             self.canvas_quivers.draw()
 
         def on_saveHeatmapvideo(self):
