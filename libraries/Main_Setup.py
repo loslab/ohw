@@ -7,6 +7,7 @@ import glob
 import cv2
 import configparser
 import copy
+from datetime import datetime, timedelta
 from matplotlib.lines import Line2D
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
@@ -66,8 +67,16 @@ class TableWidget(QWidget):
             self.ROI_names = []
             self.ROI_OHWs = []
             
-            #default values for quiver export
-       #     self.config.getboolean(section='DEFAULT QUIVER SETTINGS', option='one_view')
+            curr_date = datetime.now().date()
+            last_check = datetime.strptime(self.config['UPDATE']['last_check'],"%Y-%m-%d").date()
+            if curr_date > last_check + timedelta(days=1): #older than a day
+                helpfunctions.check_update(self, self.config['UPDATE']['version'])# self needed for msgbox... get rid at some point?
+                self.config['UPDATE']['last_check'] = str(curr_date)
+                self.save_to_config()
+                # save curr_date back into config
+
+            # default values for quiver export
+            # self.config.getboolean(section='DEFAULT QUIVER SETTINGS', option='one_view')
             self.quiver_settings = {}# self.config['DEFAULT QUIVER SETTINGS']
             for item in ['one_view', 'three_views', 'show_scalebar']:
                 self.quiver_settings[item] = self.config.getboolean(section='DEFAULT QUIVER SETTINGS', option=item)

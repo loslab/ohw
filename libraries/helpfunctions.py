@@ -6,6 +6,8 @@ import numpy as np
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import QMessageBox
 from PIL import ImageDraw, ImageFont, Image
+import requests
+import configparser
 
 def get_figure_size(img, initial_val):
     ratio = img.shape[0]/img.shape[1]
@@ -91,12 +93,11 @@ def insert_scalebar(imageStack, videometa, analysis_meta):
     scale_height_px = scalebar.shape[1]
     imageStack[:,-1-scale_width_px:-1,-1-scale_height_px:-1] = scalebar    
     
-def msgbox(self, message):
+def msgbox(self, message, msg_title = 'Successful'):
     """
         display message in QMessageBox
     """
     msg_text = message
-    msg_title = 'Successful'
     msg = QMessageBox.information(self, msg_title, msg_text, QMessageBox.Ok)
     if msg == QMessageBox.Ok:
         pass  
@@ -146,3 +147,18 @@ def get_scale_maxMotion2(absMotions):
     absMotions_flat = absMotions[absMotions>0].flatten()
     scale_min, scale_maxMotion = np.percentile(absMotions_flat, (0, 80))   
     return scale_maxMotion
+    
+def check_update(self, curr_version):
+    try:
+        print('try checking for updates')
+        github_config = requests.get('https://raw.github.com/loslab/ohw/master/config.ini').text
+        config = configparser.ConfigParser()
+        config.read_string(github_config)
+        github_version = config['UPDATE']['version']
+        github_version = tuple(map(int, (github_version.split("."))))# split version string 1.1.1 into tuple (1,1,1)
+        curr_version = tuple(map(int, (curr_version.split("."))))
+        if github_version > curr_version:
+            message = "A new version is available. Download the newest version from:<br><a href='https://github.com/loslab/ohw'>https://github.com/loslab/ohw</a>"
+            msgbox(self, message=message, msg_title = 'Update available')
+    except Exception as e:
+        print('Could not check for update:', e)
