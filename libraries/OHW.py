@@ -190,7 +190,7 @@ class OHW():
 
     def save_heatmap(self, singleframe):
         savepath = self.analysis_meta["results_folder"]/'heatmap_results'
-        plotfunctions.save_heatmap(ohw_dataset = self, savepath = savepath, singleframe=False)
+        plotfunctions.save_heatmap(ohw_dataset = self, savepath = savepath, singleframe=singleframe)
     
     def save_heatmap_thread(self, singleframe):
         savepath = self.analysis_meta["results_folder"]/'heatmap_results'
@@ -198,10 +198,11 @@ class OHW():
             plotfunctions.save_heatmap, ohw_dataset = self, savepath = savepath, singleframe=False)
         return self.thread_save_heatmap
 
-    def save_quivervid3_thread(self, skipquivers, t_cut):
-        self.thread_save_quivervid3 = helpfunctions.turn_function_into_thread(
-            self.save_quivervid3, singleframe = False, skipquivers=skipquivers, t_cut=t_cut)
-        return self.thread_save_quivervid3
+    def save_quiver3_thread(self, singleframe, skipquivers):#t_cut
+        savepath = self.analysis_meta["results_folder"]/'quiver_results'
+        self.thread_save_quiver3 = helpfunctions.turn_function_into_thread(
+            plotfunctions.save_quiver3, ohw_dataset = self, savepath = savepath, singleframe = singleframe, skipquivers=skipquivers)#t_cut=t_cut
+        return self.thread_save_quiver3
     
     def save_quiver(self, singleframe = False, skipquivers = 1, t_cut = 0, keyword = None, subfolder = None, *args, **kwargs):
         """

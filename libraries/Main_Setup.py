@@ -1737,6 +1737,7 @@ class TableWidget(QWidget):
             self.button_succeed_quivers.setStyleSheet("background-color: IndianRed")
             self.progressbar_quivers.setValue(0)
             
+            """
             if self.quiver_settings['one_view']:
                 #export one view quivers
                 save_quiver1_thread = self.current_dataset.save_quiver_thread(singleframe = False, skipquivers = int(self.quiver_settings['quiver_density']), t_cut=float(self.quiver_settings['video_length']))
@@ -1750,13 +1751,12 @@ class TableWidget(QWidget):
                 save_quiver3_thread.start()
                 self.progressbar_quivers.setRange(0,0)
                 save_quiver3_thread.finished.connect(self.finish_saveQuivervideo)
-                
             """
-            save_quiver_thread = self.OHW.save_quiver_thread(singleframe = False, skipquivers = 4)
+            
+            save_quiver_thread = self.OHW.save_quiver3_thread(singleframe = False, skipquivers = 4)
             save_quiver_thread.start()
             self.progressbar_quivers.setRange(0,0)
             save_quiver_thread.finished.connect(self.finish_saveQuivervideo)
-            """
             
         def finish_saveQuivervideo(self):
             self.progressbar_quivers.setRange(0,1)
