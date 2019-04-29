@@ -52,13 +52,13 @@ class TableWidget(QWidget):
             self.tabs.resize(800,800)
              
             # Add tabs
-            self.tabs.addTab(self.tab1,"Input folder ")
+            self.tabs.addTab(self.tab1,"Video Input ")
             self.tabs.addTab(self.tabROIs, "Manage ROIs")
-            self.tabs.addTab(self.tab2,"Compute motion vectors ")
-            self.tabs.addTab(self.tab3,"Analysis (Basic) ")
-            self.tabs.addTab(self.tab4,"Analysis: Heatmaps and Quiverplots (Advanced) ")
-            self.tabs.addTab(self.tab5,"Analysis: Time averaged motion (Advanced)")
-            self.tabs.addTab(self.tab6,"Automated analysis of multiple folders (Advanced)")
+            self.tabs.addTab(self.tab2,"Compute motion")
+            self.tabs.addTab(self.tab3,"Beating kinetics")
+            self.tabs.addTab(self.tab4,"Heatmaps and Quiverplots")
+            self.tabs.addTab(self.tab5,"Time averaged motion")
+            self.tabs.addTab(self.tab6,"Batch analysis")
             
             color_for_info = QColor(198, 255, 26)
             self.pixmap_width = 250
@@ -1774,6 +1774,7 @@ class TableWidget(QWidget):
             """     
             singleframe = int(self.slider_quiver.value())
             
+            """
             #save the different views if chosen by the user
             if self.quiver_settings['one_view']:
 
@@ -1781,6 +1782,8 @@ class TableWidget(QWidget):
             
             if self.quiver_settings['three_views']:
                 self.current_dataset.save_quivervid3(singleframe = singleframe, skipquivers = int(self.quiver_settings['quiver_density']))
+            """
+            self.current_dataset.save_quiver3(singleframe = singleframe)
             
             #display a message
             helpfunctions.msgbox(self, 'Quiver of frame ' + str(singleframe) + ' was saved successfully')            

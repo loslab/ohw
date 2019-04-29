@@ -143,9 +143,86 @@ def save_heatmap(ohw_dataset, savepath, singleframe = False, *args, **kwargs):
         animation = mpy.VideoClip(make_frame_mpl, duration=duration)
         # animation.resize((1500,800))
         animation.write_videofile(heatmap_filename, fps=fps)
-        
-        
 
+def save_quiver(self, singleframe = False, skipquivers = 1, t_cut = 0, keyword = None, subfolder = None, *args, **kwargs):
+    """
+        saves either the selected frame (singleframe = framenumber) or the whole heatmap video (= False)
+        # adjust density of arrows by skipquivers
+        # todo: add option to clip arrows
+        # todo: maybe move to helpfunctions?
+    """
+    
+    # prepare MVs... needs refactoring as it's done twice!
+    scale_max = self.get_scale_maxMotion2(self.absMotions)   
+    self.MV_zerofiltered = Filters.zeromotion_to_nan(self.unitMVs, copy=True)
+    self.MV_cutoff = Filters.cutoffMVs(self.MV_zerofiltered, max_length = scale_max, copy=True)
+    
+    self.MotionX = self.MV_cutoff[:,0,:,:]
+    self.MotionY = self.MV_cutoff[:,1,:,:]
+
+    blockwidth = self.MV_parameters["blockwidth"]
+
+    # self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.scaledImageStack.shape[1], blockwidth), np.arange(blockwidth/2, self.scaledImageStack.shape[2], blockwidth))        
+    self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.scaledImageStack.shape[2], blockwidth), np.arange(blockwidth/2, self.scaledImageStack.shape[1], blockwidth))        
+       
+    #prepare figure
+    savefig_quivers, saveax_quivers = plt.subplots(1,1)
+
+    savefig_quivers.set_size_inches(16,12)
+    saveax_quivers.axis('off')   
+    
+    qslice=(slice(None,None,skipquivers),slice(None,None,skipquivers))
+    distance_between_arrows = blockwidth * skipquivers
+    arrowscale = 1 / (distance_between_arrows / scale_max)
+
+    imshow_quivers = saveax_quivers.imshow(
+            self.scaledImageStack[0], vmin = self.videometa["Blackval"], vmax = self.videometa["Whiteval"], cmap = "gray")
+        
+    # adjust desired quiver plotstyles here!
+    quiver_quivers = saveax_quivers.quiver(
+            self.MotionCoordinatesX[qslice], self.MotionCoordinatesY[qslice], 
+            self.MotionX[0][qslice], self.MotionY[0][qslice], 
+            pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", 
+            scale = arrowscale,  width = 4, headwidth = 3, headlength = 5, headaxislength = 5, minshaft =1.5) #width = 4, headwidth = 2, headlength = 3
+
+    #saveax_quivers.set_title('Motion [µm/s]', fontsize = 16, fontweight = 'bold')
+    if keyword == None:
+        path_quivers = self.analysis_meta["results_folder"] / "quiver_results"
+    elif keyword == 'batch':
+        path_quivers = subfolder / "quiver_results"
+    path_quivers.mkdir(parents = True, exist_ok = True) #create folder for results
+    
+    if singleframe != False:
+        # save only specified frame
+
+        imshow_quivers.set_data(self.scaledImageStack[singleframe])
+        quiver_quivers.set_UVC(self.MotionX[singleframe][qslice], self.MotionY[singleframe][qslice])
+        
+        quivers_filename = str(path_quivers / ('quiver_frame' + str(singleframe) + '.png'))
+        savefig_quivers.savefig(quivers_filename, bbox_inches ="tight", pad_inches = 0, dpi = 200)
+    
+    else: 
+    # save video
+        def make_frame_mpl(t):
+
+            frame = int(round(t*self.videometa["fps"]))
+            imshow_quivers.set_data(self.scaledImageStack[frame])
+            try:
+                quiver_quivers.set_UVC(self.MotionX[frame][qslice], self.MotionY[frame][qslice])
+            except:
+                pass
+            
+            return mplfig_to_npimage(savefig_quivers) # RGB image of the figure
+        
+        quivers_filename = str(path_quivers / 'quivervideo.mp4')
+        duration = 1/self.videometa["fps"] * self.MotionX.shape[0]
+        animation = mpy.VideoClip(make_frame_mpl, duration=duration)
+        
+        #cut clip if desired by user
+        #animation_to_save = self.cut_clip(clip_full=animation, t_cut=t_cut)
+        #animation_to_save.write_videofile(quivers_filename, fps=self.videometa["fps"])
+        animation.write_videofile(quivers_filename, fps=self.videometa["fps"])
+        
 def save_quiver3(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_cut = 0, *args, **kwargs):
     """
         saves a video with the normal beating, beating + quivers and velocity trace
@@ -175,7 +252,6 @@ def save_quiver3(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_
 
     gs = gridspec.GridSpec(3,2, figure=outputfigure)
     gs.tight_layout(outputfigure)
-    #plt.tight_layout()
     
     saveax_video = outputfigure.add_subplot(gs[0:2, 0])
     saveax_video.axis('off')        
@@ -196,11 +272,6 @@ def save_quiver3(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_
         saveax_trace.spines[side].set_linewidth(2) 
     
     marker, = saveax_trace.plot(timeindex[0],mean_absMotions[0],'ro')
-    #print(type(marker))#<class 'matplotlib.lines.Line2D'>
-    
-    #savefig_quivers, saveax_quivers = plt.subplots(1,1)
-    #savefig_quivers.set_size_inches(8, 10)
-    #saveax_quivers.axis('off')   
 
     ###### prepare video axis
     imshow_video = saveax_video.imshow(
@@ -237,6 +308,7 @@ def save_quiver3(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_
     # save only specified frame       
     #if not isinstance(singleframe, bool):
     if singleframe != False:
+        print("export single frame")
         imshow_quivers.set_data(analysisImageStack[singleframe])
         imshow_video.set_data(analysisImageStack[singleframe])
         quiver_quivers.set_UVC(MotionX[singleframe][qslice], MotionY[singleframe][qslice])
@@ -245,31 +317,26 @@ def save_quiver3(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_
         marker, = saveax_trace.plot(timeindex[singleframe],mean_absMotions[singleframe],'ro')
         marker.set_clip_on(False)
             
-        outputfigure.savefig(str(savepath / ('quiver3_frame' + str(singleframe) + '.png')))
+        outputfigure.savefig(str(savepath / ('quiver3_frame' + str(singleframe) + '.png')), bbox_inches = "tight")
               
     else:
         # save video
-        def make_frame_mpl(t,marker=marker):
+        def make_frame_mpl(t):
             #calculate the current frame number:
             frame = int(round(t*videometa["fps"]))
             
-    #               if len(self.timeindex) > frame:
-    #                   print('Frame: {}, Timeindex: {}'.format(frame, self.timeindex[frame]))
             imshow_quivers.set_data(analysisImageStack[frame])
             imshow_video.set_data(analysisImageStack[frame])
             
             quiver_quivers.set_UVC(MotionX[frame][qslice], MotionY[frame][qslice])
-            
-            #global marker
-            marker.remove()
+
+            #marker.remove() # does not work, only if used as global variable...
+            saveax_trace.lines[1].remove()
             marker, = saveax_trace.plot(timeindex[frame],mean_absMotions[frame],'ro')
             marker.set_clip_on(False)
-            print("move marker")
             
             return mplfig_to_npimage(outputfigure)[bbox_bounds_px[1]:bbox_bounds_px[3],bbox_bounds_px[0]:bbox_bounds_px[2]] # RGB image of the figure  #150:1450,100:1950
             
-    #               else:
-    #                   return
             # slicing here really hacky! find better solution!
             # find equivalent to bbox_inches='tight' in savefig
             # mplfig_to_npimage just uses barer canvas.tostring_rgb()
@@ -282,8 +349,6 @@ def save_quiver3(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_
         duration = 1/videometa["fps"] * MotionX.shape[0]
         animation = mpy.VideoClip(make_frame_mpl, duration=duration)
         
-        #cut clip if desired by user
-        
-        #animation_to_save = cut_clip(clip_full=animation, t_cut=t_cut)
-       
         animation.write_videofile(quivers_filename, fps=videometa["fps"])
+        #cut clip if desired by user in future
+        #animation_to_save = cut_clip(clip_full=animation, t_cut=t_cut)

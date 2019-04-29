@@ -198,95 +198,15 @@ class OHW():
             plotfunctions.save_heatmap, ohw_dataset = self, savepath = savepath, singleframe=False)
         return self.thread_save_heatmap
 
+    def save_quiver3(self, singleframe):
+        savepath = self.analysis_meta["results_folder"]/'quiver_results'
+        plotfunctions.save_quiver3(ohw_dataset = self, savepath = savepath, singleframe=singleframe)
+    
     def save_quiver3_thread(self, singleframe, skipquivers):#t_cut
         savepath = self.analysis_meta["results_folder"]/'quiver_results'
         self.thread_save_quiver3 = helpfunctions.turn_function_into_thread(
             plotfunctions.save_quiver3, ohw_dataset = self, savepath = savepath, singleframe = singleframe, skipquivers=skipquivers)#t_cut=t_cut
         return self.thread_save_quiver3
-    
-    def save_quiver(self, singleframe = False, skipquivers = 1, t_cut = 0, keyword = None, subfolder = None, *args, **kwargs):
-        """
-            saves either the selected frame (singleframe = framenumber) or the whole heatmap video (= False)
-            # adjust density of arrows by skipquivers
-            # todo: add option to clip arrows
-            # todo: maybe move to helpfunctions?
-        """
-        
-        # prepare MVs... needs refactoring as it's done twice!
-        scale_max = self.get_scale_maxMotion2(self.absMotions)   
-        self.MV_zerofiltered = Filters.zeromotion_to_nan(self.unitMVs, copy=True)
-        self.MV_cutoff = Filters.cutoffMVs(self.MV_zerofiltered, max_length = scale_max, copy=True)
-        
-        self.MotionX = self.MV_cutoff[:,0,:,:]
-        self.MotionY = self.MV_cutoff[:,1,:,:]
-
-        blockwidth = self.MV_parameters["blockwidth"]
-     #   print('Shape of scaledImageStack:')
-     #   print(self.scaledImageStack.shape[1])
-     #   print(self.scaledImageStack.shape[2])
-#        self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.scaledImageStack.shape[1], blockwidth), np.arange(blockwidth/2, self.scaledImageStack.shape[2], blockwidth))        
-        self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.scaledImageStack.shape[2], blockwidth), np.arange(blockwidth/2, self.scaledImageStack.shape[1], blockwidth))        
-           
-        #prepare figure
-        savefig_quivers, saveax_quivers = plt.subplots(1,1)
-        #w,h = helpfunctions.get_figure_size(self.scaledImageStack[0], initial_val=12)
-#        savefig_quivers.set_size_inches(w,h)
-        savefig_quivers.set_size_inches(16,12)
-        saveax_quivers.axis('off')   
-    
-        
-        qslice=(slice(None,None,skipquivers),slice(None,None,skipquivers))
-        distance_between_arrows = blockwidth * skipquivers
-        arrowscale = 1 / (distance_between_arrows / scale_max)
-
-        imshow_quivers = saveax_quivers.imshow(self.scaledImageStack[0], vmin = self.videometa["Blackval"], vmax = self.videometa["Whiteval"], cmap = "gray")
-
-#        print('Size of quiver data:')
-#        print(self.MotionCoordinatesX.shape)
-#        print(self.MotionCoordinatesY.shape)
-#        print(self.MotionX[0].shape)
-#        print(self.MotionY[0].shape)
-#        
-        # adjust desired quiver plotstyles here!
-        quiver_quivers = saveax_quivers.quiver(self.MotionCoordinatesX[qslice], self.MotionCoordinatesY[qslice], self.MotionX[0][qslice], self.MotionY[0][qslice], pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", scale = arrowscale,  width = 4, headwidth = 3, headlength = 5, headaxislength = 5, minshaft =1.5) #width = 4, headwidth = 2, headlength = 3
-
-        #saveax_quivers.set_title('Motion [µm/s]', fontsize = 16, fontweight = 'bold')
-        if keyword == None:
-            path_quivers = self.analysis_meta["results_folder"] / "quiver_results"
-        elif keyword == 'batch':
-            path_quivers = subfolder / "quiver_results"
-        path_quivers.mkdir(parents = True, exist_ok = True) #create folder for results
-        
-        if not isinstance(singleframe, bool):
-            # save only specified frame
-
-            imshow_quivers.set_data(self.scaledImageStack[singleframe])
-            quiver_quivers.set_UVC(self.MotionX[singleframe][qslice], self.MotionY[singleframe][qslice])
-            
-            quivers_filename = str(path_quivers / ('quiver_frame' + str(singleframe) + '.png'))
-            savefig_quivers.savefig(quivers_filename, bbox_inches ="tight", pad_inches = 0, dpi = 200)
-        
-        elif isinstance(singleframe, bool): 
-        # save video
-            def make_frame_mpl(t):
-
-                frame = int(round(t*self.videometa["fps"]))
-                imshow_quivers.set_data(self.scaledImageStack[frame])
-                try:
-                    quiver_quivers.set_UVC(self.MotionX[frame][qslice], self.MotionY[frame][qslice])
-                except:
-                    pass
-                
-                return mplfig_to_npimage(savefig_quivers) # RGB image of the figure
-            
-            quivers_filename = str(path_quivers / 'quivervideo.mp4')
-            duration = 1/self.videometa["fps"] * self.MotionX.shape[0]
-            animation = mpy.VideoClip(make_frame_mpl, duration=duration)
-            
-            #cut clip if desired by user
-            animation_to_save = self.cut_clip(clip_full=animation, t_cut=t_cut)
-            
-            animation_to_save.write_videofile(quivers_filename, fps=self.videometa["fps"])
 
     def save_quiver_thread(self, singleframe, skipquivers, t_cut):
         self.thread_save_quiver = helpfunctions.turn_function_into_thread(self.save_quiver, singleframe=False, skipquivers=skipquivers, t_cut=t_cut)
