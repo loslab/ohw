@@ -14,8 +14,7 @@ def plot_Kinetics(timeindex, mean_absMotions, Peaks=None, mark_peaks=False, file
     """
         plots graph for beating kinetics "EKG"
     """
-    fig_kinetics, ax_kinetics = plt.subplots(1,1)
-    fig_kinetics.set_size_inches(11, 7) #16,12  
+    fig_kinetics, ax_kinetics = plt.subplots(1,1,figsize=(11,7))
     
     ax_kinetics.plot(timeindex, mean_absMotions, '-', linewidth = 2) #self.fig_kinetics
     ax_kinetics.set_xlim(left = 0, right = timeindex[-1])
@@ -39,15 +38,18 @@ def plot_Kinetics(timeindex, mean_absMotions, Peaks=None, mark_peaks=False, file
         fig_kinetics.savefig(str(file_name), dpi = 300, bbox_inches = 'tight') #, bbox_inches = 'tight', pad_inches = 0.4)
     return fig_kinetics, ax_kinetics
 
-def plot_TimeAveragedMotions(avg_absMotion, avg_MotionX, avg_MotionY, max_avgMotion, savefolder, file_ext):
-    colormap_for_all = "jet"    #"inferno"
+def plot_TimeAveragedMotions(ohw_dataset, file_ext):
+    avg_absMotion = ohw_dataset.avg_absMotion
+    avg_MotionX, avg_MotionY = ohw_dataset.avg_MotionX, ohw_dataset.avg_MotionY
+    max_avgMotion = ohw_dataset.max_avgMotion
+    savefolder = ohw_dataset.analysis_meta["results_folder"]
+    
+    cmap_all = "jet"    #"inferno"
     
     ###### abs-motion
-    fig_avgAmp, ax_avg_Amp = plt.subplots(1,1)
-#    w,h = get_figure_size(avg_absMotion, 12)
- #   fig_avgAmp.set_size_inches(w,h)
-    fig_avgAmp.set_size_inches(16,12)  
-    imshow_Amp_avg = ax_avg_Amp.imshow(avg_absMotion, vmin = 0, vmax = max_avgMotion, cmap=colormap_for_all, interpolation="bilinear")
+    fig_avgAmp, ax_avg_Amp = plt.subplots(1,1, figsize = (16,12))
+    imshow_Amp_avg = ax_avg_Amp.imshow(avg_absMotion, 
+        vmin = 0, vmax = max_avgMotion, cmap=cmap_all, interpolation="bilinear")
     cbar = fig_avgAmp.colorbar(imshow_Amp_avg)
     cbar.ax.tick_params(labelsize=16)     
 
@@ -61,9 +63,9 @@ def plot_TimeAveragedMotions(avg_absMotion, avg_MotionX, avg_MotionY, max_avgMot
     fig_avgAmp.savefig(outputpath, dpi = 100, bbox_inches = 'tight', pad_inches = 0.4)
 
     ##### x-motion
-    fig_avgMotionX, ax_avgMotionX = plt.subplots(1,1)
-    fig_avgMotionX.set_size_inches(16, 12)
-    imshow_Amp_avg = ax_avgMotionX.imshow(avg_MotionX, vmin = 0, vmax = max_avgMotion, cmap=colormap_for_all, interpolation="bilinear")
+    fig_avgMotionX, ax_avgMotionX = plt.subplots(1,1, figsize = (16,12))
+    imshow_Amp_avg = ax_avgMotionX.imshow(avg_MotionX, 
+        vmin = 0, vmax = max_avgMotion, cmap=cmap_all, interpolation="bilinear")
     cbar = fig_avgMotionX.colorbar(imshow_Amp_avg)
     cbar.ax.tick_params(labelsize=16)     
 
@@ -78,9 +80,9 @@ def plot_TimeAveragedMotions(avg_absMotion, avg_MotionX, avg_MotionY, max_avgMot
     
     
     ##### y-motion
-    fig_avgMotionY, ax_avgMotionY = plt.subplots(1,1)
-    fig_avgMotionY.set_size_inches(16, 12)
-    imshow_Amp_avg = ax_avgMotionY.imshow(avg_MotionY, vmin = 0, vmax = max_avgMotion, cmap=colormap_for_all, interpolation="bilinear")
+    fig_avgMotionY, ax_avgMotionY = plt.subplots(1,1, figsize = (16,12))
+    imshow_Amp_avg = ax_avgMotionY.imshow(avg_MotionY, 
+        vmin = 0, vmax = max_avgMotion, cmap=cmap_all, interpolation="bilinear")
     cbar = fig_avgMotionY.colorbar(imshow_Amp_avg)
     cbar.ax.tick_params(labelsize=16)     
 

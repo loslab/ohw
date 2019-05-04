@@ -281,7 +281,7 @@ class OHW():
         self.max_avgMotion = np.max ([self.avg_absMotion, self.avg_MotionX, self.avg_MotionY]) # avg_absMotion should be enough
     
     def plot_TimeAveragedMotions(self, file_ext):
-        plotfunctions.plot_TimeAveragedMotions(self.avg_absMotion, self.avg_MotionX, self.avg_MotionY, self.max_avgMotion, self.analysis_meta["results_folder"], file_ext)
+        plotfunctions.plot_TimeAveragedMotions(self, file_ext)
     
     def createROIImageStack(self, r):
         #r are coordinates of rectangular that was selected as ROI

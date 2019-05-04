@@ -906,7 +906,7 @@ class TableWidget(QWidget):
                 self.progressbar_quivers.setValue(0)
             
             elif self.sender() == self.timeavg_combobox:
-                self.initializeTimeAveragedMotion()
+                self.init_TAMotion()
                 
         def on_selectROI(self):
             """ select a ROI from the first image of the rawImageStack, calculation of MVs will be performed on ROI only after this 
@@ -987,7 +987,6 @@ class TableWidget(QWidget):
                 return self.batch_spinbox_maxShift.value()
             
         def on_startBatchAnalysis(self):
-        
             print('Starting batch analysis...')
             self.button_addBatchVideo.setEnabled(False)
             self.button_removeBatchVideo.setEnabled(False)
@@ -1001,7 +1000,7 @@ class TableWidget(QWidget):
             maxShift = self.batch_spinbox_maxShift.value()          
             
             
-            
+            # turn into thread...
             # use 2 progress bars? 1 for file progress, 1 for individual calculations....?
             for file in videofiles:
                 filepath = pathlib.Path(file)
@@ -1016,8 +1015,10 @@ class TableWidget(QWidget):
                 curr_analysis.calculate_motion(blockwidth = blockwidth, delay = delay, max_shift = maxShift)
                 curr_analysis.initialize_motion()
                 curr_analysis.save_MVs()
+                curr_analysis.plot_TimeAveragedMotions('.png')
                 
             # enable buttons again
+            self.button_batch_startAnalysis.setEnabled(True)
             
             # get current settings from checkboxes and spinboxes
             self.blockwidth_batch = self.batch_spinbox_blockwidth.value()
@@ -1557,7 +1558,7 @@ class TableWidget(QWidget):
             self.initialize_MV_graphs()
                         
             # initialize time averaged motion
-            #self.initializeTimeAveragedMotion()
+            self.init_TAMotion()
 
             #enable further buttons
             self.button_save_Heatmap.setEnabled(True)
@@ -1825,12 +1826,15 @@ class TableWidget(QWidget):
             self.updateQuiver(frame)
             self.label_quiver_result.setText('Quiverplot of frame ' + str(frame) + ' at time ' + str(time) + ' sec')            
                 
-        def initializeTimeAveragedMotion(self): 
+        def init_TAMotion(self): 
             max_motion = self.current_dataset.max_avgMotion
             
-            self.imshow_motion_total = self.ax_motion_total.imshow(self.current_dataset.avg_absMotion, vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")#, cmap = 'gray', vmin = self.Blackval, vmax = self.Whiteval)
-            self.imshow_motion_x = self.ax_motion_x.imshow(self.current_dataset.avg_MotionX, vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")
-            self.imshow_motion_y = self.ax_motion_y.imshow(self.current_dataset.avg_MotionY, vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")
+            self.imshow_motion_total = self.ax_motion_total.imshow(self.current_dataset.avg_absMotion, 
+                vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")#, cmap = 'gray', vmin = self.Blackval, vmax = self.Whiteval)
+            self.imshow_motion_x = self.ax_motion_x.imshow(self.current_dataset.avg_MotionX, 
+                vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")
+            self.imshow_motion_y = self.ax_motion_y.imshow(self.current_dataset.avg_MotionY, 
+                vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")
             
             self.canvas_motion_total.draw()
             self.canvas_motion_x.draw()
