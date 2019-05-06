@@ -1,20 +1,16 @@
 # -*- coding: utf-8 -*-
 
 import pathlib # change to pathlib from Python 3.4 instead of os
-import tifffile
-import cv2
+import tifffile, cv2, datetime, pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
-from scipy.signal import argrelextrema
-from PyQt5.QtWidgets import QMessageBox
-import datetime
 from libraries import OFlowCalc, Filters, plotfunctions, helpfunctions, PeakDetection, videoreader
 
 import moviepy.editor as mpy
 from moviepy.video.io.bindings import mplfig_to_npimage
 
-__version__ = "0.2-dev" #store in main python module?
+__version__ = "0.2-dev" #stored in ini-file, read from there
 
 class OHW():
     """
@@ -93,6 +89,36 @@ class OHW():
         # take original resoltuion if no other specified
         if px_longest != None:
             self.analysisImageStack, self.analysis_meta["scalingfactor"] = helpfunctions.scale_ImageStack(self.analysisImageStack, px_longest=px_longest)
+        
+        self.analysis_meta.update({'shape': self.analysisImageStack.shape})
+
+    def save_ohw(self):
+        """
+            saves ohw analysis object with all necessary info
+            -> no need to recalculate MVs when filters/ plotting parameters are changed
+            especially useful after batchrun
+        """
+        filename = str(self.analysis_meta["results_folder"]/'ohw_analysis.pickle')
+        savedata = [self.analysis_meta, self.videometa, self.rawMVs] 
+        # keep saving minimal, everything should be reconstructed from these parameters...
+
+        self.analysis_meta["results_folder"].mkdir(parents = True, exist_ok = True)
+        with open(filename, 'wb') as writefile:
+            pickle.dump(savedata, writefile, protocol=pickle.HIGHEST_PROTOCOL)
+
+    def load_ohw(self, filename):
+        """
+            loads ohw analysis object saved previously and sets corresponding variables
+            initializes motion to get to the same state before saving
+        """
+        # take care if sth will be overwritten?
+        # best way to insert rawImageStack?
+        
+        with open(filename, 'rb') as loadfile:
+            data = pickle.load(loadfile)
+        self.analysis_meta, self.videometa, self.rawMVs = data
+        
+        self.initialize_motion()
 
     def calculate_motion(self, method = 'BM', progressSignal = None, **parameters):
         """
@@ -105,13 +131,13 @@ class OHW():
             -LK: lucas-kanade
             -MM: musclemotion
         """
-        #self.results_folder.mkdir(parents = True, exist_ok = True) #create folder for results        
 
-        #store parameters which were used for the calculation of MVs
+        #store parameters which wwill be used for the calculation of MVs
         self.analysis_meta.update({'Motion_method': method, 'MV_parameters': parameters})
         
         if method == 'BM':   
-            self.rawMVs = OFlowCalc.BM_stack(self.analysisImageStack, progressSignal = progressSignal, **parameters)#adjust self.scaledImageStack...
+            self.rawMVs = OFlowCalc.BM_stack(self.analysisImageStack, 
+                progressSignal = progressSignal, **parameters)
         elif method == 'GF':
             pass
         elif method == 'LK':
@@ -121,7 +147,8 @@ class OHW():
             pass
 
     def calculate_motion_thread(self, **parameters):
-        self.thread_calculate_motion = helpfunctions.turn_function_into_thread(self.calculate_motion, emit_progSignal=True, **parameters)
+        self.thread_calculate_motion = helpfunctions.turn_function_into_thread(
+            self.calculate_motion, emit_progSignal=True, **parameters)
         return self.thread_calculate_motion 
     
     def initialize_motion(self):
@@ -138,6 +165,7 @@ class OHW():
         self.get_mean_absMotion()
         self.prepare_quiver_components()
         self.calc_TimeAveragedMotion()
+        self.PeakDetection.set_data(self.timeindex,self.mean_absMotions)
     
     def get_mean_absMotion(self):
         """
@@ -154,8 +182,9 @@ class OHW():
         
         self.analysis_meta["results_folder"].mkdir(parents = True, exist_ok = True) #create folder for results if it doesn't exist
         self.timeindex = (np.arange(self.mean_absMotions.shape[0]) / self.videometa["fps"]).round(2)
-        np.save(str(self.analysis_meta["results_folder"] / 'beating_kinetics.npy'), np.array([self.timeindex,self.mean_absMotions]))
-    
+        #np.save(str(self.analysis_meta["results_folder"] / 'beating_kinetics.npy'), np.array([self.timeindex,self.mean_absMotions]))
+        #save in own function if desired...
+        
     def prepare_quiver_components(self):
         '''
             sets all 0-motions to nan such that they won't be plotted in quiver plot
@@ -169,8 +198,10 @@ class OHW():
         bw = self.analysis_meta["MV_parameters"]["blockwidth"]
         
         self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(
-            np.arange(bw/2, self.analysisImageStack.shape[2]-bw/2, bw)+1, 
-            np.arange(bw/2, self.analysisImageStack.shape[1]-bw/2+1, bw))  #changed arange range, double check!.. inconsistency in x and y?
+            np.arange(bw/2, self.analysis_meta["shape"][2]-bw/2, bw)+1, 
+            np.arange(bw/2, self.analysis_meta["shape"][1]-bw/2+1, bw))  #changed arange range, double check!.. inconsistency in x and y?
+            
+            
             
     def save_MVs(self):
         """
@@ -228,8 +259,6 @@ class OHW():
             peak detection in mean_absMotions
         """
         
-        self.PeakDetection.set_data(self.timeindex,self.mean_absMotions)
-        
         self.PeakDetection.detectPeaks(ratio, number_of_neighbours)
         self.PeakDetection.analyzePeaks()
         self.PeakDetection.calculateTimeIntervals()
@@ -280,7 +309,7 @@ class OHW():
 
         self.max_avgMotion = np.max ([self.avg_absMotion, self.avg_MotionX, self.avg_MotionY]) # avg_absMotion should be enough
     
-    def plot_TimeAveragedMotions(self, file_ext):
+    def plot_TimeAveragedMotions(self, file_ext='.png'):
         plotfunctions.plot_TimeAveragedMotions(self, file_ext)
     
     def createROIImageStack(self, r):

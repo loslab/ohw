@@ -195,14 +195,13 @@ class PeakDetection():
         workbook_ekg = Workbook()
         sheet_ekg = workbook_ekg.active
         sheet_ekg.Name = 'EKG values'
-        sheet_ekg.append(['Values of the EKG:'])
-        sheet_ekg.append(['time (sec)', 'mean absolute motion'])
+        sheet_ekg.append(['t [s]', 'v_mean [µm/s]'])
 
         for time, peak in zip(self.timeindex, self.mean_absMotions):
             sheet_ekg.append([time, peak])        
         
         #turn some cells'style to bold
-        bold_cells = ['A1', 'B1', 'C1', 'A2', 'B2', 'C2']
+        bold_cells = ['A1', 'B1']
 
         for cell in bold_cells:
             sheet_ekg[cell].font = font_bold

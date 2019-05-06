@@ -38,7 +38,7 @@ def plot_Kinetics(timeindex, mean_absMotions, Peaks=None, mark_peaks=False, file
         fig_kinetics.savefig(str(file_name), dpi = 300, bbox_inches = 'tight') #, bbox_inches = 'tight', pad_inches = 0.4)
     return fig_kinetics, ax_kinetics
 
-def plot_TimeAveragedMotions(ohw_dataset, file_ext):
+def plot_TimeAveragedMotions(ohw_dataset, file_ext='.png'):
     avg_absMotion = ohw_dataset.avg_absMotion
     avg_MotionX, avg_MotionY = ohw_dataset.avg_MotionX, ohw_dataset.avg_MotionY
     max_avgMotion = ohw_dataset.max_avgMotion
