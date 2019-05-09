@@ -48,6 +48,7 @@ def read_imagestack(inputpath, *args, **kwargs):
         videometa["Blackval"], videometa["Whiteval"] = np.percentile(rawImageStack[0], (0.1, 99.9))  #set default values if no infos defined in videoinfos file
     
     videometa["fps"] = round(videometa["fps"], 1)# round fps to 1 digit
+    videometa["microns_per_pixel"] = round(videometa["microns_per_pixel"], 4)
 
     return rawImageStack, videometa
     

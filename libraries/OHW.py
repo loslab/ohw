@@ -42,11 +42,13 @@ class OHW():
         #self.exceptions = None
         #self.isROI_OHW = False
         
-        self.videometa = {}   # dict of video metadata: microns_per_pixel, fps, blackval, whiteval, 
+        self.raw_videometa = {} # raw info after importing  # dict of video metadata: microns_per_pixel, fps, blackval, whiteval,
+        self.videometa = {}
         self.analysis_meta = {"date": datetime.datetime.now(), "version": __version__}
     
     def import_video(self, inputpath, *args, **kwargs):        
-        self.rawImageStack, self.videometa = videoreader.import_video(inputpath)
+        self.rawImageStack, self.raw_videometa = videoreader.import_video(inputpath)
+        self.videometa = self.raw_videometa.copy()
         self.set_auto_results_folder()
         
     def import_video_thread(self, inputpath):
@@ -58,6 +60,7 @@ class OHW():
         set video data + metadata directly instead of importing whole video again
         '''
         self.rawImageStack, self.videometa = rawImageStack, videometa
+        self.videometa = self.raw_videometa # necessary?
         self.set_auto_results_folder()    
     
     def set_auto_results_folder(self):

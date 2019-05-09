@@ -23,6 +23,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 #from PyQt5 import QtGui
  
 from libraries import MultipleFoldersByUser, UserDialogs, Filters, helpfunctions, QuiverExportOptions, plotfunctions, OHW
+from libraries.gui import tab_input
 
 class TableWidget(QWidget):
         def __init__(self, parent):   
@@ -45,7 +46,7 @@ class TableWidget(QWidget):
 
             self.plotted_peaks = False
             
-            self.tab1 = QWidget()    
+            self.tab_input = tab_input.TabInput(self)
             self.tab2 = QWidget()
             self.tab3 = QWidget()
             self.tab4 = QWidget()
@@ -55,7 +56,7 @@ class TableWidget(QWidget):
             self.tabs.resize(800,800)
              
             # Add tabs
-            self.tabs.addTab(self.tab1,"Video Input ")
+            self.tabs.addTab(self.tab_input,"Video Input ")
             self.tabs.addTab(self.tabROIs, "Manage ROIs")
             self.tabs.addTab(self.tab2,"Compute motion")
             self.tabs.addTab(self.tab3,"Beating kinetics")
@@ -88,7 +89,7 @@ class TableWidget(QWidget):
         
             for item in ['video_length']:
                 self.quiver_settings[item] = self.config.getfloat(section='DEFAULT QUIVER SETTINGS', option=item)
-        
+            """
  ########### fill the first tab ##################
             info_loadFile = QTextEdit()
             info_loadFile.setText('In this tab you choose the input folder. If a videoinfos.txt file is found, the information is processed automatically. Otherwise, please enter the framerate and microns per pixel.')
@@ -104,23 +105,23 @@ class TableWidget(QWidget):
             self.label_px_per_micron = QLabel('Enter the number of micrometer per pixel: ')
             self.label_loadFile.setFont(QFont("Times",weight=QFont.Bold))
 
-            self.line_fps = QLineEdit()
-            self.line_px_perMicron = QLineEdit()
+            self.tab_input.edit_fps = QLineEdit()
+            self.tab_input.edit_mpp = QLineEdit()
 
-            self.line_px_perMicron.setText(self.config['DEFAULT VALUES']['px_per_micron'])
-            self.line_fps.setText(self.config['DEFAULT VALUES']['fps'])
-            self.line_px_perMicron.textChanged.connect(self.changePxPerMicron)
-            self.line_fps.textChanged.connect(self.changeFPS)            
+            self.tab_input.edit_mpp.setText(self.config['DEFAULT VALUES']['px_per_micron'])
+            self.tab_input.edit_fps.setText(self.config['DEFAULT VALUES']['fps'])
+            self.tab_input.edit_mpp.textChanged.connect(self.changePxPerMicron)
+            self.tab_input.edit_fps.textChanged.connect(self.changeFPS)            
             
             #display image
             source = 'Chosen video: '
-            self.label_chosen_image = QLabel(str(source + ' - '))
+            self.tab_input.label_input_path = QLabel(str(source + ' - '))
         
             #display first image
-            self.fig_firstIm, self.ax_firstIm = plt.subplots(1,1)#, figsize = (5,5))
-            self.ax_firstIm.axis('off')
-            self.canvas_firstImage = FigureCanvas(self.fig_firstIm)
-            self.canvas_firstImage.setMinimumSize(500,500)
+            self.fig_firstIm, self.tab_input.ax_firstIm = plt.subplots(1,1)#, figsize = (5,5))
+            self.tab_input.ax_firstIm.axis('off')
+            self.tab_input.canvas_firstImage = FigureCanvas(self.fig_firstIm)
+            self.tab_input.canvas_firstImage.setMinimumSize(500,500)
             
             #load-video button
             self.button_loadVideo = QPushButton('Load video')
@@ -155,14 +156,14 @@ class TableWidget(QWidget):
             self.button_reset_blackWhiteVal.clicked.connect(self.on_resetBlackWhiteVal)
             
             #label to display current results folder
-            self.label_resultsfolder = QLabel('Current results folder: ')
-            self.label_resultsfolder.setFont(QFont("Times",weight=QFont.Bold))
+            self.tab_input.label_results_folder = QLabel('Current results folder: ')
+            self.tab_input.label_results_folder.setFont(QFont("Times",weight=QFont.Bold))
                         
             #button for changing the results folder
-            self.button_change_resultsfolder = QPushButton('Change results folder ')
-            self.button_change_resultsfolder.resize(self.button_change_resultsfolder.sizeHint())
-            self.button_change_resultsfolder.clicked.connect(self.on_changeResultsfolder)
-            self.button_change_resultsfolder.setEnabled(False)
+            self.tab_input.btn_results_folder = QPushButton('Change results folder ')
+            self.tab_input.btn_results_folder.resize(self.tab_input.btn_results_folder.sizeHint())
+            self.tab_input.btn_results_folder.clicked.connect(self.on_changeResultsfolder)
+            self.tab_input.btn_results_folder.setEnabled(False)
             
             #succeed-button
             self.button_succeed_tab1 = QPushButton('Video successfully loaded if this button is green!')
@@ -175,9 +176,9 @@ class TableWidget(QWidget):
             
             #progressbar in tab1  
             #rename progressbars in future?
-            self.progressbar_loadStack = QProgressBar(self)
-            self.progressbar_loadStack.setMaximum(1)  
-            self.progressbar_loadStack.setValue(0)
+            self.tab_input.progressbar_loadVideo = QProgressBar(self)
+            self.tab_input.progressbar_loadVideo.setMaximum(1)  
+            self.tab_input.progressbar_loadVideo.setValue(0)
             
             self.tab1.layout = QGridLayout(self)
             self.tab1.layout.setSpacing(15)
@@ -186,22 +187,22 @@ class TableWidget(QWidget):
          
             self.tab1.layout.addWidget(self.label_loadFile,         1, 0, Qt.AlignTop)            
             self.tab1.layout.addWidget(self.label_fps,              2, 0, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.line_fps,               2, 1, Qt.AlignTop)
+            self.tab1.layout.addWidget(self.tab_input.edit_fps,               2, 1, Qt.AlignTop)
             self.tab1.layout.addWidget(self.label_px_per_micron,    3, 0, Qt.AlignTop)
 
-            self.tab1.layout.addWidget(self.line_px_perMicron,      3, 1, Qt.AlignTop)
+            self.tab1.layout.addWidget(self.tab_input.edit_mpp,      3, 1, Qt.AlignTop)
             self.tab1.layout.addWidget(self.button_loadVideo,       4, 0, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.progressbar_loadStack,  5, 0, Qt.AlignTop)
+            self.tab1.layout.addWidget(self.tab_input.progressbar_loadVideo,  5, 0, Qt.AlignTop)
             self.tab1.layout.addWidget(self.button_succeed_tab1,    6, 0, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.label_chosen_image,     7, 0, Qt.AlignTop)
+            self.tab1.layout.addWidget(self.tab_input.label_input_path,     7, 0, Qt.AlignTop)
             
-            self.tab1.layout.addWidget(self.label_resultsfolder,    8, 0, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.button_change_resultsfolder, 9,0, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.canvas_firstImage,      10, 0, 2,1, Qt.AlignTop)
+            self.tab1.layout.addWidget(self.tab_input.label_results_folder,    8, 0, Qt.AlignTop)
+            self.tab1.layout.addWidget(self.tab_input.btn_results_folder, 9,0, Qt.AlignTop)
+            self.tab1.layout.addWidget(self.tab_input.canvas_firstImage,      10, 0, 2,1, Qt.AlignTop)
 
             self.tab1.layout.setAlignment(Qt.AlignTop)
             self.tab1.setLayout(self.tab1.layout)
-
+            """
 ########### fill the ROI selection tab ###########
             info_ROI = QTextEdit()
             info_ROI.setText('In this tab you can add, edit and choose Regions of Interest.')
@@ -818,8 +819,8 @@ class TableWidget(QWidget):
             self.button_batch_stopAnalysis.setEnabled(False)
             
             #label to display current results folder
-            self.label_resultsfolder_batch = QLabel('Current results folder: ')
-            self.label_resultsfolder_batch.setFont(QFont("Times",weight=QFont.Bold))
+            self.tab_input.label_results_folder_batch = QLabel('Current results folder: ')
+            self.tab_input.label_results_folder_batch.setFont(QFont("Times",weight=QFont.Bold))
           
             #button for changing the results folder
             self.button_batch_resultsfolder = QPushButton('Change results folder ')
@@ -853,7 +854,7 @@ class TableWidget(QWidget):
             self.tab6.layout.addWidget(self.batch_checkFilter,          12,0)
             self.tab6.layout.addWidget(self.batch_checkHeatmaps,        13,0)
             self.tab6.layout.addWidget(self.batch_checkQuivers,         14,0)
-            self.tab6.layout.addWidget(self.label_resultsfolder_batch,  15,0)
+            self.tab6.layout.addWidget(self.tab_input.label_results_folder_batch,  15,0)
             self.tab6.layout.addWidget(self.button_batch_resultsfolder, 16,0)
             self.tab6.layout.addWidget(self.button_batch_startAnalysis, 17,0)
             self.tab6.layout.addWidget(self.progressbar_batch,          18,0)
@@ -1187,8 +1188,9 @@ class TableWidget(QWidget):
             if self.qlist_batchvideos.count() == 0:
                 self.button_batch_startAnalysis.setEnabled(False)
                 
-        def on_loadVideo(self, grid):
-            self.progressbar_loadStack.setValue(0)
+        def on_loadVideo(self):
+
+            self.tab_input.progressbar_loadVideo.setValue(0)
             
             #choose a folder
             msg = 'Choose an input video: file of type .mp4, .avi, .mov or a .tif file in a folder containing a sequence of .tif-images'
@@ -1213,44 +1215,19 @@ class TableWidget(QWidget):
                 #read imagestack
                 self.import_video_thread = self.current_ohw.import_video_thread(inputpath)
                 self.import_video_thread.start()
-                #self.progressbar_loadStack.setFormat("loading Folder")  #is not displayed yet?
-                self.progressbar_loadStack.setRange(0,0)
+                #self.tab_input.progressbar_loadVideo.setFormat("loading Folder")  #is not displayed yet?
+                self.tab_input.progressbar_loadVideo.setRange(0,0)
                 self.import_video_thread.finished.connect(self.finish_loadVideo)
             except Exception:
                 pass 
                         
         def finish_loadVideo(self):
-            self.progressbar_loadStack.setRange(0,1)
-            self.progressbar_loadStack.setValue(1)
-            
-            self.set_video_param()  #update videoinfos with data from current_ohw
-            
-            self.add_sliders_blackWhiteVal()
-            self.on_resetBlackWhiteVal()
-            
-            self.button_selectROI.setEnabled(True)
-        
-        def add_sliders_blackWhiteVal(self):
-            """ add sliders for black and white value adaption to the tab, store original values
-            """
-            #store the original black and white values
-            self.blackval_orig = self.current_ohw.videometa["Blackval"]
-            self.whiteval_orig = self.current_ohw.videometa["Whiteval"]
+            self.tab_input.progressbar_loadVideo.setRange(0,1)
+            self.tab_input.progressbar_loadVideo.setValue(1)
 
-            #update slider information
-            self.slider_blackval.setMaximum(self.current_ohw.videometa["Whiteval"])
-            self.slider_whiteval.setMinimum(self.current_ohw.videometa["Blackval"])
-            self.slider_whiteval.setMaximum(self.current_ohw.videometa["Whiteval"]*3)
-            self.slider_blackval.setValue(self.current_ohw.videometa["Blackval"])
-            self.slider_whiteval.setValue(self.current_ohw.videometa["Whiteval"])
-            
-            #add sliders 
-            self.tab1.layout.addWidget(self.label_slider_blackval,  9,1, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.slider_blackval,        10,1, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.label_slider_whiteval,  9,2, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.slider_whiteval,        10,2, Qt.AlignTop)
-            
-            self.tab1.layout.addWidget(self.button_reset_blackWhiteVal, 11, 1, 1, 2, Qt.AlignTop)
+            self.set_video_param()  #update videoinfos with data from current_ohw
+           
+            #self.button_selectROI.setEnabled(True)
             
         def on_changeResultsfolder(self):
             #choose a folder
@@ -1262,10 +1239,10 @@ class TableWidget(QWidget):
                 return
             
             self.current_ohw.analysis_meta["results_folder"] = pathlib.Path(folderName)
-            self.label_resultsfolder.setText(folderName)
+            self.tab_input.label_results_folder.setText(folderName)
             # fix for batch and rois!
             '''
-            if self.sender() == self.button_change_resultsfolder:
+            if self.sender() == self.tab_input.btn_results_folder:
                 #change the results folder of the OHW class
                 self.current_ohw.results_folder = pathlib.Path(folderName)
                 
@@ -1275,7 +1252,7 @@ class TableWidget(QWidget):
                         self.ROI_OHWs[ROI_nr].results_folder = pathlib.Path(folderName).joinpath(self.ROI_names[ROI_nr])
                 #display
                 current_folder = 'Current results folder: ' + str(pathlib.PureWindowsPath(self.current_ohw.results_folder))
-                self.label_resultsfolder.setText(current_folder)
+                self.tab_input.label_results_folder.setText(current_folder)
                 
 
             elif self.sender() == self.button_batch_resultsfolder:
@@ -1284,47 +1261,53 @@ class TableWidget(QWidget):
                 
                 #display new results folder
                 current_folder = 'Current results folder: ' + str(pathlib.PureWindowsPath(self.results_folder_batch))
-                self.label_resultsfolder_batch.setText(current_folder)
+                self.tab_input.label_results_folder_batch.setText(current_folder)
             '''    
             print('New results folder: %s' %folderName)            
             
         def display_firstImage(self, image):
-             # display first image and update controls
-            self.imshow_firstImage = self.ax_firstIm.imshow(image, cmap = 'gray', vmin = self.current_ohw.videometa["Blackval"], vmax = self.current_ohw.videometa["Whiteval"])
-            self.canvas_firstImage.draw()
+            # display first image and update controls
+            print(self.current_ohw.videometa["Blackval"], self.current_ohw.videometa["Whiteval"])
+            self.imshow_firstImage = self.tab_input.ax_firstIm.imshow(image, cmap = 'gray', vmin = self.current_ohw.videometa["Blackval"], vmax = self.current_ohw.videometa["Whiteval"])
+            self.tab_input.canvas_firstImage.draw()
         
-        def update_brightness(self, vmin, vmax):
+        def update_brightness(self):
+            vmin, vmax = self.current_ohw.videometa["Blackval"], self.current_ohw.videometa["Whiteval"]
             self.imshow_firstImage.set_clim(vmin=vmin, vmax=vmax)
-            self.canvas_firstImage.draw()
+            self.tab_input.canvas_firstImage.draw()
         
-        def change_blackWhiteVal(self):          
+        def on_change_blackVal(self):          
             """
-                change the black and white values saved for image display
+                change the white values for image display
+                using a slider with 2 handles would be easiest option...
             """
-            # save the new values to videometa
-            self.current_ohw.videometa["Blackval"] = self.slider_blackval.value()
-            self.current_ohw.videometa["Whiteval"] = self.slider_whiteval.value()
+         
+            # save the new value to videometa
+            self.current_ohw.videometa["Blackval"] = self.tab_input.slider_blackval.value()
 
-            # using a slider with 2 handles would be easiest option...
             # set allowed whitevals and blackvals           
-            self.slider_blackval.setMaximum(self.current_ohw.videometa["Whiteval"])
-            self.slider_whiteval.setMinimum(self.current_ohw.videometa["Blackval"])
-            
-            self.update_brightness(self.current_ohw.videometa["Blackval"],
-                                self.current_ohw.videometa["Whiteval"])
+            self.tab_input.slider_whiteval.setMinimum(self.current_ohw.videometa["Blackval"])            
+            self.update_brightness()
 
-        def on_resetBlackWhiteVal(self):
+        def on_change_whiteVal(self):          
+            """
+                change the white values for image display
+            """
+            # save the new value to videometa
+            self.current_ohw.videometa["Whiteval"] = self.tab_input.slider_whiteval.value()
+
+            # set allowed whitevals and blackvals           
+            self.tab_input.slider_blackval.setMaximum(self.current_ohw.videometa["Whiteval"])            
+            self.update_brightness()
+
+        def on_resetBrightness(self):
             """ resets the image display back to the original values
             """
-            #save the new values to videometa
-            self.current_ohw.videometa["Blackval"] = self.blackval_orig
-            self.current_ohw.videometa["Whiteval"] = self.whiteval_orig
+            self.current_ohw.videometa["Blackval"] = self.current_ohw.raw_videometa["Blackval"]
+            self.current_ohw.videometa["Whiteval"] = self.current_ohw.raw_videometa["Whiteval"]
             
-            self.slider_blackval.setValue(self.blackval_orig)
-            self.slider_whiteval.setValue(self.whiteval_orig)
-            
-            self.update_brightness(self.current_ohw.videometa["Blackval"],
-                                self.current_ohw.videometa["Whiteval"])
+            self.set_raw_brightness()
+            self.update_brightness()
             
         def display_ROI(self, ROI, ROI_nr, row):
             fig_ROI, ax_ROI = plt.subplots(1,1)
@@ -1367,16 +1350,16 @@ class TableWidget(QWidget):
             return self.maxShift
         
         def changeFPS(self):
-            self.current_ohw.videometa['fps'] = float(self.line_fps.text())
+            self.current_ohw.videometa['fps'] = float(self.tab_input.edit_fps.text())
             if len(self.ROI_OHWs) is not 0:
                 for ROI_nr in range(0,len(self.ROI_OHWs)):
-                    self.ROI_OHWs[ROI_nr].videometa['fps'] = float(self.line_fps.text())
+                    self.ROI_OHWs[ROI_nr].videometa['fps'] = float(self.tab_input.edit_fps.text())
         
         def changePxPerMicron(self):
-            self.current_ohw.videometa['microns_per_pixel'] = float(self.line_px_perMicron.text())
+            self.current_ohw.videometa['microns_per_pixel'] = float(self.tab_input.edit_mpp.text())
             if len(self.ROI_OHWs) is not 0:
                 for ROI_nr in range(0,len(self.ROI_OHWs)):
-                    self.ROI_OHWs[ROI_nr].videometa['fps'] = float(self.line_fps.text())
+                    self.ROI_OHWs[ROI_nr].videometa['fps'] = float(self.tab_input.edit_fps.text())
     
         def on_detectPeaks(self):
             #detect peaks and draw them as EKG
@@ -1682,10 +1665,20 @@ class TableWidget(QWidget):
             self.spinbox_blockwidth.setValue(self.current_ohw.analysis_meta["MV_parameters"]["blockwidth"])
             self.spinbox_delay.setValue(self.current_ohw.analysis_meta["MV_parameters"]["delay"])
             self.spinbox_maxShift.setValue(self.current_ohw.analysis_meta["MV_parameters"]["max_shift"])
-            
+        
+        def set_raw_brightness(self):
+            """
+                set brightness sliders to raw values
+            """
+            self.tab_input.slider_whiteval.setMaximum(self.current_ohw.videometa["Whiteval"]*3)
+            self.tab_input.slider_blackval.setMaximum(self.current_ohw.videometa["Whiteval"])      
+            self.tab_input.slider_whiteval.setValue(self.current_ohw.videometa["Whiteval"]) # take care in which order this is called, as it also triggers on_change_whiteVal
+            self.tab_input.slider_blackval.setValue(self.current_ohw.videometa["Blackval"])
+            self.tab_input.slider_whiteval.setMinimum(self.current_ohw.videometa["Blackval"]) 
+        
         def set_video_param(self):
-            self.line_fps.setText(str(self.current_ohw.videometa['fps']))
-            self.line_px_perMicron.setText(str(self.current_ohw.videometa['microns_per_pixel']))            
+            self.tab_input.edit_fps.setText(str(self.current_ohw.videometa['fps']))
+            self.tab_input.edit_mpp.setText(str(self.current_ohw.videometa['microns_per_pixel']))            
             # disable input field if videoinfos.txt available? if self.current_ohw.videometa['infofile_exists'] == True: ....
             
             # display first image and update controls
@@ -1693,19 +1686,24 @@ class TableWidget(QWidget):
             if type(self.current_ohw.rawImageStack) == np.ndarray:
                 self.display_firstImage(self.current_ohw.rawImageStack[0])
                 self.button_getMVs.setEnabled(True)
-                self.button_succeed_tab1.setStyleSheet("background-color: YellowGreen")
+                
+                self.tab_input.slider_blackval.setEnabled(True)
+                self.tab_input.slider_whiteval.setEnabled(True)
+                
+                self.set_raw_brightness()
+                #self.button_succeed_tab1.setStyleSheet("background-color: YellowGreen")
             else:
                 # disable brightness slider
-                self.ax_firstIm.clear()
-                self.canvas_firstImage.draw()
-                self.button_succeed_tab1.setStyleSheet("background-color: IndianRed")
-             
-            inputpath = str('Chosen folder: ' + str(self.current_ohw.videometa['inputpath']))
-            self.label_chosen_image.setText(inputpath)
+                self.tab_input.ax_firstIm.clear()
+                self.tab_input.canvas_firstImage.draw()
+                #self.button_succeed_tab1.setStyleSheet("background-color: IndianRed")
             
-            results_folder = 'Current results folder: ' + str(pathlib.PureWindowsPath(self.current_ohw.analysis_meta['results_folder']))
-            self.label_resultsfolder.setText(results_folder)
-            self.button_change_resultsfolder.setEnabled(True)
+            inputpath = str(self.current_ohw.videometa['inputpath'])
+            self.tab_input.label_input_path.setText(inputpath)
+            
+            results_folder = str(pathlib.PureWindowsPath(self.current_ohw.analysis_meta['results_folder']))
+            self.tab_input.label_results_folder.setText(results_folder)
+            self.tab_input.btn_results_folder.setEnabled(True)
         
         def findMainWindow(self): #-> typing.Union[QMainWindow, None]:
             # Global function to find the (open) QMainWindow in application
