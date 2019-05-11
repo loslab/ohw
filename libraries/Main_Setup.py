@@ -23,7 +23,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 #from PyQt5 import QtGui
  
 from libraries import MultipleFoldersByUser, UserDialogs, Filters, helpfunctions, QuiverExportOptions, plotfunctions, OHW
-from libraries.gui import tab_input
+from libraries.gui import tab_input, tab_motion
 
 class TableWidget(QWidget):
         def __init__(self, parent):   
@@ -46,7 +46,7 @@ class TableWidget(QWidget):
             self.plotted_peaks = False
             
             self.tab_input = tab_input.TabInput(self)
-            self.tab2 = QWidget()
+            self.tab_motion = tab_motion.TabMotion(self)
             self.tab3 = QWidget()
             self.tab4 = QWidget()
             self.tab5 = QWidget()
@@ -56,8 +56,8 @@ class TableWidget(QWidget):
              
             # Add tabs
             self.tabs.addTab(self.tab_input,"Video Input ")
-            self.tabs.addTab(self.tabROIs, "Manage ROIs")
-            self.tabs.addTab(self.tab2,"Compute motion")
+            #self.tabs.addTab(self.tabROIs, "Manage ROIs")
+            self.tabs.addTab(self.tab_motion,"Compute motion")
             self.tabs.addTab(self.tab3,"Beating kinetics")
             self.tabs.addTab(self.tab4,"Heatmaps and Quiverplots")
             self.tabs.addTab(self.tab5,"Time averaged motion")
@@ -87,7 +87,7 @@ class TableWidget(QWidget):
         
             for item in ['video_length']:
                 self.quiver_settings[item] = self.config.getfloat(section='DEFAULT QUIVER SETTINGS', option=item)
-
+            """
 ########### fill the ROI selection tab ###########
             info_ROI = QTextEdit()
             info_ROI.setText('In this tab you can add, edit and choose Regions of Interest.')
@@ -140,106 +140,8 @@ class TableWidget(QWidget):
             self.tabROIs.layout.addWidget(QLineEdit('Example ROI'),     3,0)
             self.tabROIs.layout.addWidget(self.ROI,                     3,1)
             self.tabROIs.setLayout(self.tabROIs.layout)
-            
-########### fill the second tab ##################
-            info_measurement = QTextEdit()
-            info_measurement.setText('In this tab you set the settings for the block-matching algorithm and perform the calculation of the motion vectors. You can also export the motion vectors.')
-            info_measurement.setReadOnly(True)
-            info_measurement.setMaximumHeight(40)
-            info_measurement.setMaximumWidth(800)
-            info_measurement.setStyleSheet("background-color: LightSkyBlue")
-            
-            label_measure = QLabel('Measure velocity (block-matching): ')
-            label_settings = QLabel('Settings: ')
-            label_measure.setFont(QFont("Times",weight=QFont.Bold))
-            label_settings.setFont(QFont("Times",weight=QFont.Bold))
-            label_addOptions = QLabel('Additional options: ')
-            label_addOptions.setFont(QFont("Times",weight=QFont.Bold))
-            
-            #user settings  
-            label_blockwidth =  QLabel('Blockwidth (in pixels):')
-            label_delay =       QLabel('Delay (in frames): ')
-            label_maxShift =    QLabel('Maximum shift p (in pixels): ')
-            self.spinbox_blockwidth = QSpinBox()
-            self.spinbox_delay = QSpinBox()
-            self.spinbox_maxShift = QSpinBox()
-            
-            #settings for the spinboxes
-            self.spinbox_blockwidth.setRange(2,128)
-            self.spinbox_blockwidth.setSingleStep(2)
-            self.spinbox_blockwidth.setSuffix(' pixels')
-            self.spinbox_blockwidth.setValue(int(self.config['DEFAULT VALUES']['blockwidth']))
-            self.spinbox_delay.setRange(1,10)
-            self.spinbox_delay.setSuffix(' frames')
-            self.spinbox_delay.setSingleStep(1)
-            self.spinbox_delay.setValue(int(self.config['DEFAULT VALUES']['delay']))
-            self.spinbox_maxShift.setSuffix(' pixels')
-            self.spinbox_maxShift.setValue(int(self.config['DEFAULT VALUES']['maxShift']))
+            """
 
-            #if value of box is changed
-            self.spinbox_blockwidth.valueChanged.connect(self.changeBlockwidth)
-            self.spinbox_delay.valueChanged.connect(self.changeDelay)
-            self.spinbox_maxShift.valueChanged.connect(self.changeMaxShift)
-            
-            self.check_scaling = QCheckBox('Scale the longest side to 1024 px during calculation')
-            #default values:
-            self.scaling_status = True
-            self.factor_scaling = 1024  #todo: remove factor_scaling as class variable here
-            self.check_scaling.setChecked(self.scaling_status)
-            self.check_scaling.stateChanged.connect(self.changeStatus)
-            
-            #enable/disable filtering
-            self.check_filter = QCheckBox("Filter motion vectors during calculation")
-            self.filter_status = True
-            
-            self.check_filter.setChecked(self.filter_status)
-            self.check_filter.stateChanged.connect(self.changeStatus)
-            
-            self.button_getMVs = QPushButton('Calculate motion vectors')
-            self.button_getMVs.resize(self.button_getMVs.sizeHint())
-            self.button_getMVs.clicked.connect(self.on_getMVs)
-            self.button_getMVs.setEnabled(False)
-            
-            self.button_save_motionVectors = QPushButton('Save motion vectors')
-            self.button_save_motionVectors.resize(self.button_save_motionVectors.sizeHint())
-            self.button_save_motionVectors.clicked.connect(self.on_saveMVs)
-            self.button_save_motionVectors.setEnabled(False)
-            
-            self.btn_load_ohw = QPushButton('Load motion analysis')
-            self.btn_load_ohw.clicked.connect(self.on_load_ohw)
-            
-            
-            #succed-button
-            self.button_succeed_MVs = QPushButton('Move on to the next tab if this button is green!')
-            self.button_succeed_MVs.setStyleSheet("background-color: IndianRed")
-            
-            #progressbar in tab2    
-            self.progressbar_MVs = QProgressBar(self)
-            self.progressbar_MVs.setMaximum(100)
-            self.progressbar_MVs.setValue(0)
-            
-            self.tab2.layout = QGridLayout(self)
-            self.tab2.layout.setSpacing(25)
-            self.tab2.layout.addWidget(info_measurement, 0,0)
-            self.tab2.layout.addWidget(label_settings, 1,0)
-            self.tab2.layout.addWidget(label_blockwidth,2,0)
-            self.tab2.layout.addWidget(self.spinbox_blockwidth,2,1)
-            self.tab2.layout.addWidget(label_delay,3,0)
-            self.tab2.layout.addWidget(self.spinbox_delay, 3,1)
-            self.tab2.layout.addWidget(label_maxShift,4,0)
-            self.tab2.layout.addWidget(self.spinbox_maxShift,4,1)
-            self.tab2.layout.addWidget(label_addOptions, 5,0)
-            self.tab2.layout.addWidget(self.check_scaling, 6,0)
-            self.tab2.layout.addWidget(self.check_filter, 7,0 )
-            self.tab2.layout.addWidget(label_measure, 8,0)
-            self.tab2.layout.addWidget(self.button_getMVs, 9,0)
-            self.tab2.layout.addWidget(self.progressbar_MVs, 10,0)
-            self.tab2.layout.addWidget(self.button_succeed_MVs, 11,0)
-            self.tab2.layout.addWidget(self.button_save_motionVectors, 12,0)
-            self.tab2.layout.addWidget(self.btn_load_ohw,13,0)
-            
-            self.tab2.setLayout(self.tab2.layout)
-            
 ########### fill the third tab ##################
             info_analysisBasic = QTextEdit()
             info_analysisBasic.setText('In this tab you can plot the motion as an EKG and calculate statistics based on the found peaks. Change the parameters manually to optimize the peak detection. You can save the graphs and export the peaks.')
@@ -751,8 +653,9 @@ class TableWidget(QWidget):
 
 ###############################################################################
         def change_ROI_names(self, ROI_nr):
-            """ emitted when name of one of the ROIs is changed by the user in one of the lineedits
-            Parameters: 
+            """ 
+                emitted when name of one of the ROIs is changed by the user in one of the lineedits
+                Parameters: 
                 ROI_nr      index of the ROI
             """
             #get the new name from the LineEdit which send the signal
@@ -869,7 +772,7 @@ class TableWidget(QWidget):
             elif self.sender() == self.batch_spinbox_maxShift:
                 self.maxshift_batch = self.batch_spinbox_maxShift.value()
                 return self.batch_spinbox_maxShift.value()
-            
+
         def on_startBatchAnalysis(self):
             print('Starting batch analysis...')
             self.button_addBatchVideo.setEnabled(False)
@@ -1249,18 +1152,6 @@ class TableWidget(QWidget):
             current_lineedit.textEdited.connect(lambda: self.change_ROI_names(ROI_nr=ROI_nr))
             self.tabROIs.layout.addWidget(current_lineedit, row, 0)
             self.tabROIs.layout.addWidget(canvas_ROI,row,1) 
-        
-        def changeBlockwidth(self):
-            self.blockwidth = self.spinbox_blockwidth.value()
-            return self.blockwidth
-        
-        def changeDelay(self):
-            self.delay = self.spinbox_delay.value()
-            return self.delay    
-        
-        def changeMaxShift(self):
-            self.maxShift = self.spinbox_maxShift.value()
-            return self.maxShift
           
         def on_detectPeaks(self):
             #detect peaks and draw them as EKG
@@ -1358,15 +1249,17 @@ class TableWidget(QWidget):
         
         def on_getMVs(self):
             #disable button to not cause interference between different calculations
-            self.button_getMVs.setEnabled(False)
+            self.tab_motion.button_getMVs.setEnabled(False)
             
             #get current parameters entered by user
-            blockwidth = self.changeBlockwidth()
-            maxShift = self.changeMaxShift()
-            delay = self.changeDelay()
+            blockwidth = self.tab_motion.spinbox_blockwidth.value()
+            maxShift = self.tab_motion.spinbox_maxShift.value()
+            delay = self.tab_motion.spinbox_delay.value()
             
             px_longest = None
-            if self.scaling_status == True:
+            scaling_status = self.tab_motion.check_scaling.isChecked()
+            print(scaling_status)
+            if scaling_status == True:
                 px_longest = 1024
             '''
             else:                
@@ -1396,13 +1289,13 @@ class TableWidget(QWidget):
             calculate_motion_thread.finished.connect(self.initialize_motion)
               
         def updateMVProgressBar(self, value):
-                self.progressbar_MVs.setValue(value*100)
+                self.tab_motion.progressbar_MVs.setValue(value*100)
 
         def updateProgressBar_batch(self, value):
                 self.progressbar_batch.setValue(value*100)
                 
         def updateProgressBar(self, value):
-                self.progressbar_tab2.setValue(value*100)
+                self.progressbar_tab_motion.setValue(value*100)
         
         def initialize_motion(self):
             print('initializing motion')
@@ -1414,10 +1307,10 @@ class TableWidget(QWidget):
             self.current_ohw.plot_TimeAveragedMotions('.png')
             
             #set the succeed button to green:
-            self.button_succeed_MVs.setStyleSheet("background-color: YellowGreen")
+            self.tab_motion.button_succeed_MVs.setStyleSheet("background-color: YellowGreen")
                 
             #enable other buttons for further actions
-            self.button_save_motionVectors.setEnabled(True)
+            self.tab_motion.button_save_MVs.setEnabled(True)
             self.button_detectPeaks.setEnabled(True)
             self.button_saveKinetics.setEnabled(True)
             self.button_export_ekg_csv.setEnabled(True)
@@ -1438,7 +1331,7 @@ class TableWidget(QWidget):
             self.button_save_Heatmap.setEnabled(True)
             self.button_save_Quiver.setEnabled(True)
             self.button_save_timeMotion.setEnabled(True)
-            self.button_getMVs.setEnabled(True)
+            self.tab_motion.button_getMVs.setEnabled(True)
             
             #get the current video length and save it to the quiver settings
             #self.quiver_settings['video_length'] = str(1/self.current_ohw.videometa["fps"] * self.current_ohw.absMotions.shape[0])
@@ -1557,15 +1450,15 @@ class TableWidget(QWidget):
             
             self.set_motion_param()
             self.update_tab_input()
-            self.btn_reloadVideo.setEnabled(True)
+            self.tab_input.btn_reloadVideo.setEnabled(True)
         
         def set_motion_param(self):
             """
                 sets values in gui from loaded ohw-file
             """
-            self.spinbox_blockwidth.setValue(self.current_ohw.analysis_meta["MV_parameters"]["blockwidth"])
-            self.spinbox_delay.setValue(self.current_ohw.analysis_meta["MV_parameters"]["delay"])
-            self.spinbox_maxShift.setValue(self.current_ohw.analysis_meta["MV_parameters"]["max_shift"])
+            self.tab_motion.spinbox_blockwidth.setValue(self.current_ohw.analysis_meta["MV_parameters"]["blockwidth"])
+            self.tab_motion.spinbox_delay.setValue(self.current_ohw.analysis_meta["MV_parameters"]["delay"])
+            self.tab_motion.spinbox_maxShift.setValue(self.current_ohw.analysis_meta["MV_parameters"]["max_shift"])
         
         def set_start_brightness(self):
             """
@@ -1598,7 +1491,7 @@ class TableWidget(QWidget):
                 self.tab_input.btn_brightness.setEnabled(True)
                 self.set_start_brightness()
                 
-                self.button_getMVs.setEnabled(True)
+                self.tab_motion.button_getMVs.setEnabled(True)
                 #self.button_succeed_tab1.setStyleSheet("background-color: YellowGreen")
             else:
                 self.display_firstImage()
@@ -1606,7 +1499,7 @@ class TableWidget(QWidget):
                 self.tab_input.slider_whiteval.setEnabled(False)
                 self.tab_input.btn_brightness.setEnabled(False)
                 
-                self.button_getMVs.setEnabled(False)
+                self.tab_motion.button_getMVs.setEnabled(False)
                 #self.button_succeed_tab1.setStyleSheet("background-color: IndianRed")
             
             inputpath = str(self.current_ohw.videometa['inputpath'])
