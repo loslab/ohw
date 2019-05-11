@@ -43,7 +43,8 @@ class TabInput(QWidget):
         #display first image
         self.fig_firstIm, self.ax_firstIm = plt.subplots(1,1)#, figsize = (5,5))
         self.fig_firstIm.patch.set_facecolor('#ffffff')##cd0e49')
-        #self.ax_firstIm.axis('off')
+        self.fig_firstIm.subplots_adjust(bottom=0, top=1, left=0, right=1)
+        self.ax_firstIm.axis('off')
         self.canvas_firstImage = FigureCanvas(self.fig_firstIm)
         self.canvas_firstImage.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.canvas_firstImage.setFixedSize(500,500)
@@ -59,6 +60,12 @@ class TabInput(QWidget):
         self.button_loadVideo = QPushButton('Load video')
         self.button_loadVideo.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
         self.button_loadVideo.clicked.connect(self.parent().on_loadVideo)
+        
+        # upon loading video... use standard parameters if no other are present
+        self.btn_reloadVideo = QPushButton('Reload analysis video')
+        self.btn_reloadVideo.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
+        self.btn_reloadVideo.clicked.connect(self.parent().on_reloadVideo)
+        self.btn_reloadVideo.setEnabled(False)
         
         self.progressbar_loadVideo = QProgressBar()#self)
         self.progressbar_loadVideo.setMaximum(1)  
@@ -89,23 +96,25 @@ class TabInput(QWidget):
         
         self.btn_brightness = QPushButton('Reset brightness')
         self.btn_brightness.clicked.connect(self.parent().on_resetBrightness)
+        self.btn_brightness.setEnabled(False)
         
         self.grid_prop = QGridLayout()        
         self.grid_prop.setSpacing(10)
         self.grid_prop.setAlignment(Qt.AlignTop|Qt.AlignLeft)
-               
+
         self.grid_prop.addWidget(self.button_loadVideo,0,0)
+        self.grid_prop.addWidget(self.btn_reloadVideo, 1, 0)
         self.grid_prop.addWidget(self.progressbar_loadVideo,0,1)
-        self.grid_prop.addWidget(self.label_vidinfo,1,0,1,2)
-        self.grid_prop.addWidget(self.label_path,2,0)
-        self.grid_prop.addWidget(self.label_input_path,2,1)
-        self.grid_prop.addWidget(self.label_fps, 3, 0)
-        self.grid_prop.addWidget(self.edit_fps, 3, 1)
-        self.grid_prop.addWidget(self.label_mpp, 4, 0)
-        self.grid_prop.addWidget(self.edit_mpp, 4, 1)
-        self.grid_prop.addWidget(self.label_results,5,0)
-        self.grid_prop.addWidget(self.label_results_folder,5,1)
-        self.grid_prop.addWidget(self.btn_results_folder,6,0,1,2)
+        self.grid_prop.addWidget(self.label_vidinfo,2,0,1,2)
+        self.grid_prop.addWidget(self.label_path,3,0)
+        self.grid_prop.addWidget(self.label_input_path,3,1)
+        self.grid_prop.addWidget(self.label_fps, 4, 0)
+        self.grid_prop.addWidget(self.edit_fps, 4, 1)
+        self.grid_prop.addWidget(self.label_mpp, 5, 0)
+        self.grid_prop.addWidget(self.edit_mpp,5, 1)
+        self.grid_prop.addWidget(self.label_results,6,0)
+        self.grid_prop.addWidget(self.label_results_folder,6,1)
+        self.grid_prop.addWidget(self.btn_results_folder,7,0,1,2)
         
         self.grid_slider = QGridLayout()
         self.grid_slider.setSpacing(10)

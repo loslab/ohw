@@ -42,13 +42,10 @@ def read_imagestack(inputpath, *args, **kwargs):
     videometa['frameCount']=len(inputtifs)
     videometa['frameWidth']=rawImageStack.shape[1]
     videometa['frameHeight']=rawImageStack.shape[2]
-    videometa["input_type"] = 'tifstack'
+    videometa['input_type'] = 'tifstack'
     
     if ('Blackval' or 'Whiteval') not in videometa.keys():
         videometa["Blackval"], videometa["Whiteval"] = np.percentile(rawImageStack[0], (0.1, 99.9))  #set default values if no infos defined in videoinfos file
-    
-    videometa["fps"] = round(videometa["fps"], 1)# round fps to 1 digit
-    videometa["microns_per_pixel"] = round(videometa["microns_per_pixel"], 4)
 
     return rawImageStack, videometa
     
@@ -56,7 +53,7 @@ def get_videoinfos_file(inputpath):
     """
         reads dict from file videoinfos.txt and sets values in videometa
     """
-    videometa = {"fps":1,"microns_per_pixel":1}
+    videometa = {}
     path_videoinfos = inputpath.parent / "videoinfos.txt"
     if path_videoinfos.is_file():
         # set metadata from file if videoinfos.txt exists
@@ -91,7 +88,7 @@ def read_videofile(inputpath):
         rawImageStack[fc] = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         fc += 1    
     
-    videometa = {'frameCount':frameCount,'frameWidth':frameWidth,'frameHeight':frameHeight,'fps':videofps,'microns_per_pixel':1}
+    videometa = {'frameCount':frameCount,'frameWidth':frameWidth,'frameHeight':frameHeight,'fps':videofps}
     videometa["Blackval"], videometa["Whiteval"] = np.percentile(rawImageStack[0], (0.1, 99.9))
     videometa["input_type"] = 'videofile'
 

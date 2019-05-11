@@ -10,8 +10,6 @@ from libraries import OFlowCalc, Filters, plotfunctions, helpfunctions, PeakDete
 import moviepy.editor as mpy
 from moviepy.video.io.bindings import mplfig_to_npimage
 
-__version__ = "0.2-dev" #stored in ini-file, read from there
-
 class OHW():
     """
         main class of OpenHeartWare
@@ -37,31 +35,54 @@ class OHW():
         self.timeindex = None           # time index for 1D-representation
 
         self.PeakDetection = PeakDetection.PeakDetection()    # class which detects + saves peaks
+        self.video_loaded = False       # tells state if video is connected to ohw-objecet
        
-        #store exceptions that appear
         #self.exceptions = None
         #self.isROI_OHW = False
+        self.config = helpfunctions.read_config() # load current config
         
-        self.raw_videometa = {} # raw info after importing  # dict of video metadata: microns_per_pixel, fps, blackval, whiteval,
+        self.raw_videometa = {} # raw info after importing  # dict of video metadata: microns_per_px, fps, blackval, whiteval,
         self.videometa = {}
-        self.analysis_meta = {"date": datetime.datetime.now(), "version": __version__}
+        self.analysis_meta = {"date": datetime.datetime.now(), "version": self.config['UPDATE']['version'], "has_MVs": False}
     
     def import_video(self, inputpath, *args, **kwargs):        
         self.rawImageStack, self.raw_videometa = videoreader.import_video(inputpath)
+        self.set_default_videometa(self.raw_videometa)
         self.videometa = self.raw_videometa.copy()
         self.set_auto_results_folder()
+        self.video_loaded = True
         
     def import_video_thread(self, inputpath):
         self.thread_import_video = helpfunctions.turn_function_into_thread(self.import_video, emit_progSignal = True, inputpath = inputpath)
         return self.thread_import_video       
         
+    def reload_video(self, *args, **kwargs):
+        inputpath = self.videometa["inputpath"]
+        self.rawImageStack, self.raw_videometa = videoreader.import_video(inputpath)
+        self.video_loaded = True
+
+    def reload_video_thread(self):
+        self.thread_reload_video = helpfunctions.turn_function_into_thread(self.reload_video, emit_progSignal = True)
+        return self.thread_reload_video  
+    
+    def set_default_videometa(self, videometa):
+        """
+            gets default values from config if not found in input
+        """
+        for key in ["fps","microns_per_px"]:
+            if key not in videometa.keys():
+                videometa[key] = self.config['DEFAULT VALUES'][key]
+        videometa["fps"] = round(float(videometa["fps"]), 1)# round fps to 1 digit
+        videometa["microns_per_px"] = round(float(videometa["microns_per_px"]), 4)
+    
     def set_video(self, rawImageStack, videometa):
         '''
         set video data + metadata directly instead of importing whole video again
         '''
         self.rawImageStack, self.videometa = rawImageStack, videometa
-        self.videometa = self.raw_videometa # necessary?
-        self.set_auto_results_folder()    
+        self.raw_videometa = self.videometa.copy() #raw_videometa not available anymore
+        self.set_auto_results_folder()
+        self.video_loaded = True
     
     def set_auto_results_folder(self):
         # set results folder
@@ -120,7 +141,7 @@ class OHW():
         with open(filename, 'rb') as loadfile:
             data = pickle.load(loadfile)
         self.analysis_meta, self.videometa, self.rawMVs = data
-        
+        self.video_loaded = False
         self.initialize_motion()
 
     def calculate_motion(self, method = 'BM', progressSignal = None, **parameters):
@@ -141,6 +162,7 @@ class OHW():
         if method == 'BM':   
             self.rawMVs = OFlowCalc.BM_stack(self.analysisImageStack, 
                 progressSignal = progressSignal, **parameters)
+            self.analysis_meta["has_MVs"] = True
         elif method == 'GF':
             pass
         elif method == 'LK':
@@ -162,7 +184,7 @@ class OHW():
         #distinguish between MVs and motion here
         
         scalingfactor, delay = self.analysis_meta["scalingfactor"], self.analysis_meta["MV_parameters"]["delay"]
-        self.unitMVs = (self.rawMVs / scalingfactor) * self.videometa["microns_per_pixel"] * (self.videometa["fps"] / delay)
+        self.unitMVs = (self.rawMVs / scalingfactor) * self.videometa["microns_per_px"] * (self.videometa["fps"] / delay)
         self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame        
     
         self.get_mean_absMotion()

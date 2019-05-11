@@ -30,8 +30,7 @@ class TableWidget(QWidget):
             super(QWidget, self).__init__(parent)
             
             #read config file
-            self.config = configparser.ConfigParser()
-            self.config.read('config.ini')
+            self.config = helpfunctions.read_config()
          
             self.layout = QGridLayout(self)
  
@@ -75,8 +74,7 @@ class TableWidget(QWidget):
             if curr_date > last_check + timedelta(days=1): #older than a day
                 helpfunctions.check_update(self, self.config['UPDATE']['version'])# self needed for msgbox... get rid at some point?
                 self.config['UPDATE']['last_check'] = str(curr_date)
-                self.save_to_config()
-                # save curr_date back into config
+                helpfunctions.save_config(self.config) # save curr_date back into config
 
             # default values for quiver export
             # self.config.getboolean(section='DEFAULT QUIVER SETTINGS', option='one_view')
@@ -89,120 +87,7 @@ class TableWidget(QWidget):
         
             for item in ['video_length']:
                 self.quiver_settings[item] = self.config.getfloat(section='DEFAULT QUIVER SETTINGS', option=item)
-            """
- ########### fill the first tab ##################
-            info_loadFile = QTextEdit()
-            info_loadFile.setText('In this tab you choose the input folder. If a videoinfos.txt file is found, the information is processed automatically. Otherwise, please enter the framerate and microns per pixel.')
-            info_loadFile.setReadOnly(True)
-            info_loadFile.setMinimumWidth(700)
-            info_loadFile.setMaximumHeight(50)
-            info_loadFile.setMaximumWidth(800)
-            info_loadFile.setTextBackgroundColor(color_for_info)
-            info_loadFile.setStyleSheet("background-color: LightSkyBlue")
-            
-            self.label_loadFile = QLabel('Load file(s): ')
-            self.label_fps = QLabel('Enter the framerate [frames/sec]: ')
-            self.label_px_per_micron = QLabel('Enter the number of micrometer per pixel: ')
-            self.label_loadFile.setFont(QFont("Times",weight=QFont.Bold))
 
-            self.tab_input.edit_fps = QLineEdit()
-            self.tab_input.edit_mpp = QLineEdit()
-
-            self.tab_input.edit_mpp.setText(self.config['DEFAULT VALUES']['px_per_micron'])
-            self.tab_input.edit_fps.setText(self.config['DEFAULT VALUES']['fps'])
-            self.tab_input.edit_mpp.textChanged.connect(self.changePxPerMicron)
-            self.tab_input.edit_fps.textChanged.connect(self.changeFPS)            
-            
-            #display image
-            source = 'Chosen video: '
-            self.tab_input.label_input_path = QLabel(str(source + ' - '))
-        
-            #display first image
-            self.fig_firstIm, self.tab_input.ax_firstIm = plt.subplots(1,1)#, figsize = (5,5))
-            self.tab_input.ax_firstIm.axis('off')
-            self.tab_input.canvas_firstImage = FigureCanvas(self.fig_firstIm)
-            self.tab_input.canvas_firstImage.setMinimumSize(500,500)
-            
-            #load-video button
-            self.button_loadVideo = QPushButton('Load video')
-            self.button_loadVideo.resize(self.button_loadVideo.sizeHint())
-            self.button_loadVideo.clicked.connect(self.on_loadVideo)
-                       
-            #create sliders to change the blackval and whiteval of the image
-            self.label_slider_blackval = QLabel('Black value: ')
-            self.slider_blackval = QSlider(Qt.Vertical)
-            self.slider_blackval.setMinimum(0)
-            self.slider_blackval.setMaximum(100)
-            self.slider_blackval.setValue(0)
-            self.slider_blackval.setMinimumHeight(400)
-            #self.slider_blackval.setTickPosition(QSlider.TicksBelow)
-            #self.slider_blackval.setTickInterval(5)
-            self.slider_blackval.valueChanged.connect(self.change_blackWhiteVal)
-            
-            self.label_slider_whiteval = QLabel('White value: ')
-            self.slider_whiteval = QSlider(Qt.Vertical)
-            self.slider_whiteval.setMinimum(0)
-            self.slider_whiteval.setMaximum(100)
-            self.slider_whiteval.setValue(0)
-            self.slider_whiteval.setMinimumHeight(400)
-            #self.slider_whiteval.setTickPosition(QSlider.TicksBelow)
-            #self.slider_whiteval.setTickInterval(5)
-            
-            self.slider_whiteval.valueChanged.connect(self.change_blackWhiteVal)
-            
-            #reset the black and white values
-            self.button_reset_blackWhiteVal = QPushButton('Reset black and white value')
-            self.button_reset_blackWhiteVal.resize(self.button_reset_blackWhiteVal.sizeHint())
-            self.button_reset_blackWhiteVal.clicked.connect(self.on_resetBlackWhiteVal)
-            
-            #label to display current results folder
-            self.tab_input.label_results_folder = QLabel('Current results folder: ')
-            self.tab_input.label_results_folder.setFont(QFont("Times",weight=QFont.Bold))
-                        
-            #button for changing the results folder
-            self.tab_input.btn_results_folder = QPushButton('Change results folder ')
-            self.tab_input.btn_results_folder.resize(self.tab_input.btn_results_folder.sizeHint())
-            self.tab_input.btn_results_folder.clicked.connect(self.on_changeResultsfolder)
-            self.tab_input.btn_results_folder.setEnabled(False)
-            
-            #succeed-button
-            self.button_succeed_tab1 = QPushButton('Video successfully loaded if this button is green!')
-            self.button_succeed_tab1.setStyleSheet("background-color: IndianRed")
-            
-            #reset-button
-            self.button_reset = QPushButton('Restart with new data')
-            self.button_reset.resize(self.button_reset.sizeHint())
-            self.button_reset.clicked.connect(self.restartGUI)      
-            
-            #progressbar in tab1  
-            #rename progressbars in future?
-            self.tab_input.progressbar_loadVideo = QProgressBar(self)
-            self.tab_input.progressbar_loadVideo.setMaximum(1)  
-            self.tab_input.progressbar_loadVideo.setValue(0)
-            
-            self.tab1.layout = QGridLayout(self)
-            self.tab1.layout.setSpacing(15)
-            self.tab1.layout.addWidget(info_loadFile,               0, 0, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.button_reset,           0, 1, Qt.AlignTop)
-         
-            self.tab1.layout.addWidget(self.label_loadFile,         1, 0, Qt.AlignTop)            
-            self.tab1.layout.addWidget(self.label_fps,              2, 0, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.tab_input.edit_fps,               2, 1, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.label_px_per_micron,    3, 0, Qt.AlignTop)
-
-            self.tab1.layout.addWidget(self.tab_input.edit_mpp,      3, 1, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.button_loadVideo,       4, 0, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.tab_input.progressbar_loadVideo,  5, 0, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.button_succeed_tab1,    6, 0, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.tab_input.label_input_path,     7, 0, Qt.AlignTop)
-            
-            self.tab1.layout.addWidget(self.tab_input.label_results_folder,    8, 0, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.tab_input.btn_results_folder, 9,0, Qt.AlignTop)
-            self.tab1.layout.addWidget(self.tab_input.canvas_firstImage,      10, 0, 2,1, Qt.AlignTop)
-
-            self.tab1.layout.setAlignment(Qt.AlignTop)
-            self.tab1.setLayout(self.tab1.layout)
-            """
 ########### fill the ROI selection tab ###########
             info_ROI = QTextEdit()
             info_ROI.setText('In this tab you can add, edit and choose Regions of Interest.')
@@ -544,6 +429,7 @@ class TableWidget(QWidget):
             
             # display figures for heatmaps in Canvas
             self.fig_heatmaps, self.ax_heatmaps = plt.subplots(1,1, figsize = (16,12))
+            self.fig_heatmaps.subplots_adjust(bottom=0, top=1, left=0, right=1)
             self.ax_heatmaps.axis('off')
             self.ax_heatmaps.text(0.5, 0.5,'no motion calculated/ loaded yet',
                 size=16, ha='center', va='center', backgroundcolor='indianred', color='w')
@@ -570,6 +456,7 @@ class TableWidget(QWidget):
  
             # display figures for quivers in Canvas
             self.fig_quivers, self.ax_quivers = plt.subplots(1,1, figsize = (16,12))
+            self.fig_quivers.subplots_adjust(bottom=0, top=1, left=0, right=1)
             self.ax_quivers.axis('off')
             self.ax_quivers.text(0.5, 0.5,'no motion calculated/ loaded yet',
                 size=16, ha='center', va='center', backgroundcolor='indianred', color='w')
@@ -1189,7 +1076,6 @@ class TableWidget(QWidget):
                 self.button_batch_startAnalysis.setEnabled(False)
                 
         def on_loadVideo(self):
-
             self.tab_input.progressbar_loadVideo.setValue(0)
             
             #choose a folder
@@ -1207,7 +1093,7 @@ class TableWidget(QWidget):
                 inputpath = pathlib.Path(fileName[0])
                 #save changes to config file
                 self.config.set("LAST SESSION", "input_folder", str((inputpath / "..").resolve()))#easier with parent?
-                self.save_to_config()
+                helpfunctions.save_config(self.config)
                 
                 # create OHW object to work with motion vectors
                 self.current_ohw = OHW.OHW()
@@ -1215,19 +1101,36 @@ class TableWidget(QWidget):
                 #read imagestack
                 self.import_video_thread = self.current_ohw.import_video_thread(inputpath)
                 self.import_video_thread.start()
-                #self.tab_input.progressbar_loadVideo.setFormat("loading Folder")  #is not displayed yet?
                 self.tab_input.progressbar_loadVideo.setRange(0,0)
                 self.import_video_thread.finished.connect(self.finish_loadVideo)
             except Exception:
                 pass 
-                        
+                
         def finish_loadVideo(self):
             self.tab_input.progressbar_loadVideo.setRange(0,1)
             self.tab_input.progressbar_loadVideo.setValue(1)
 
-            self.set_video_param()  #update videoinfos with data from current_ohw
+            self.update_tab_input()  #update videoinfos with data from current_ohw
            
-            #self.button_selectROI.setEnabled(True)
+            #self.button_selectROI.setEnabled(True) 
+            
+        def on_reloadVideo(self):
+            """
+                reloads video files into current_ohw
+                e.g. when analysis file is opened
+            """
+            self.tab_input.progressbar_loadVideo.setValue(0)            
+            self.reload_video_thread = self.current_ohw.reload_video_thread()
+            self.reload_video_thread.start()
+            self.tab_input.progressbar_loadVideo.setRange(0,0)
+            self.reload_video_thread.finished.connect(self.finish_reloadVideo)
+        
+        def finish_reloadVideo(self):
+            self.tab_input.progressbar_loadVideo.setRange(0,1)
+            self.tab_input.progressbar_loadVideo.setValue(1)
+            self.update_tab_input()
+            self.current_ohw.set_analysisImageStack(px_longest = self.current_ohw.analysis_meta["px_longest"])
+            self.initialize_MV_graphs()
             
         def on_changeResultsfolder(self):
             #choose a folder
@@ -1265,16 +1168,26 @@ class TableWidget(QWidget):
             '''    
             print('New results folder: %s' %folderName)            
             
-        def display_firstImage(self, image):
+        def display_firstImage(self, image = None):
+            self.tab_input.ax_firstIm.clear()
+            self.tab_input.ax_firstIm.axis('off')
             # display first image and update controls
-            print(self.current_ohw.videometa["Blackval"], self.current_ohw.videometa["Whiteval"])
-            self.imshow_firstImage = self.tab_input.ax_firstIm.imshow(image, cmap = 'gray', vmin = self.current_ohw.videometa["Blackval"], vmax = self.current_ohw.videometa["Whiteval"])
+            if type(image) == np.ndarray:
+                print(self.current_ohw.videometa["Blackval"], self.current_ohw.videometa["Whiteval"])
+                self.imshow_firstImage = self.tab_input.ax_firstIm.imshow(image, cmap = 'gray', vmin = self.current_ohw.videometa["Blackval"], vmax = self.current_ohw.videometa["Whiteval"])
+            else:
+                self.tab_input.ax_firstIm.text(0.5, 0.5,'no video loaded yet',
+                    size=14, ha='center', va='center', backgroundcolor='indianred', color='w')
             self.tab_input.canvas_firstImage.draw()
         
         def update_brightness(self):
             vmin, vmax = self.current_ohw.videometa["Blackval"], self.current_ohw.videometa["Whiteval"]
             self.imshow_firstImage.set_clim(vmin=vmin, vmax=vmax)
             self.tab_input.canvas_firstImage.draw()
+            
+            if (self.current_ohw.video_loaded and self.current_ohw.analysis_meta["has_MVs"]):
+                self.imshow_quivers.set_clim(vmin=vmin, vmax=vmax)
+                self.canvas_quivers.draw()
         
         def on_change_blackVal(self):          
             """
@@ -1306,7 +1219,7 @@ class TableWidget(QWidget):
             self.current_ohw.videometa["Blackval"] = self.current_ohw.raw_videometa["Blackval"]
             self.current_ohw.videometa["Whiteval"] = self.current_ohw.raw_videometa["Whiteval"]
             
-            self.set_raw_brightness()
+            self.set_start_brightness()
             self.update_brightness()
             
         def display_ROI(self, ROI, ROI_nr, row):
@@ -1348,19 +1261,7 @@ class TableWidget(QWidget):
         def changeMaxShift(self):
             self.maxShift = self.spinbox_maxShift.value()
             return self.maxShift
-        
-        def changeFPS(self):
-            self.current_ohw.videometa['fps'] = float(self.tab_input.edit_fps.text())
-            if len(self.ROI_OHWs) is not 0:
-                for ROI_nr in range(0,len(self.ROI_OHWs)):
-                    self.ROI_OHWs[ROI_nr].videometa['fps'] = float(self.tab_input.edit_fps.text())
-        
-        def changePxPerMicron(self):
-            self.current_ohw.videometa['microns_per_pixel'] = float(self.tab_input.edit_mpp.text())
-            if len(self.ROI_OHWs) is not 0:
-                for ROI_nr in range(0,len(self.ROI_OHWs)):
-                    self.ROI_OHWs[ROI_nr].videometa['fps'] = float(self.tab_input.edit_fps.text())
-    
+          
         def on_detectPeaks(self):
             #detect peaks and draw them as EKG
             
@@ -1578,8 +1479,7 @@ class TableWidget(QWidget):
             """
             
             # init quivers if video (= rawImageStack) is loaded
-            if type(self.current_ohw.rawImageStack) == np.ndarray:
-                print('rawImageStack loaded')
+            if self.current_ohw.video_loaded:
                 self.init_quivers()
             # else set placeholder and disable slider
             else:
@@ -1594,11 +1494,12 @@ class TableWidget(QWidget):
             
             for txt in self.ax_quivers.texts:
                 txt.remove() # clear placeholder    
-        
+            
+            self.slider_quiver.setEnabled(False)
             self.slider_quiver.setMaximum(self.current_ohw.mean_absMotions.shape[0]-1)# or introduce new variable which counts the amount of motion timepoints
 
             blockwidth = self.current_ohw.analysis_meta["MV_parameters"]["blockwidth"]
-            microns_per_pixel = self.current_ohw.videometa["microns_per_pixel"]
+            microns_per_px = self.current_ohw.videometa["microns_per_px"]
             scalingfactor = self.current_ohw.analysis_meta["scalingfactor"]
             scale_max = helpfunctions.get_scale_maxMotion2(self.current_ohw.absMotions)
             
@@ -1655,8 +1556,8 @@ class TableWidget(QWidget):
             self.initialize_motion()
             
             self.set_motion_param()
-            self.set_video_param()
-            # also update rest of gui to display video info! add option to reload video
+            self.update_tab_input()
+            self.btn_reloadVideo.setEnabled(True)
         
         def set_motion_param(self):
             """
@@ -1666,36 +1567,46 @@ class TableWidget(QWidget):
             self.spinbox_delay.setValue(self.current_ohw.analysis_meta["MV_parameters"]["delay"])
             self.spinbox_maxShift.setValue(self.current_ohw.analysis_meta["MV_parameters"]["max_shift"])
         
-        def set_raw_brightness(self):
+        def set_start_brightness(self):
             """
                 set brightness sliders to raw values
             """
+            self.tab_input.slider_whiteval.blockSignals(True)# prevent calling on_change_whiteVal/blackVal
+            self.tab_input.slider_blackval.blockSignals(True)
             self.tab_input.slider_whiteval.setMaximum(self.current_ohw.videometa["Whiteval"]*3)
             self.tab_input.slider_blackval.setMaximum(self.current_ohw.videometa["Whiteval"])      
-            self.tab_input.slider_whiteval.setValue(self.current_ohw.videometa["Whiteval"]) # take care in which order this is called, as it also triggers on_change_whiteVal
+            self.tab_input.slider_whiteval.setValue(self.current_ohw.videometa["Whiteval"])
             self.tab_input.slider_blackval.setValue(self.current_ohw.videometa["Blackval"])
-            self.tab_input.slider_whiteval.setMinimum(self.current_ohw.videometa["Blackval"]) 
+            self.tab_input.slider_whiteval.setMinimum(self.current_ohw.videometa["Blackval"])
+            self.tab_input.slider_whiteval.blockSignals(False)
+            self.tab_input.slider_blackval.blockSignals(False)
         
-        def set_video_param(self):
+        def update_tab_input(self):
+            """
+                updates info displayed in inputtab
+                -> loading of new video or loading of analysis file
+            """
             self.tab_input.edit_fps.setText(str(self.current_ohw.videometa['fps']))
-            self.tab_input.edit_mpp.setText(str(self.current_ohw.videometa['microns_per_pixel']))            
+            self.tab_input.edit_mpp.setText(str(self.current_ohw.videometa['microns_per_px']))            
             # disable input field if videoinfos.txt available? if self.current_ohw.videometa['infofile_exists'] == True: ....
             
-            # display first image and update controls
-            # check if video is loaded....introduce maybe variable?
-            if type(self.current_ohw.rawImageStack) == np.ndarray:
+            # check if video is loaded and update controls
+            if self.current_ohw.video_loaded == True:
                 self.display_firstImage(self.current_ohw.rawImageStack[0])
-                self.button_getMVs.setEnabled(True)
-                
                 self.tab_input.slider_blackval.setEnabled(True)
                 self.tab_input.slider_whiteval.setEnabled(True)
+                self.tab_input.btn_brightness.setEnabled(True)
+                self.set_start_brightness()
                 
-                self.set_raw_brightness()
+                self.button_getMVs.setEnabled(True)
                 #self.button_succeed_tab1.setStyleSheet("background-color: YellowGreen")
             else:
-                # disable brightness slider
-                self.tab_input.ax_firstIm.clear()
-                self.tab_input.canvas_firstImage.draw()
+                self.display_firstImage()
+                self.tab_input.slider_blackval.setEnabled(False)
+                self.tab_input.slider_whiteval.setEnabled(False)
+                self.tab_input.btn_brightness.setEnabled(False)
+                
+                self.button_getMVs.setEnabled(False)
                 #self.button_succeed_tab1.setStyleSheet("background-color: IndianRed")
             
             inputpath = str(self.current_ohw.videometa['inputpath'])
@@ -1784,17 +1695,13 @@ class TableWidget(QWidget):
             for item in ['quiver_density', 'video_length']:
                 self.config.set("DEFAULT QUIVER SETTINGS", option=item, value=str(self.quiver_settings[item]))
             
-            self.save_to_config()
+            helpfunctions.save_config(self.config)
             
             #close the settings window
             self.settingsWindow.close()
             
             #initialize MV_graphs again
             self.initialize_MV_graphs()
-            
-        def save_to_config(self):
-            with open('config.ini', 'w') as configfile:
-                self.config.write(configfile)
                 
         def on_saveQuivervideo(self):
             """

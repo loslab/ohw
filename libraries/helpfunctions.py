@@ -162,3 +162,12 @@ def check_update(self, curr_version):
             msgbox(self, message=message, msg_title = 'Update available')
     except Exception as e:
         print('Could not check for update:', e)
+
+def read_config():
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    return config
+    
+def save_config(config):
+    with open('config.ini', 'w') as configfile:
+        config.write(configfile)
