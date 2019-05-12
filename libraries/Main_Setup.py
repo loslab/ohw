@@ -23,7 +23,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 #from PyQt5 import QtGui
  
 from libraries import MultipleFoldersByUser, UserDialogs, Filters, helpfunctions, QuiverExportOptions, plotfunctions, OHW
-from libraries.gui import tab_input, tab_motion
+from libraries.gui import tab_input, tab_motion, tab_TA
 
 class TableWidget(QWidget):
         def __init__(self, parent):   
@@ -49,7 +49,7 @@ class TableWidget(QWidget):
             self.tab_motion = tab_motion.TabMotion(self)
             self.tab3 = QWidget()
             self.tab4 = QWidget()
-            self.tab5 = QWidget()
+            self.tab_TA = tab_TA.TabTA(self)
             self.tab6 = QWidget()
             self.tabROIs = QWidget()
             self.tabs.resize(800,800)
@@ -60,7 +60,7 @@ class TableWidget(QWidget):
             self.tabs.addTab(self.tab_motion,"Compute motion")
             self.tabs.addTab(self.tab3,"Beating kinetics")
             self.tabs.addTab(self.tab4,"Heatmaps and Quiverplots")
-            self.tabs.addTab(self.tab5,"Time averaged motion")
+            self.tabs.addTab(self.tab_TA,"Time averaged motion")
             self.tabs.addTab(self.tab6,"Batch analysis")
             
             color_for_info = QColor(198, 255, 26)
@@ -413,97 +413,6 @@ class TableWidget(QWidget):
             self.tab4.layout.setColumnStretch(2,1)
             self.tab4.layout.setHorizontalSpacing(20)
             self.tab4.setLayout(self.tab4.layout)
-       
-
-########### fill the fifth tab ##################
-            info_timeAveraged = QTextEdit()
-            info_timeAveraged.setText('In this tab you can save the time averaged motion: absolute contractility and contractility in x- and y-direction.')
-            info_timeAveraged.setReadOnly(True)
-            info_timeAveraged.setMaximumHeight(40)
-            info_timeAveraged.setMaximumWidth(800)
-            info_timeAveraged.setStyleSheet("background-color: LightSkyBlue")
-            
-            label_time_avg_motion = QLabel('Motion averaged over time')
-            label_time_avg_motion.setFont(QFont("Times",weight=QFont.Bold))
-         
-            #create a label for choosing the ROI
-            label_timeavg_chooseROI = QLabel('Choose the ROI to be displayed: ')
-            label_timeavg_chooseROI.setFont(QFont("Times",weight=QFont.Bold))
-            
-            #create a drop-down menu for choosing the ROI to be displayed
-            self.timeavg_combobox = QComboBox()
-            self.timeavg_combobox.addItem('Full image')    
-            self.timeavg_combobox.currentIndexChanged[int].connect(self.on_chooseROI)
-            
-            #display the calculated time averaged motion
-            self.label_time_averaged_result_total = QLabel('Absolute contractility:')
-            self.label_time_averaged_result_x = QLabel('Contractility in x-direction:')
-            self.label_time_averaged_result_y = QLabel('Contractility in y-direction:')
-            self.image_motion_total = QLabel()
-            self.image_motion_x  = QLabel()
-            self.image_motion_y = QLabel()
-            
-            self.image_motion_total.setPixmap(QPixmap('icons/dummy_TimeAveraged_totalMotion.png').scaledToWidth(self.pixmap_width))
-            self.image_motion_x.setPixmap(QPixmap('icons/dummy_TimeAveraged_x.png').scaledToWidth(self.pixmap_width))
-            self.image_motion_y.setPixmap(QPixmap('icons/dummy_TimeAveraged_y.png').scaledToWidth(self.pixmap_width))
-            
-            # create mpl figurecanvas for display of averaged motion
-            self.fig_motion_total, self.ax_motion_total = plt.subplots(1,1)
-            self.fig_motion_x, self.ax_motion_x = plt.subplots(1,1)
-            self.fig_motion_y, self.ax_motion_y = plt.subplots(1,1)
-            
-            self.fig_motion_total.set_size_inches(16,12)
-            self.fig_motion_x.set_size_inches(16,12)
-            self.fig_motion_y.set_size_inches(16,12)
-            
-            self.ax_motion_total.axis('off')
-            self.ax_motion_x.axis('off')
-            self.ax_motion_y.axis('off')
-            
-            self.canvas_motion_total = FigureCanvas(self.fig_motion_total)
-            self.canvas_motion_x = FigureCanvas(self.fig_motion_x)
-            self.canvas_motion_y = FigureCanvas(self.fig_motion_y)
-            
-            #button for saving plots
-            label_save_motion = QLabel('Save the plots as: ')
-            self.button_save_timeMotion = QPushButton('Click for saving')
-            self.button_save_timeMotion.resize(self.button_save_timeMotion.sizeHint())
-            self.button_save_timeMotion.clicked.connect(self.on_saveTimeAveragedMotion)
-            self.button_save_timeMotion.setEnabled(False)
-            
-            #combobox for file extensions
-            self.combo_avgExt = QComboBox(self)
-            self.combo_avgExt.addItem('.png')
-            self.combo_avgExt.addItem('.jpeg')
-            self.combo_avgExt.addItem('.tiff')
-            self.combo_avgExt.addItem('.svg')
-            self.combo_avgExt.addItem('.eps')
-
-            #succed-button
-            self.button_succeed_motion = QPushButton('Plotting of time averaged motion was successful')
-            self.button_succeed_motion.setStyleSheet("background-color: IndianRed")
- 
-            #define layout
-            self.tab5.layout = QGridLayout()
-            self.tab5.layout.addWidget(info_timeAveraged,                       0,0)
-            self.tab5.layout.addWidget(label_timeavg_chooseROI,                 1,0)
-            self.tab5.layout.addWidget(self.timeavg_combobox,                   2,0)
-            self.tab5.layout.addWidget(label_time_avg_motion,                   3,0)
-            self.tab5.layout.addWidget(self.button_succeed_motion,              4,0)
-            self.tab5.layout.addWidget(self.label_time_averaged_result_total,   5,0)
-            self.tab5.layout.addWidget(self.image_motion_total,                 6,0)
-            self.tab5.layout.addWidget(self.label_time_averaged_result_x,       7,0)
-            self.tab5.layout.addWidget(self.image_motion_x,                     8,0)
-            self.tab5.layout.addWidget(self.label_time_averaged_result_y,       7,1)
-            self.tab5.layout.addWidget(self.image_motion_y,                     8,1)
-
-            self.tab5.layout.addWidget(label_save_motion,                       9,0)
-            self.tab5.layout.addWidget(self.combo_avgExt,                       9,1)
-            self.tab5.layout.addWidget(self.button_save_timeMotion, 10,0)
-
-            self.tab5.layout.setHorizontalSpacing(20)
-            self.tab5.setLayout(self.tab5.layout)
-           
 
 ########### fill the sixth tab ##################
             info_batch = QTextEdit()
@@ -1330,7 +1239,7 @@ class TableWidget(QWidget):
             #enable further buttons
             self.button_save_Heatmap.setEnabled(True)
             self.button_save_Quiver.setEnabled(True)
-            self.button_save_timeMotion.setEnabled(True)
+            #self.button_save_timeMotion.setEnabled(True)
             self.tab_motion.button_getMVs.setEnabled(True)
             
             #get the current video length and save it to the quiver settings
@@ -1670,23 +1579,22 @@ class TableWidget(QWidget):
         def init_TAMotion(self): 
             max_motion = self.current_ohw.max_avgMotion
             
-            self.imshow_motion_total = self.ax_motion_total.imshow(self.current_ohw.avg_absMotion, 
+            self.imshow_motion_total = self.tab_TA.ax_TA_tot.imshow(self.current_ohw.avg_absMotion, 
                 vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")#, cmap = 'gray', vmin = self.Blackval, vmax = self.Whiteval)
-            self.imshow_motion_x = self.ax_motion_x.imshow(self.current_ohw.avg_MotionX, 
+            self.imshow_motion_x = self.tab_TA.ax_TA_x.imshow(self.current_ohw.avg_MotionX, 
                 vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")
-            self.imshow_motion_y = self.ax_motion_y.imshow(self.current_ohw.avg_MotionY, 
+            self.imshow_motion_y = self.tab_TA.ax_TA_y.imshow(self.current_ohw.avg_MotionY, 
                 vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")
             
-            self.canvas_motion_total.draw()
-            self.canvas_motion_x.draw()
-            self.canvas_motion_y.draw()
+            self.tab_TA.canvas_TA_tot.draw()
+            self.tab_TA.canvas_TA_x.draw()
+            self.tab_TA.canvas_TA_y.draw()
             
-            self.tab5.layout.addWidget(self.canvas_motion_total, 6,0)
-            self.tab5.layout.addWidget(self.canvas_motion_x, 8,0)
-            self.tab5.layout.addWidget(self.canvas_motion_y, 8,1)
+            #self.tab_TA.layout.addWidget(self.canvas_motion_total, 6,0)
+            #self.tab_TA.layout.addWidget(self.canvas_motion_x, 8,0)
+            #self.tab_TA.layout.addWidget(self.canvas_motion_y, 8,1)
             
-            self.button_succeed_motion.setStyleSheet("background-color: YellowGreen")
-            self.button_save_timeMotion.setEnabled(True)
+            self.tab_TA.btn_save_TA.setEnabled(True)
                 
         def on_saveTimeAveragedMotion(self):
             
