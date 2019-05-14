@@ -23,7 +23,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 #from PyQt5 import QtGui
  
 from libraries import MultipleFoldersByUser, UserDialogs, Filters, helpfunctions, QuiverExportOptions, plotfunctions, OHW
-from libraries.gui import tab_input, tab_motion, tab_TA, tab_quiver
+from libraries.gui import tab_input, tab_motion, tab_TA, tab_quiver, tab_batch
 
 class TableWidget(QWidget):
         def __init__(self, parent):   
@@ -51,7 +51,7 @@ class TableWidget(QWidget):
             self.tab3 = QWidget()
             self.tab_quiver = tab_quiver.TabQuiver(self)
             self.tab_TA = tab_TA.TabTA(self)
-            self.tab6 = QWidget()
+            self.tab_batch = tab_batch.TabBatch(self)
             self.tabROIs = QWidget()
             self.tabs.resize(800,800)
              
@@ -62,7 +62,7 @@ class TableWidget(QWidget):
             self.tabs.addTab(self.tab3,"Beating kinetics")
             self.tabs.addTab(self.tab_quiver,"Heatmaps and Quiverplots")
             self.tabs.addTab(self.tab_TA,"Time averaged motion")
-            self.tabs.addTab(self.tab6,"Batch analysis")
+            self.tabs.addTab(self.tab_batch,"Batch analysis")
             
             self.tab_TA.init_ohw()
             
@@ -257,152 +257,6 @@ class TableWidget(QWidget):
             self.tab3.layout.addWidget(self.button_export_statistics, 18,0)
             self.tab3.setLayout(self.tab3.layout)
 
-########### fill the sixth tab ##################
-            info_batch = QTextEdit()
-            info_batch.setText('In this tab you can automate the analysis of multiple folders without further interaction during the processing.')
-            info_batch.setReadOnly(True)
-            info_batch.setMaximumHeight(40)
-            info_batch.setMaximumWidth(800)
-            info_batch.setTextBackgroundColor(color_for_info)
-            info_batch.setStyleSheet("background-color: LightSkyBlue")
-            
-            #select the folders
-            self.batch_folders = []
-            self.info_batchfolders = QLabel('Currently selected videos for automated analysis:')
-            self.info_batchfolders.setFont(QFont("Times",weight=QFont.Bold))
-            self.qlist_batchvideos = QListWidget()
-            self.qlist_batchvideos.setSelectionMode(QAbstractItemView.ExtendedSelection)
-            #self.names_batchfolders = QTextEdit()
-            
-            #button for adding folders
-            self.button_addBatchVideo = QPushButton('Add Videos...')
-            self.button_addBatchVideo.resize(self.button_addBatchVideo.sizeHint())
-            self.button_addBatchVideo.clicked.connect(self.on_addBatchVideo)
-            
-            #button for removing folders
-            self.button_removeBatchVideo = QPushButton('Remove selected Videos')
-            self.button_removeBatchVideo.resize(self.button_removeBatchVideo.sizeHint())
-            self.button_removeBatchVideo.clicked.connect(self.on_removeBatchVideo)
-            
-            #options: needed parameters
-            label_batch_parameters = QLabel('Settings during calculation of motion vectors:')
-            label_batch_parameters.setFont(QFont("Times",weight=QFont.Bold))
-            label_batch_blockwidth = QLabel('Blockwidth (in pixels)')
-            label_batch_delay = QLabel('Delay (in frames)')
-            label_batch_maxShift = QLabel('Maximum shift p (in pixels)')
-            
-            #spinboxes incl settings
-            self.batch_spinbox_blockwidth  = QSpinBox()
-            self.batch_spinbox_delay = QSpinBox()
-            self.batch_spinbox_maxShift = QSpinBox()
-            
-            self.batch_spinbox_blockwidth.setRange(2,128)
-            self.batch_spinbox_blockwidth.setSingleStep(2)
-            self.batch_spinbox_blockwidth.setSuffix(' pixels')
-            self.batch_spinbox_blockwidth.setValue(16)
-            self.batch_spinbox_delay.setRange(2,10)
-            self.batch_spinbox_delay.setSuffix(' frames')
-            self.batch_spinbox_delay.setSingleStep(1)
-            self.batch_spinbox_delay.setValue(2)
-            self.batch_spinbox_maxShift.setSuffix(' pixels')
-            self.batch_spinbox_maxShift.setValue(7)
-
-            #if value of box is changed
-            self.batch_spinbox_blockwidth.valueChanged.connect(self.changeBatchSettings)
-            self.batch_spinbox_delay.valueChanged.connect(self.changeBatchSettings)
-            self.batch_spinbox_maxShift.valueChanged.connect(self.changeBatchSettings)
-            
-            #options for automated analysis
-            label_batchOptions = QLabel('Choose options for automated analysis of chosen folders:')
-            label_batchOptions.setFont(QFont("Times",weight=QFont.Bold))
-            
-            self.batch_checkFilter = QCheckBox("Filter motion vectors during calculation")
-            self.batch_checkHeatmaps = QCheckBox("Create heatmap video")
-            self.batch_checkQuivers = QCheckBox("Create quiver plot video")
-            self.batch_checkTimeAveraged = QCheckBox("Create plots for time averaged motion")
-            self.batch_checkSaveMotionVectors = QCheckBox("Save the generated motion vectors")
-            self.batch_checkScaling = QCheckBox("Scale the longest side to 1024 px during calculation")
-            self.check_batchresultsFolder = QCheckBox("Use standard results folder, individual for each video")
-            
-            #create a variable for the checkbox status
-            self.batch_filter_status = True
-            self.batch_heatmap_status = True
-            self.batch_quiver_status = True
-            self.batch_timeAver_status = True
-            self.batch_scaling_status = True
-            self.batch_saveMotionVectors_status = False
-            self.check_batchresultsFolder.setChecked(True)
-            
-            self.batch_checkFilter.setChecked(self.batch_filter_status)
-            self.batch_checkSaveMotionVectors.setChecked(self.batch_saveMotionVectors_status)
-            self.batch_checkHeatmaps.setChecked(self.batch_heatmap_status)
-            self.batch_checkQuivers.setChecked(self.batch_quiver_status)
-            self.batch_checkTimeAveraged.setChecked(self.batch_timeAver_status)
-            self.batch_checkScaling.setChecked(self.batch_scaling_status)
-            
-            self.batch_checkFilter.stateChanged.connect(self.changeStatus)
-            self.batch_checkHeatmaps.stateChanged.connect(self.changeStatus)
-            self.batch_checkQuivers.stateChanged.connect(self.changeStatus)
-            self.batch_checkSaveMotionVectors.stateChanged.connect(self.changeStatus)
-            self.batch_checkScaling.stateChanged.connect(self.changeStatus)
-            self.check_batchresultsFolder.stateChanged.connect(self.changeStatus)
-            
-            #button for starting the analysis
-            self.button_batch_startAnalysis = QPushButton('Start the automated analysis of the chosen folders...')
-            self.button_batch_startAnalysis.resize(self.button_batch_startAnalysis.sizeHint())
-            self.button_batch_startAnalysis.clicked.connect(self.on_startBatchAnalysis)
-            self.button_batch_startAnalysis.setEnabled(False)
-            
-            #button for aborting the analysis
-            self.button_batch_stopAnalysis = QPushButton('Stop onging analysis')
-            self.button_batch_stopAnalysis.resize(self.button_batch_stopAnalysis.sizeHint())
-            self.button_batch_stopAnalysis.clicked.connect(self.on_stopBatchAnalysis)
-            self.button_batch_stopAnalysis.setEnabled(False)
-            
-            #label to display current results folder
-            self.tab_input.label_results_folder_batch = QLabel('Current results folder: ')
-            self.tab_input.label_results_folder_batch.setFont(QFont("Times",weight=QFont.Bold))
-          
-            #button for changing the results folder
-            self.button_batch_resultsfolder = QPushButton('Change results folder ')
-            self.button_batch_resultsfolder.resize(self.button_batch_resultsfolder.sizeHint())
-            self.button_batch_resultsfolder.clicked.connect(self.on_changeResultsfolder)
-            self.button_batch_resultsfolder.setEnabled(False)
-            
-            #create a progressbar    
-            self.progressbar_batch = QProgressBar(self)
-            self.progressbar_batch.setMaximum(100)  
-            self.progressbar_batch.setValue(0)
-            
-            #Layout management
-            self.tab6.layout = QGridLayout(self)
-            #self.tab6.layout.setSpacing(25)
-            self.tab6.layout.addWidget(info_batch,                      1,0)
-            self.tab6.layout.addWidget(self.info_batchfolders,          2,0)
-            self.tab6.layout.addWidget(self.qlist_batchvideos,          3,0,2,1)# spans 2 rows and 1 column
-            self.tab6.layout.addWidget(self.button_addBatchVideo,       3,1)
-            self.tab6.layout.addWidget(self.button_removeBatchVideo,    4,1)
-            self.tab6.layout.addWidget(label_batch_parameters,          5,0)
-            self.tab6.layout.addWidget(label_batch_blockwidth,          6,0)
-            self.tab6.layout.addWidget(self.batch_spinbox_blockwidth,   6,1)
-            self.tab6.layout.addWidget(label_batch_delay,               7,0)
-            self.tab6.layout.addWidget(self.batch_spinbox_delay,        7,1)
-            self.tab6.layout.addWidget(label_batch_maxShift,            8,0)
-            self.tab6.layout.addWidget(self.batch_spinbox_maxShift,     8,1)            
-            self.tab6.layout.addWidget(label_batchOptions,              9,0)
-            self.tab6.layout.addWidget(self.batch_checkScaling,         10,0)
-            self.tab6.layout.addWidget(self.check_batchresultsFolder,   11,0)
-            self.tab6.layout.addWidget(self.batch_checkFilter,          12,0)
-            self.tab6.layout.addWidget(self.batch_checkHeatmaps,        13,0)
-            self.tab6.layout.addWidget(self.batch_checkQuivers,         14,0)
-            self.tab6.layout.addWidget(self.tab_input.label_results_folder_batch,  15,0)
-            self.tab6.layout.addWidget(self.button_batch_resultsfolder, 16,0)
-            self.tab6.layout.addWidget(self.button_batch_startAnalysis, 17,0)
-            self.tab6.layout.addWidget(self.progressbar_batch,          18,0)
-            self.tab6.layout.addWidget(self.button_batch_stopAnalysis,  19,1)
-            
-            self.tab6.setLayout(self.tab6.layout)
-
 ###############################################################################
         def change_ROI_names(self, ROI_nr):
             """ 
@@ -510,20 +364,6 @@ class TableWidget(QWidget):
             
                 #add OHW to list of all ROI OHWs
                 self.ROI_OHWs.append(current_ROI_OHW)
-    
-            
-        def changeBatchSettings(self):
-            if self.sender() == self.batch_spinbox_blockwidth:
-                self.blockwidth_batch = self.batch_spinbox_blockwidth.value()
-                return self.batch_spinbox_blockwidth.value()
-            
-            elif self.sender() == self.batch_spinbox_delay:
-                self.delay_batch = self.batch_spinbox_delay.value()
-                return self.batch_spinbox_delay.value()
-            
-            elif self.sender() == self.batch_spinbox_maxShift:
-                self.maxshift_batch = self.batch_spinbox_maxShift.value()
-                return self.batch_spinbox_maxShift.value()
 
         def on_startBatchAnalysis(self):
             print('Starting batch analysis...')
@@ -707,29 +547,7 @@ class TableWidget(QWidget):
             msg = QMessageBox.information(self, msg_title, msg_text, QMessageBox.Ok)
             if msg == QMessageBox.Ok:
                 pass  
-            
-        def on_addBatchVideo(self):
-        
-            new_file = UserDialogs.chooseFileByUser("Select video to add for batch analysis", input_folder=self.config['LAST SESSION']['input_folder'])
-            print(new_file)
-            self.qlist_batchvideos.addItem(new_file[0])
-            # allow selection of folders/multiple files
-
-            #folderDialog = MultipleFoldersByUser.MultipleFoldersDialog()
-            #chosen_folders = folderDialog.getSelection()
-            
-            if self.qlist_batchvideos.count() > 0:
-                #sobald erster Folder hinzugefügt wird 
-                self.button_batch_startAnalysis.setEnabled(True)
-      
-        def on_removeBatchVideo(self):
-            for item in self.qlist_batchvideos.selectedItems():
-                print(item)
-                self.qlist_batchvideos.takeItem(self.qlist_batchvideos.row(item))
-            
-            if self.qlist_batchvideos.count() == 0:
-                self.button_batch_startAnalysis.setEnabled(False)
-                
+                      
         def on_loadVideo(self):
             self.tab_input.progressbar_loadVideo.setValue(0)
             
@@ -1230,54 +1048,6 @@ class TableWidget(QWidget):
             
             helpfunctions.save_config(self.config)
             
-            #close the settings window
-            self.settingsWindow.close()
-            
+            self.settingsWindow.close()       
             #initialize MV_graphs again
             #self.initialize_MV_graphs()
-                
-        def changeStatus(self):
-            
-            #disable or enable the option to choose results folder
-            if self.sender() == self.check_batchresultsFolder:
-                if self.check_batchresultsFolder.isChecked():
-                    self.button_batch_resultsfolder.setEnabled(False)
-                else:
-                    self.button_batch_resultsfolder.setEnabled(True)
-
-            # can be directly read when started, not needed to store...
-            #handle changes of filterstatus
-            elif self.sender() == self.check_filter:
-                self.filter_status = self.check_filter.isChecked()                
-            
-            #handle changes of batch scaling
-            elif self.sender() == self.batch_checkScaling:
-                self.batch_scaling_status = self.batch_checkScaling.isChecked()
-                if (self.batch_scaling_status == True):
-                    self.batch_factor_scaling = 1024
-                elif (self.batch_scaling_status == False): 
-                    self.batch_factor_scaling = 2048
-            
-            #handle changes of scaling options
-            elif self.sender() == self.check_scaling:
-                self.scaling_status = self.check_scaling.isChecked()
-                if (self.scaling_status == True):
-                    self.factor_scaling = 1024
-                elif (self.scaling_status == False): 
-                    self.factor_scaling = 2048
-            
-            #handle changes of batch filter option
-            elif self.sender() == self.batch_checkFilter:
-                self.batch_filter_status = self.batch_checkFilter.isChecked()
-                
-            #handle changes of save motion vector option
-            elif self.sender() == self.batch_checkSaveMotionVectors:
-                self.batch_saveMotionVectors_status = self.batch_checkSaveMotionVectors.isChecked()
-                
-            #handle changes of batch heatmap option
-            elif self.sender() == self.batch_checkHeatmaps:
-                self.batch_heatmap_status = self.batch_checkHeatmaps.isChecked()
-            
-            #handle changes of batch quiver option
-            elif self.sender() == self.batch_checkQuivers:
-                self.batch_quiver_status = self.batch_checkQuivers.isChecked()
