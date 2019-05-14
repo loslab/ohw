@@ -43,7 +43,8 @@ class OHW():
         
         self.raw_videometa = {} # raw info after importing  # dict of video metadata: microns_per_px, fps, blackval, whiteval,
         self.videometa = {}
-        self.analysis_meta = {"date": datetime.datetime.now(), "version": self.config['UPDATE']['version'], "has_MVs": False}
+        self.analysis_meta = {"date": datetime.datetime.now(), "version": self.config['UPDATE']['version'], 
+            "motion_calculated":False, "has_MVs": False}
     
     def import_video(self, inputpath, *args, **kwargs):        
         self.rawImageStack, self.raw_videometa = videoreader.import_video(inputpath)
@@ -162,7 +163,8 @@ class OHW():
         if method == 'BM':   
             self.rawMVs = OFlowCalc.BM_stack(self.analysisImageStack, 
                 progressSignal = progressSignal, **parameters)
-            self.analysis_meta["has_MVs"] = True
+            self.analysis_meta["has_MVs"], self.analysis_meta["motion_calculated"] = True, True
+
         elif method == 'GF':
             pass
         elif method == 'LK':

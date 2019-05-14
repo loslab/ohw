@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import (QLabel, QLineEdit, QGridLayout, QComboBox,
     QTextEdit,QSizePolicy, QPushButton, QProgressBar,QSlider, QWidget, QSpinBox, QCheckBox)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
+from libraries import helpfunctions
 
 class TabTA(QWidget):
     """
@@ -17,6 +18,7 @@ class TabTA(QWidget):
     def __init__(self, parent):
         super(TabTA, self).__init__(parent)
         self.initUI()
+        self.parent=parent
         
     def initUI(self):
     
@@ -56,11 +58,6 @@ class TabTA(QWidget):
         self.fig_TA_x.subplots_adjust(bottom=0, top=1, left=0, right=1)
         self.fig_TA_y.subplots_adjust(bottom=0, top=1, left=0, right=1)
         
-        
-        self.ax_TA_tot.axis('off')
-        self.ax_TA_x.axis('off')
-        self.ax_TA_y.axis('off')
-        
         self.canvas_TA_tot = FigureCanvas(self.fig_TA_tot)
         self.canvas_TA_x = FigureCanvas(self.fig_TA_x)
         self.canvas_TA_y = FigureCanvas(self.fig_TA_y)
@@ -73,7 +70,7 @@ class TabTA(QWidget):
         self.label_save_TA = QLabel('Save the plots as: ')
         self.btn_save_TA = QPushButton('Click for saving')
         #self.btn_save_TA.resize(self.button_save_timeMotion.sizeHint())
-        self.btn_save_TA.clicked.connect(self.parent().on_saveTimeAveragedMotion)
+        self.btn_save_TA.clicked.connect(self.on_saveTimeAveragedMotion)
         self.btn_save_TA.setEnabled(False)
         
         #combobox for file extensions
@@ -92,10 +89,15 @@ class TabTA(QWidget):
         self.grid_overall.addWidget(self.canvas_TA_x,3,1)
         self.grid_overall.addWidget(self.canvas_TA_y,3,2)
         
-        self.grid_overall.addWidget(self.label_save_TA, 4,0)
-        self.grid_overall.addWidget(self.btn_save_TA, 4,1)
-        self.grid_overall.addWidget(self.combo_TA_ext, 4,2)
+        self.grid_save = QGridLayout()
+        self.grid_save.setSpacing(10)
+        self.grid_save.setAlignment(Qt.AlignTop|Qt.AlignLeft)
         
+        self.grid_save.addWidget(self.label_save_TA, 0,0)
+        self.grid_save.addWidget(self.combo_TA_ext, 0,1)
+        self.grid_save.addWidget(self.btn_save_TA, 0,2)        
+        
+        self.grid_overall.addLayout(self.grid_save,4,0,1,3,Qt.AlignTop|Qt.AlignLeft)
         self.grid_overall.setSpacing(15)        
         self.grid_overall.setAlignment(Qt.AlignTop|Qt.AlignLeft)      
         self.setLayout(self.grid_overall)
@@ -113,8 +115,46 @@ class TabTA(QWidget):
         #for btn in self.findChildren(QPushButton):
         #    btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         
-    def init_ohw(self, current_ohw):
+    def init_ohw(self):
         """
             set values from current_ohw
+            enable save button if MVs are present
         """
-        pass
+        if self.parent.current_ohw.analysis_meta["has_MVs"]:
+            self.btn_save_TA.setEnabled(True)
+            self.init_TAmotion()
+        else:
+            self.btn_save_TA.setEnabled(False)
+            self.clear_figs()
+
+    def init_TAmotion(self): 
+        max_motion = self.parent.current_ohw.max_avgMotion
+        
+        self.imshow_motion_total = self.ax_TA_tot.imshow(self.parent.current_ohw.avg_absMotion, 
+            vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")
+        self.imshow_motion_x = self.ax_TA_x.imshow(self.parent.current_ohw.avg_MotionX, 
+            vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")
+        self.imshow_motion_y = self.ax_TA_y.imshow(self.parent.current_ohw.avg_MotionY, 
+            vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")
+        
+        self.canvas_TA_tot.draw()
+        self.canvas_TA_x.draw()
+        self.canvas_TA_y.draw()
+    
+    def clear_figs(self):
+        self.ax_TA_tot.clear()
+        self.ax_TA_x.clear()
+        self.ax_TA_y.clear()
+        
+        self.ax_TA_tot.axis('off')
+        self.ax_TA_x.axis('off')
+        self.ax_TA_y.axis('off')
+        
+        self.canvas_TA_tot.draw()
+        self.canvas_TA_x.draw()
+        self.canvas_TA_y.draw()
+    
+    def on_saveTimeAveragedMotion(self): 
+        file_ext = self.combo_TA_ext.currentText()
+        self.parent.current_ohw.plot_TimeAveragedMotions(file_ext)
+        helpfunctions.msgbox(self, 'Plots of time averaged motion were saved successfully.')

@@ -23,7 +23,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 #from PyQt5 import QtGui
  
 from libraries import MultipleFoldersByUser, UserDialogs, Filters, helpfunctions, QuiverExportOptions, plotfunctions, OHW
-from libraries.gui import tab_input, tab_motion, tab_TA
+from libraries.gui import tab_input, tab_motion, tab_TA, tab_quiver
 
 class TableWidget(QWidget):
         def __init__(self, parent):   
@@ -31,7 +31,8 @@ class TableWidget(QWidget):
             
             #read config file
             self.config = helpfunctions.read_config()
-         
+            self.current_ohw = OHW.OHW()
+            
             self.layout = QGridLayout(self)
  
             # Initialize tab screen
@@ -48,7 +49,7 @@ class TableWidget(QWidget):
             self.tab_input = tab_input.TabInput(self)
             self.tab_motion = tab_motion.TabMotion(self)
             self.tab3 = QWidget()
-            self.tab4 = QWidget()
+            self.tab_quiver = tab_quiver.TabQuiver(self)
             self.tab_TA = tab_TA.TabTA(self)
             self.tab6 = QWidget()
             self.tabROIs = QWidget()
@@ -59,9 +60,11 @@ class TableWidget(QWidget):
             #self.tabs.addTab(self.tabROIs, "Manage ROIs")
             self.tabs.addTab(self.tab_motion,"Compute motion")
             self.tabs.addTab(self.tab3,"Beating kinetics")
-            self.tabs.addTab(self.tab4,"Heatmaps and Quiverplots")
+            self.tabs.addTab(self.tab_quiver,"Heatmaps and Quiverplots")
             self.tabs.addTab(self.tab_TA,"Time averaged motion")
             self.tabs.addTab(self.tab6,"Batch analysis")
+            
+            self.tab_TA.init_ohw()
             
             color_for_info = QColor(198, 255, 26)
             self.pixmap_width = 250
@@ -254,166 +257,6 @@ class TableWidget(QWidget):
             self.tab3.layout.addWidget(self.button_export_statistics, 18,0)
             self.tab3.setLayout(self.tab3.layout)
 
-########### fill the fourth tab ##################
-            info_heat_quiver = QTextEdit()
-            info_heat_quiver.setText('In this tab you can calculate heatmaps and quiverplots and use the slider to look at the different frames.')
-            info_heat_quiver.setReadOnly(True)
-            info_heat_quiver.setMaximumHeight(40)
-            info_heat_quiver.setMaximumWidth(800)
-            info_heat_quiver.setStyleSheet("background-color: LightSkyBlue")
- 
-            #create a label for choosing the ROI
-            label_advanced_choose_ROI = QLabel('Choose the ROI to be displayed: ')
-            label_advanced_choose_ROI.setFont(QFont("Times",weight=QFont.Bold))
-            
-            #create a drop-down menu for choosing the ROI to be displayed
-            self.advanced_combobox = QComboBox()
-            self.advanced_combobox.addItem('Full image')    
-#            self.advanced_combobox.activated[str].connect(self.on_chooseROI)
-            self.advanced_combobox.currentIndexChanged[int].connect(self.on_chooseROI)
-
-            
-            label_heatmaps = QLabel('Heatmaps')
-            label_heatmaps.setFont(QFont("Times",weight=QFont.Bold))
-            
-            label_quivers = QLabel('Quivers')
-            label_quivers.setFont(QFont("Times",weight=QFont.Bold))
-
-            #Button for starting the creation of heatmaps and heatmap video
-            self.button_heatmaps_video = QPushButton('Export Heatmap Video')
-            self.button_heatmaps_video.resize(self.button_heatmaps_video.sizeHint())
-            self.button_heatmaps_video.clicked.connect(self.on_saveHeatmapvideo)            
-            #is disabled, enabled after successful calculation of MotionVectors
-            self.button_heatmaps_video.setEnabled(False)
-                          
-            #create  a slider to switch manually between the heatmaps
-            self.label_slider_info = QLabel('Use the slider to switch between heatmaps of the different frames: ')
-            self.slider_heatmaps = QSlider(Qt.Horizontal)
-            self.slider_heatmaps.setMinimum(0)
-            self.slider_heatmaps.setMaximum(100)
-            self.slider_heatmaps.setValue(0)
-            self.slider_heatmaps.setEnabled(False)
-            self.slider_heatmaps.setTickPosition(QSlider.TicksBelow)
-            self.slider_heatmaps.setTickInterval(5)
-            self.slider_heatmaps.valueChanged.connect(self.slider_heatmaps_valueChanged)
-            
-            #create buttons for saving a specific heatmap or quiverplot frame
-            self.button_save_Heatmap = QPushButton('Save this heatmap frame to image file...')
-            self.button_save_Heatmap.resize(self.button_save_Heatmap.sizeHint())
-            self.button_save_Heatmap.clicked.connect(self.on_saveHeatmap)      
-            #is disabled, enabled after successful calculation of Heatmaps
-            self.button_save_Heatmap.setEnabled(False)
-            
-            self.button_save_Quiver = QPushButton('Save this quiver frame to image file...')
-            self.button_save_Quiver.resize(self.button_save_Quiver.sizeHint())
-            self.button_save_Quiver.clicked.connect(self.on_saveQuiver)            
-            #is disabled, enabled after successful calculation of QuiverPlots
-            self.button_save_Quiver.setEnabled(False)
-            
-            #create a second slider for the quiver plots
-            self.label_slider_quivers = QLabel('Use the slider to switch between quiverplots of the different frames: ')
-            self.slider_quiver = QSlider(Qt.Horizontal)
-            self.slider_quiver.setMinimum(0)
-            self.slider_quiver.setMaximum(100)
-            self.slider_quiver.setValue(0)
-            self.slider_quiver.setEnabled(False)
-            self.slider_quiver.setTickPosition(QSlider.TicksBelow)
-            self.slider_quiver.valueChanged.connect(self.slider_quiver_valueChanged)
-            self.slider_quiver.setTickPosition(QSlider.TicksBelow)
-            self.slider_quiver.setTickInterval(5)
-            
-            #display the chosen heatmap
-            self.label_heatmap_result = QLabel('Heatmap result:')
-            #display the chosen heatmap
-            self.label_heatmap_result = QLabel('Heatmap result:')
-            self.image_heatmap = QLabel()
-            self.image_heatmap.setPixmap(QPixmap('icons/dummy_heatmap.png').scaledToWidth(self.pixmap_width))
-            
-            # display figures for heatmaps in Canvas
-            self.fig_heatmaps, self.ax_heatmaps = plt.subplots(1,1, figsize = (16,12))
-            self.fig_heatmaps.subplots_adjust(bottom=0, top=1, left=0, right=1)
-            self.ax_heatmaps.axis('off')
-            self.ax_heatmaps.text(0.5, 0.5,'no motion calculated/ loaded yet',
-                size=16, ha='center', va='center', backgroundcolor='indianred', color='w')
-            
-            self.canvas_heatmap = FigureCanvas(self.fig_heatmaps)
-            
-            #button for changing the quiver export settings
-            self.button_change_quiverSettings = QPushButton('Change quiver export settings')
-            self.button_change_quiverSettings.resize(self.button_change_quiverSettings.sizeHint())
-            self.button_change_quiverSettings.clicked.connect(self.on_change_quiverSettings)
-            
-            #Button for starting the creation of quiver plots and quiver video
-            self.button_quivers_video = QPushButton('Export quiver video')
-            self.button_quivers_video.resize(self.button_quivers_video.sizeHint())
-            self.button_quivers_video.clicked.connect(self.on_saveQuivervideo)
-            #is disabled, enabled after successful calculation of MotionVectors
-            self.button_quivers_video.setEnabled(False)
-                     
-             #display the chosen quiver plot
-            self.label_quiver_result = QLabel('Quiver result: ')
-            self.label_quiver_result = QLabel('Quiver result: ')
-            self.image_quiver = QLabel()
-            self.image_quiver.setPixmap(QPixmap('icons/dummy_quiver.png').scaledToWidth(self.pixmap_width))
- 
-            # display figures for quivers in Canvas
-            self.fig_quivers, self.ax_quivers = plt.subplots(1,1, figsize = (16,12))
-            self.fig_quivers.subplots_adjust(bottom=0, top=1, left=0, right=1)
-            self.ax_quivers.axis('off')
-            self.ax_quivers.text(0.5, 0.5,'no motion calculated/ loaded yet',
-                size=16, ha='center', va='center', backgroundcolor='indianred', color='w')
-            
-            self.canvas_quivers = FigureCanvas(self.fig_quivers)
-                  
-            #succed-button
-            self.button_succeed_heatmaps = QPushButton('Heatmap-video creation was successful')
-            self.button_succeed_heatmaps.setStyleSheet("background-color: IndianRed")
-            self.button_succeed_quivers = QPushButton('Quiver-video creation was successful')
-            self.button_succeed_quivers.setStyleSheet("background-color: IndianRed")
-
-            #progressbar for heatmaps
-            self.progressbar_heatmaps = QProgressBar(self)
-            self.progressbar_heatmaps.setValue(0)
-            
-            #progressbar for quivers
-            self.progressbar_quivers = QProgressBar(self)
-            self.progressbar_quivers.setValue(0)
-        
-            #define layout
-            colHeatmap = 0
-            colQuiver = 2
-            self.tab4.layout = QGridLayout()
-            self.tab4.layout.addWidget(info_heat_quiver, 0,0)
-            self.tab4.layout.addWidget(label_advanced_choose_ROI,   1,  0)
-            self.tab4.layout.addWidget(self.advanced_combobox,      2,  0)
-            self.tab4.layout.addWidget(label_heatmaps,              3,  colHeatmap)
-            self.tab4.layout.addWidget(label_quivers,               3,  colQuiver)
-            self.tab4.layout.addWidget(self.button_change_quiverSettings, 2, colQuiver)
-            self.tab4.layout.addWidget(self.button_heatmaps_video,  4,  colHeatmap)
-            self.tab4.layout.addWidget(self.button_quivers_video,   4,  colQuiver)
-            self.tab4.layout.addWidget(self.progressbar_heatmaps,   5,  colHeatmap)
-            self.tab4.layout.addWidget(self.progressbar_quivers,    5,  colQuiver)
-            self.tab4.layout.addWidget(self.button_succeed_heatmaps,6,  colHeatmap)
-            self.tab4.layout.addWidget(self.button_succeed_quivers, 6,  colQuiver)
-            self.tab4.layout.addWidget(self.label_heatmap_result,   7,  colHeatmap)
-            self.tab4.layout.addWidget(self.label_quiver_result,    7,  colQuiver)
-            self.tab4.layout.addWidget(self.canvas_heatmap,         8,  colHeatmap)# directly plot canvas
-            self.tab4.layout.addWidget(self.canvas_quivers,         8,  colQuiver)
-            self.tab4.layout.addWidget(self.button_save_Heatmap,    11,  colHeatmap)
-            self.tab4.layout.addWidget(self.button_save_Quiver,     11,  colQuiver)
-            
-            #create sliders for heatmaps and quivers
-            self.tab4.layout.addWidget(self.label_slider_info,      9,0)
-            self.tab4.layout.addWidget(self.label_slider_quivers,   9,2)
-            self.tab4.layout.addWidget(self.slider_heatmaps,        10,0)
-            self.tab4.layout.addWidget(self.slider_quiver,          10,2)
-
-            self.tab4.layout.setColumnStretch(0,1)
-            self.tab4.layout.setColumnStretch(1,1)
-            self.tab4.layout.setColumnStretch(2,1)
-            self.tab4.layout.setHorizontalSpacing(20)
-            self.tab4.setLayout(self.tab4.layout)
-
 ########### fill the sixth tab ##################
             info_batch = QTextEdit()
             info_batch.setText('In this tab you can automate the analysis of multiple folders without further interaction during the processing.')
@@ -601,8 +444,8 @@ class TableWidget(QWidget):
                 self.progressbar_heatmaps.setValue(0)
                 self.progressbar_quivers.setValue(0)
             
-            elif self.sender() == self.timeavg_combobox:
-                self.init_TAMotion()
+            #elif self.sender() == self.timeavg_combobox:
+            #    self.init_TAMotion()
                 
         def on_selectROI(self):
             """ select a ROI from the first image of the rawImageStack, calculation of MVs will be performed on ROI only after this 
@@ -923,7 +766,8 @@ class TableWidget(QWidget):
             self.tab_input.progressbar_loadVideo.setValue(1)
 
             self.update_tab_input()  #update videoinfos with data from current_ohw
-           
+            self.tab_quiver.init_ohw()
+            self.tab_TA.init_ohw()
             #self.button_selectROI.setEnabled(True) 
             
         def on_reloadVideo(self):
@@ -942,7 +786,8 @@ class TableWidget(QWidget):
             self.tab_input.progressbar_loadVideo.setValue(1)
             self.update_tab_input()
             self.current_ohw.set_analysisImageStack(px_longest = self.current_ohw.analysis_meta["px_longest"])
-            self.initialize_MV_graphs()
+            self.tab_quiver.init_ohw()
+            self.tab_TA.init_ohw()
             
         def on_changeResultsfolder(self):
             #choose a folder
@@ -998,8 +843,7 @@ class TableWidget(QWidget):
             self.tab_input.canvas_firstImage.draw()
             
             if (self.current_ohw.video_loaded and self.current_ohw.analysis_meta["has_MVs"]):
-                self.imshow_quivers.set_clim(vmin=vmin, vmax=vmax)
-                self.canvas_quivers.draw()
+                self.tab_quiver.updateQuiverBrightness(vmin=vmin, vmax=vmax)
         
         def on_change_blackVal(self):          
             """
@@ -1198,13 +1042,13 @@ class TableWidget(QWidget):
             calculate_motion_thread.finished.connect(self.initialize_motion)
               
         def updateMVProgressBar(self, value):
-                self.tab_motion.progressbar_MVs.setValue(value*100)
+            self.tab_motion.progressbar_MVs.setValue(value*100)
 
         def updateProgressBar_batch(self, value):
-                self.progressbar_batch.setValue(value*100)
+            self.progressbar_batch.setValue(value*100)
                 
         def updateProgressBar(self, value):
-                self.progressbar_tab_motion.setValue(value*100)
+            self.progressbar_tab_motion.setValue(value*100)
         
         def initialize_motion(self):
             print('initializing motion')
@@ -1223,24 +1067,17 @@ class TableWidget(QWidget):
             self.button_detectPeaks.setEnabled(True)
             self.button_saveKinetics.setEnabled(True)
             self.button_export_ekg_csv.setEnabled(True)
-            self.button_heatmaps_video.setEnabled(True)
-            self.button_quivers_video.setEnabled(True)
-            self.slider_heatmaps.setEnabled(True)
-            self.slider_quiver.setEnabled(True)
             
             self.initialize_kinetics()
             
             # fill graphs with data from first frame
-            self.initialize_MV_graphs()
+            # self.initialize_MV_graphs()
+            self.tab_quiver.init_ohw()
     
             # initialize time averaged motion
-            self.init_TAMotion()
+            self.tab_TA.init_ohw()
             
-            #enable further buttons
-            self.button_save_Heatmap.setEnabled(True)
-            self.button_save_Quiver.setEnabled(True)
-            #self.button_save_timeMotion.setEnabled(True)
-            self.tab_motion.button_getMVs.setEnabled(True)
+            self.tab_motion.button_getMVs.setEnabled(True) #move to tab...
             
             #get the current video length and save it to the quiver settings
             #self.quiver_settings['video_length'] = str(1/self.current_ohw.videometa["fps"] * self.current_ohw.absMotions.shape[0])
@@ -1258,72 +1095,9 @@ class TableWidget(QWidget):
             
             self.tab3.layout.addWidget(self.canvas_kinetics, 7,0)
             self.canvas_kinetics.draw()
-            
-        def initialize_MV_graphs(self):
-            print("initialize MV graphs")
-            
-            # initialize heatmaps, display first frame           
-            scale_max = helpfunctions.get_scale_maxMotion2(self.current_ohw.absMotions) #decide on which scale to use
-            
-            for txt in self.ax_heatmaps.texts:
-                txt.remove() # clear placeholder
-            self.imshow_heatmaps = self.ax_heatmaps.imshow(self.current_ohw.absMotions[0], vmin = 0, vmax = scale_max, cmap = 'jet', interpolation = 'bilinear')
-            self.slider_heatmaps.setMaximum(self.current_ohw.absMotions.shape[0]-1)
-            
-            self.canvas_heatmap.draw()
-            """
-            # don't add title in gui yet/ adjust size...
-            cbar_heatmaps = self.fig_heatmaps.colorbar(self.imshow_heatmaps)
-            cbar_heatmaps.ax.tick_params(labelsize=20)
-            for l in cbar_heatmaps.ax.yaxis.get_ticklabels():
-                l.set_weight("bold")
-            self.ax_heatmaps.set_title('Motion [µm/s]', fontsize = 16, fontweight = 'bold')            
-            """
-            
-            # init quivers if video (= rawImageStack) is loaded
-            if self.current_ohw.video_loaded:
-                self.init_quivers()
-            # else set placeholder and disable slider
-            else:
-                self.ax_quivers.clear()
-                self.ax_quivers.axis('off')
-                self.ax_quivers.text(0.5, 0.5,'no motion calculated/ loaded yet',
-                    size=16, ha='center', va='center', backgroundcolor='indianred', color='w')
-                self.canvas_quivers.draw()
-                self.slider_quiver.setEnabled(False)
-            
-        def init_quivers(self):
-            
-            for txt in self.ax_quivers.texts:
-                txt.remove() # clear placeholder    
-            
-            self.slider_quiver.setEnabled(False)
-            self.slider_quiver.setMaximum(self.current_ohw.mean_absMotions.shape[0]-1)# or introduce new variable which counts the amount of motion timepoints
 
-            blockwidth = self.current_ohw.analysis_meta["MV_parameters"]["blockwidth"]
-            microns_per_px = self.current_ohw.videometa["microns_per_px"]
-            scalingfactor = self.current_ohw.analysis_meta["scalingfactor"]
-            scale_max = helpfunctions.get_scale_maxMotion2(self.current_ohw.absMotions)
-            
-            skipquivers =  int(self.quiver_settings['quiver_density'])
-            distance_between_arrows = blockwidth * skipquivers
-            arrowscale = 1 / (distance_between_arrows / scale_max)
-            
-            #self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.current_ohw.scaledImageStack.shape[2]-blockwidth/2, blockwidth)+1, np.arange(blockwidth/2, self.current_ohw.scaledImageStack.shape[1]-blockwidth/2+1, blockwidth))  #changed arange range, double check!
-            
-            self.qslice=(slice(None,None,skipquivers),slice(None,None,skipquivers))
-            qslice = self.qslice
-            
-            self.imshow_quivers = self.ax_quivers.imshow(
-                    self.current_ohw.analysisImageStack[0], cmap = "gray", 
-                    vmin = self.current_ohw.videometa["Blackval"], vmax = self.current_ohw.videometa["Whiteval"])
-            self.quiver_quivers = self.ax_quivers.quiver(
-                    self.current_ohw.MotionCoordinatesX[qslice], 
-                    self.current_ohw.MotionCoordinatesY[qslice], 
-                    self.current_ohw.MotionX[0][qslice], 
-                    self.current_ohw.MotionY[0][qslice], 
-                    pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", 
-                    scale = arrowscale, width = 3, headwidth = 2, headlength = 3) #adjust scale to max. movement   #width = blockwidth / 4?
+        def init_quivers(self):
+            pass
             '''
             if not self.current_ohw.isROI_OHW:
                 if self.quiver_settings['show_scalebar']:
@@ -1333,8 +1107,6 @@ class TableWidget(QWidget):
                     #remove scalebar by recalculating the scaled imagestack
                     self.current_ohw.scale_ImageStack(self.current_ohw.rawImageStack.shape[1], self.current_ohw.rawImageStack.shape[2])
             '''
-            
-            self.canvas_quivers.draw()
 
         def on_saveMVs(self):
             """
@@ -1432,47 +1204,6 @@ class TableWidget(QWidget):
             python = sys.executable
             os.execl(python, python, *sys.argv)
         
-        def updateHeatMap(self, frame):
-            #callback when slider is moved
-            self.imshow_heatmaps.set_data(self.current_ohw.absMotions[frame])
-            self.canvas_heatmap.draw()
- 
-        def updateQuiver(self, frame):
-            #callback when slider is moved
-            self.imshow_quivers.set_data(self.current_ohw.analysisImageStack[frame])    #introduce a displayImageStack here?
-            self.quiver_quivers.set_UVC(self.current_ohw.MotionX[frame][self.qslice], self.current_ohw.MotionY[frame][self.qslice])
-            self.canvas_quivers.draw()
-
-        def on_saveHeatmapvideo(self):
-            """
-                saves the heatmpavideo
-            """
-            #reset the color of success-button
-            self.button_succeed_heatmaps.setStyleSheet("background-color: IndianRed")
-            self.progressbar_heatmaps.setValue(0)
-            
-            save_heatmap_thread = self.current_ohw.save_heatmap_thread(singleframe = False)
-            save_heatmap_thread.start()
-            self.progressbar_heatmaps.setRange(0,0)
-            save_heatmap_thread.finished.connect(self.finish_saveHeatmapvideo)
-        
-        def finish_saveHeatmapvideo(self):
-            self.progressbar_heatmaps.setRange(0,1)
-            self.progressbar_heatmaps.setValue(1)
-            helpfunctions.msgbox(self, 'Heatmap video was saved successfully')
-            
-            #set succeed button to green if video creation finished
-            self.button_succeed_heatmaps.setStyleSheet("background-color: YellowGreen")            
-        
-        def on_saveHeatmap(self):
-            """
-                saves the selected frame (singleframe = framenumber)
-            """
-            singleframe=self.slider_heatmaps.value()
-            self.current_ohw.save_heatmap(singleframe = singleframe)
-            
-            helpfunctions.msgbox(self, 'Heatmap of frame ' + str(singleframe) + ' was saved successfully')
-        
         def on_change_quiverSettings(self):
             #calculate maximum video length
           #  del self.quiver_settings['video_length']
@@ -1503,106 +1234,8 @@ class TableWidget(QWidget):
             self.settingsWindow.close()
             
             #initialize MV_graphs again
-            self.initialize_MV_graphs()
+            #self.initialize_MV_graphs()
                 
-        def on_saveQuivervideo(self):
-            """
-                saves the quivervideo
-            """
-            #reset the color of success-button
-            self.button_succeed_quivers.setStyleSheet("background-color: IndianRed")
-            self.progressbar_quivers.setValue(0)
-            
-            """
-            if self.quiver_settings['one_view']:
-                #export one view quivers
-                save_quiver1_thread = self.current_ohw.save_quiver_thread(singleframe = False, skipquivers = int(self.quiver_settings['quiver_density']), t_cut=float(self.quiver_settings['video_length']))
-                save_quiver1_thread.start()
-                self.progressbar_quivers.setRange(0,0)
-                save_quiver1_thread.finished.connect(self.finish_saveQuivervideo)
-                              
-            if self.quiver_settings['three_views']:
-                #export three views quivers
-                save_quiver3_thread = self.current_ohw.save_quivervid3_thread(skipquivers = int(self.quiver_settings['quiver_density']), t_cut=float(self.quiver_settings['video_length']))
-                save_quiver3_thread.start()
-                self.progressbar_quivers.setRange(0,0)
-                save_quiver3_thread.finished.connect(self.finish_saveQuivervideo)
-            """
-            
-            save_quiver_thread = self.current_ohw.save_quiver3_thread(singleframe = False, skipquivers = 4)
-            save_quiver_thread.start()
-            self.progressbar_quivers.setRange(0,0)
-            save_quiver_thread.finished.connect(self.finish_saveQuivervideo)
-            
-        def finish_saveQuivervideo(self):
-            self.progressbar_quivers.setRange(0,1)
-            self.progressbar_quivers.setValue(1)
-            
-            helpfunctions.msgbox(self, 'Quiver was saved successfully')
-
-            #set succeed button to green if video creation finished
-            self.button_succeed_quivers.setStyleSheet("background-color: YellowGreen")
-
-            
-        def on_saveQuiver(self):
-            """
-                saves either the selected frame (singleframe = framenumber)
-            """     
-            singleframe = int(self.slider_quiver.value())
-            
-            """
-            #save the different views if chosen by the user
-            if self.quiver_settings['one_view']:
-
-                self.current_ohw.save_quiver(singleframe = singleframe, skipquivers = int(self.quiver_settings['quiver_density']))
-            
-            if self.quiver_settings['three_views']:
-                self.current_ohw.save_quivervid3(singleframe = singleframe, skipquivers = int(self.quiver_settings['quiver_density']))
-            """
-            self.current_ohw.save_quiver3(singleframe = singleframe)
-            
-            #display a message
-            helpfunctions.msgbox(self, 'Quiver of frame ' + str(singleframe) + ' was saved successfully')            
-
-        def slider_heatmaps_valueChanged(self):
-            frame = self.slider_heatmaps.value()
-            time = round(frame / self.current_ohw.videometa["fps"], 3)
-            self.updateHeatMap(frame)
-            self.label_heatmap_result.setText('Heatmap of frame ' + str(frame) + ' at time ' + str(time) + 'sec')
-        
-        def slider_quiver_valueChanged(self): 
-            frame = self.slider_quiver.value()
-            time = round(frame / self.current_ohw.videometa["fps"], 3)
-            self.updateQuiver(frame)
-            self.label_quiver_result.setText('Quiverplot of frame ' + str(frame) + ' at time ' + str(time) + ' sec')            
-                
-        def init_TAMotion(self): 
-            max_motion = self.current_ohw.max_avgMotion
-            
-            self.imshow_motion_total = self.tab_TA.ax_TA_tot.imshow(self.current_ohw.avg_absMotion, 
-                vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")#, cmap = 'gray', vmin = self.Blackval, vmax = self.Whiteval)
-            self.imshow_motion_x = self.tab_TA.ax_TA_x.imshow(self.current_ohw.avg_MotionX, 
-                vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")
-            self.imshow_motion_y = self.tab_TA.ax_TA_y.imshow(self.current_ohw.avg_MotionY, 
-                vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")
-            
-            self.tab_TA.canvas_TA_tot.draw()
-            self.tab_TA.canvas_TA_x.draw()
-            self.tab_TA.canvas_TA_y.draw()
-            
-            #self.tab_TA.layout.addWidget(self.canvas_motion_total, 6,0)
-            #self.tab_TA.layout.addWidget(self.canvas_motion_x, 8,0)
-            #self.tab_TA.layout.addWidget(self.canvas_motion_y, 8,1)
-            
-            self.tab_TA.btn_save_TA.setEnabled(True)
-                
-        def on_saveTimeAveragedMotion(self):
-            
-            file_ext = self.combo_avgExt.currentText()
-            self.current_ohw.plot_TimeAveragedMotions(file_ext)
-            
-            helpfunctions.msgbox(self, 'Plots of time averaged motion were saved successfully.')
-            
         def changeStatus(self):
             
             #disable or enable the option to choose results folder
