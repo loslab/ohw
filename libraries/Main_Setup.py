@@ -364,68 +364,6 @@ class TableWidget(QWidget):
             
                 #add OHW to list of all ROI OHWs
                 self.ROI_OHWs.append(current_ROI_OHW)
-
-        def on_startBatchAnalysis(self):
-            print('Starting batch analysis...')
-            self.button_addBatchVideo.setEnabled(False)
-            self.button_removeBatchVideo.setEnabled(False)
-            self.button_batch_startAnalysis.setEnabled(False)
-            
-            videofiles = [self.qlist_batchvideos.item(i).text() for i in range(self.qlist_batchvideos.count())]
-            print(videofiles)
-            
-            blockwidth = self.batch_spinbox_blockwidth.value()
-            delay = self.batch_spinbox_delay.value()
-            maxShift = self.batch_spinbox_maxShift.value()          
-            
-            
-            # turn into thread...
-            # use 2 progress bars? 1 for file progress, 1 for individual calculations....?
-            for file in videofiles:
-                filepath = pathlib.Path(file)
-                curr_analysis = OHW.OHW()
-                curr_analysis.import_video(filepath)
-                
-                if self.batch_checkScaling.isChecked():
-                    curr_analysis.set_analysisImageStack(px_longest = 1024)
-                else:
-                    curr_analysis.set_analysisImageStack(px_longest = 1024)
-            
-                curr_analysis.calculate_motion(blockwidth = blockwidth, delay = delay, max_shift = maxShift)
-                curr_analysis.initialize_motion()
-                curr_analysis.save_MVs()
-                curr_analysis.plot_TimeAveragedMotions('.png')
-                
-            # enable buttons again
-            self.button_batch_startAnalysis.setEnabled(True)
-            
-            # get current settings from checkboxes and spinboxes
-            self.blockwidth_batch = self.batch_spinbox_blockwidth.value()
-            self.delay_batch = self.batch_spinbox_delay.value()
-            self.maxShift_batch = self.batch_spinbox_maxShift.value()
-            self.batch_factor_scaling = self.batch_checkScaling.isChecked()
-            self.batch_filter_status = self.batch_checkFilter.isChecked()
-            self.batch_heatmap_status = self.batch_checkHeatmaps.isChecked()
-            self.batch_quiver_status = self.batch_checkQuivers.isChecked()
-            self.batch_scaling_status = self.batch_checkScaling.isChecked()
-            
-
-            '''
-            if (self.results_folder_batch == ''):
-                self.button_batch_startAnalysis.setEnabled(True)
-                print('Batch analysis did not start correctly. Start again!')
-                return
-            
-            #enable the stop button
-            self.button_batch_stopAnalysis.setEnabled(True)
-            
-            #create a thread for batch analysis:
-            self.thread_batchAnalysis = self.perform_batchAnalysis_thread()
-    
-            self.thread_batchAnalysis.start()
-            self.thread_batchAnalysis.finished.connect(self.finish_batchAnalysis)
-            self.thread_batchAnalysis.progressSignal.connect(self.updateProgressBar_batch)
-            '''
                
         def getMaximumSignals_batch(self):
             #calculates the number of signals to be emitted

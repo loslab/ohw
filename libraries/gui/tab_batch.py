@@ -9,7 +9,8 @@ from PyQt5.QtWidgets import (QLabel, QLineEdit, QGridLayout, QComboBox,
     QSpinBox, QCheckBox, QListWidget, QAbstractItemView)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from libraries import helpfunctions, UserDialogs
+from libraries import helpfunctions, UserDialogs, OHW
+import pathlib
 
 class TabBatch(QWidget):
     """
@@ -24,7 +25,7 @@ class TabBatch(QWidget):
     def initUI(self):
 
         self.info = QTextEdit()
-        self.info.setText('In this tab you can automate the analysis of multiple folders without further interaction during the processing.')
+        self.info.setText('In this tab you can automate the analysis of multiple folders without further interaction during processing.')
         self.info.setReadOnly(True)
         self.info.setMaximumHeight(40)
         self.info.setMaximumWidth(800)
@@ -35,8 +36,8 @@ class TabBatch(QWidget):
         self.info_batchfolders.setFont(QFont("Times",weight=QFont.Bold))
         self.qlist_batchvideos = QListWidget()
         self.qlist_batchvideos.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.qlist_batchvideos.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        #self.names_batchfolders = QTextEdit()
+        #self.qlist_batchvideos.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.qlist_batchvideos.setMinimumWidth(600)
         
         #button for adding folders
         self.btn_addVid = QPushButton('Add Videos...')
@@ -49,11 +50,11 @@ class TabBatch(QWidget):
         self.btn_remVid.clicked.connect(self.on_removeBatchVideo)
         
         #batch param
-        label_parameters = QLabel('Settings during calculation of motion vectors:')
-        label_parameters.setFont(QFont("Times",weight=QFont.Bold))
-        label_blockwidth = QLabel('Blockwidth (in pixels)')
-        label_delay = QLabel('Delay (in frames)')
-        label_maxShift = QLabel('Maximum shift p (in pixels)')
+        self.label_parameters = QLabel('Settings during calculation of motion vectors:')
+        self.label_parameters.setFont(QFont("Times",weight=QFont.Bold))
+        self.label_blockwidth = QLabel('Blockwidth (in pixels)')
+        self.label_delay = QLabel('Delay (in frames)')
+        self.label_maxShift = QLabel('Maximum shift p (in pixels)')
         
         #use own grid for spinboxes...
         
@@ -63,6 +64,7 @@ class TabBatch(QWidget):
         self.spinbox_maxShift = QSpinBox()
         
         self.spinbox_blockwidth.setRange(2,128)
+        #self.spinbox_blockwidth.setMinimumHeight(20)
         self.spinbox_blockwidth.setSingleStep(2)
         self.spinbox_blockwidth.setSuffix(' pixels')
         self.spinbox_blockwidth.setValue(16)  # set standard values somewhere else!
@@ -104,58 +106,71 @@ class TabBatch(QWidget):
         
         #button for starting the analysis
         self.btn_startBatch = QPushButton('Start the automated analysis of chosen folders')
-        #self.btn_startBatch.clicked.connect(self.on_startBatchAnalysis)
+        self.btn_startBatch.clicked.connect(self.on_startBatch)
         self.btn_startBatch.setEnabled(False)
         
         #button for aborting the analysis
-        self.btn_stopBatc = QPushButton('Stop onging analysis')
-        #self.btn_stopBatc.clicked.connect(self.on_stopBatchAnalysis)
-        self.btn_stopBatc.setEnabled(False)
+        self.btn_stopBatch = QPushButton('Stop onging analysis')
+        #self.btn_stopBatch.clicked.connect(self.on_stopBatchAnalysis)
+        self.btn_stopBatch.setEnabled(False)
         
         #label to display current results folder
         self.label_results_folder = QLabel('Current results folder: ')
         self.label_results_folder.setFont(QFont("Times",weight=QFont.Bold))
         
         #button for changing the results folder
-        self.button_resultsfolder = QPushButton('Change results folder ')
-        self.button_resultsfolder.resize(self.button_resultsfolder.sizeHint())
-        #self.button_resultsfolder.clicked.connect(self.on_changeResultsfolder)
-        self.button_resultsfolder.setEnabled(False)
+        self.btn_resultsfolder = QPushButton('Change results folder ')
+        #self.btn_resultsfolder.resize(self.btn_resultsfolder.sizeHint())
+        #self.btn_resultsfolder.clicked.connect(self.on_changeResultsfolder)
+        self.btn_resultsfolder.setEnabled(False)
+        self.check_batchresultsFolder.stateChanged.connect(self.changeStatus)
         
-        #create a progressbar    
-        self.progressbar = QProgressBar(self)
+        self.progressbar = QProgressBar()
         self.progressbar.setMaximum(100)  
         self.progressbar.setValue(0)
+        self.progressbar.setFixedWidth(800)
         self.progressbar.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
-        self.grid_overall = QGridLayout()
-        self.grid_overall.addWidget(self.info,                      1,0,1,2)
-        self.grid_overall.addWidget(self.info_batchfolders,          2,0)
-        self.grid_overall.addWidget(self.qlist_batchvideos,          3,0,3,1)# spans 2 rows and 1 column
-        self.grid_overall.addWidget(self.btn_addVid,            3,1)
-        self.grid_overall.addWidget(self.btn_remVid,            4,1)
-        self.grid_overall.addWidget(label_parameters,          6,0)
-        self.grid_overall.addWidget(label_blockwidth,          7,0)
-        self.grid_overall.addWidget(self.spinbox_blockwidth,   7,1)
-        self.grid_overall.addWidget(label_delay,               8,0)
-        self.grid_overall.addWidget(self.spinbox_delay,        8,1)
-        self.grid_overall.addWidget(label_maxShift,            9,0)
-        self.grid_overall.addWidget(self.spinbox_maxShift,     9,1)            
-        self.grid_overall.addWidget(label_batchOptions,              10,0)
-        self.grid_overall.addWidget(self.checkScaling,         11,0)
-        self.grid_overall.addWidget(self.check_batchresultsFolder,   12,0)
-        self.grid_overall.addWidget(self.checkFilter,          13,0)
-        self.grid_overall.addWidget(self.checkHeatmaps,        14,0)
-        self.grid_overall.addWidget(self.checkQuivers,         15,0)
-        self.grid_overall.addWidget(self.label_results_folder,  16,0)
-        self.grid_overall.addWidget(self.button_resultsfolder, 17,0)
-        self.grid_overall.addWidget(self.btn_startBatch, 18,0)
-        self.grid_overall.addWidget(self.progressbar,          19,0)
-        self.grid_overall.addWidget(self.btn_stopBatc,  20,1)        
-    
+        ########## add widgets
+        
+        self.grid_param = QGridLayout()
+        
+        self.grid_param.addWidget(self.label_parameters,        0,0,1,2)
+        self.grid_param.addWidget(self.label_blockwidth,        1,0)
+        self.grid_param.addWidget(self.spinbox_blockwidth,      1,1)
+        self.grid_param.addWidget(self.label_delay,             2,0)
+        self.grid_param.addWidget(self.spinbox_delay,           2,1)
+        self.grid_param.addWidget(self.label_maxShift,          3,0)
+        self.grid_param.addWidget(self.spinbox_maxShift,        3,1)
 
+        self.grid_param.setSpacing(15)
+        self.grid_param.setAlignment(Qt.AlignTop|Qt.AlignLeft)
+        
+        self.grid_overall = QGridLayout()
+
+        self.grid_overall.addWidget(self.info,                  1,0,1,3)
+        self.grid_overall.addWidget(self.info_batchfolders,     2,0)
+        self.grid_overall.addWidget(self.qlist_batchvideos,     3,0,3,2)#,Qt.AlignTop|Qt.AlignLeft)# spans 3 rows and 1 column
+        self.grid_overall.addWidget(self.btn_addVid,            3,2)
+        self.grid_overall.addWidget(self.btn_remVid,            4,2)
+        self.grid_overall.setRowStretch(5,2)    #otherwise gird_param will also stretch?
+        
+        self.grid_overall.addLayout(self.grid_param,            6,0,1,3,Qt.AlignTop|Qt.AlignLeft)#,Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(label_batchOptions,         7,0)#,Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.checkScaling,          8,0)
+        self.grid_overall.addWidget(self.check_batchresultsFolder,   9,0)
+        self.grid_overall.addWidget(self.checkFilter,           10,0)
+        self.grid_overall.addWidget(self.checkHeatmaps,         11,0)
+        self.grid_overall.addWidget(self.checkQuivers,          12,0)
+        self.grid_overall.addWidget(self.label_results_folder,  13,0)
+        self.grid_overall.addWidget(self.btn_resultsfolder,  14,0)
+        self.grid_overall.addWidget(self.btn_startBatch,        14,1)
+        self.grid_overall.addWidget(self.btn_stopBatch,         14,2)
+        self.grid_overall.addWidget(self.progressbar,          15,0,1,3)
+       
         self.grid_overall.setSpacing(15)        
-        self.grid_overall.setAlignment(Qt.AlignTop|Qt.AlignLeft)      
+        self.grid_overall.setAlignment(Qt.AlignTop|Qt.AlignLeft)
+        
         self.setLayout(self.grid_overall)
 
         for label in self.findChildren(QLabel):
@@ -169,7 +184,7 @@ class TabBatch(QWidget):
         for CheckBox in self.findChildren(QCheckBox):
             CheckBox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         #for btn in self.findChildren(QPushButton):
-        #    btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        #   btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         
     def on_addBatchVideo(self):
     
@@ -189,3 +204,68 @@ class TabBatch(QWidget):
             self.qlist_batchvideos.takeItem(self.qlist_batchvideos.row(item))
         if self.qlist_batchvideos.count() == 0:
             self.btn_startBatch.setEnabled(False)            
+            
+    def changeStatus(self):
+        #disable or enable the option to choose results folder
+        if self.sender() == self.check_batchresultsFolder:
+            if self.check_batchresultsFolder.isChecked():
+                self.btn_resultsfolder.setEnabled(False)
+            else:
+                self.btn_resultsfolder.setEnabled(True)
+    
+    def on_startBatch(self):
+        print('Starting batch analysis...')
+        self.btn_addVid.setEnabled(False)
+        self.btn_remVid.setEnabled(False)
+        self.btn_startBatch.setEnabled(False)
+        self.btn_stopBatch.setEnabled(True)
+        
+        videofiles = [self.qlist_batchvideos.item(i).text() for i in range(self.qlist_batchvideos.count())]
+        print(videofiles)
+        
+        blockwidth = self.spinbox_blockwidth.value()
+        delay = self.spinbox_delay.value()
+        maxShift = self.spinbox_maxShift.value()          
+        
+        # turn into thread...
+        # use 2 progress bars? 1 for file progress, 1 for individual calculations....?
+        for file in videofiles:
+            filepath = pathlib.Path(file)
+            curr_analysis = OHW.OHW()
+            curr_analysis.import_video(filepath)
+            
+            if self.checkScaling.isChecked():
+                curr_analysis.set_analysisImageStack(px_longest = 1024)
+            else:
+                curr_analysis.set_analysisImageStack()
+        
+            curr_analysis.calculate_motion(blockwidth = blockwidth, delay = delay, max_shift = maxShift)
+            curr_analysis.initialize_motion()
+            curr_analysis.save_MVs()
+            curr_analysis.plot_TimeAveragedMotions('.png')
+            
+            if self.checkHeatmaps.isChecked():
+                curr_analysis.save_heatmap(singleframe = False)
+            if self.checkQuivers.isChecked():
+                curr_analysis.save_quiver3(singleframe = False) #allow to choose between quiver and quiver3
+            
+            
+        # enable buttons again
+        self.btn_addVid.setEnabled(True)
+        self.btn_remVid.setEnabled(True)
+        self.btn_startBatch.setEnabled(True)
+        self.btn_stopBatch.setEnabled(False)
+
+        '''
+        if (self.results_folder_batch == ''):
+            self.button_batch_startAnalysis.setEnabled(True)
+            print('Batch analysis did not start correctly. Start again!')
+            return
+        
+        #create a thread for batch analysis:
+        self.thread_batchAnalysis = self.perform_batchAnalysis_thread()
+    
+        self.thread_batchAnalysis.start()
+        self.thread_batchAnalysis.finished.connect(self.finish_batchAnalysis)
+        self.thread_batchAnalysis.progressSignal.connect(self.updateProgressBar_batch)
+        '''
