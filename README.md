@@ -1,3 +1,5 @@
+![OpenHeartWare-Logo](/icons/ohw-logo.png)
+
 # OpenHeartWare (OHW)
 Open source software for the optical determination of cardiomyocyte contractility
 developed by Oliver Schneider & Carla Sailer at the Loskill Group, Fraunhofer Institute for Interfacial Engineering and Biotechnology (IGB)

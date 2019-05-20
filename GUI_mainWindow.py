@@ -16,7 +16,7 @@ class App(QMainWindow):
         self.resize(1150,800)
         self.center()
         self.setWindowTitle(self.title)
-        self.setWindowIcon(QIcon('icons/icon_color.PNG'))
+        self.setWindowIcon(QIcon('icons/ohw-icon.PNG'))
         
         #create a TableWidget to use different tabs in the GUI       
         self.table_widget = TableWidget(self)
