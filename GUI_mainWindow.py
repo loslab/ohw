@@ -21,7 +21,6 @@ class App(QMainWindow):
         #create a TableWidget to use different tabs in the GUI       
         self.table_widget = TableWidget(self)
         self.setCentralWidget(self.table_widget)
- 
         self.show()
     
     def center(self):
@@ -54,7 +53,8 @@ if __name__ == '__main__':
         #os.environ["PYTHONWARNINGS"] = "default" # Also affect subprocesses
    
     #start the application
-    app = QApplication(sys.argv) 
+    app = QApplication(sys.argv)
+    app.setAttribute(Core.Qt.AA_DisableHighDpiScaling)
     app.aboutToQuit.connect(app.deleteLater)
     heartware_gui = App()    
     app.exec_()

@@ -70,7 +70,7 @@ def BM_getMV(patternToFind, searchRegion, max_shift, methodnr = 4):
     
     return xMotion, yMotion
     
-def BM_stack(imageStack, blockwidth, delay, max_shift, progressSignal = None):
+def BM_stack(imageStack, blockwidth, delay, max_shift, progressSignal = None, *args, **kwargs):
     """
         gets optical flow of a complete imagestack, based on blockmatching
         unit is px/frame as no scale is given here yet

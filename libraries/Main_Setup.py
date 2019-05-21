@@ -28,7 +28,7 @@ from libraries.gui import tab_input, tab_motion, tab_TA, tab_quiver, tab_batch
 class TableWidget(QWidget):
         def __init__(self, parent):   
             super(QWidget, self).__init__(parent)
-            
+
             #read config file
             self.config = helpfunctions.read_config()
             self.current_ohw = OHW.OHW()
@@ -364,30 +364,6 @@ class TableWidget(QWidget):
             
                 #add OHW to list of all ROI OHWs
                 self.ROI_OHWs.append(current_ROI_OHW)
-               
-        def getMaximumSignals_batch(self):
-            #calculates the number of signals to be emitted
-            #needed for progressbar during batch analysis
-            count = 0
-            
-            #add 2 signals for reading data and calculating MVs
-            count += 2
-            
-            if self.batch_heatmap_status == True:
-                count += 1
-            
-            if self.batch_quiver_status == True:
-                count += 1
-            
-            #multiply this number by the number of batch folders to be evaluated
-            count_tot = count * len(self.batch_folders)
-           
-            #return this number, needed during threading
-            return count_tot 
-        
-        def perform_batchAnalysis_thread(self):
-            current_batch_thread = helpfunctions.turn_function_into_thread(self.perform_batchAnalysis, emit_progSignal=True)
-            return current_batch_thread  
  
         def perform_batchAnalysis(self, progressSignal=None):
              #number of signals to be emitted  
@@ -459,32 +435,6 @@ class TableWidget(QWidget):
                     if progressSignal != None:
                         self.count_batch_signals += 1
                         progressSignal.emit(self.count_batch_signals/self.maxNumberSignals)
-        
-        def finish_batchAnalysis(self):
-            print('Yeah we are done with this thread.')
-            self.progressbar_batch.setRange(0,1)
-            self.progressbar_batch.setValue(1)
-            
-            #prepare for another round of analysis:
-            self.button_batch_stopAnalysis.setEnabled(False)
-            self.button_batch_startAnalysis.setEnabled(True)
-            
-        def on_stopBatchAnalysis(self):
-            self.thread_batchAnalysis.endThread()
-            
-            #get ready for new analysis:
-            self.button_batch_startAnalysis.setEnabled(True)
-            self.button_batch_stopAnalysis.setEnabled(False)
-            self.button_addBatchVideo.setEnabled(True)
-            self.progressbar_batch.setValue(0)
-            print('Threads are terminated. Ready for new analysis.')
-            
-            #display a message for successful stopping
-            msg_text = 'Analysis of multiple folders was stopped successfully. You can start again.' # to: ' + text_for_saving
-            msg_title = 'Successful'
-            msg = QMessageBox.information(self, msg_title, msg_text, QMessageBox.Ok)
-            if msg == QMessageBox.Ok:
-                pass  
                       
         def on_loadVideo(self):
             self.tab_input.progressbar_loadVideo.setValue(0)
@@ -799,9 +749,6 @@ class TableWidget(QWidget):
               
         def updateMVProgressBar(self, value):
             self.tab_motion.progressbar_MVs.setValue(value*100)
-
-        def updateProgressBar_batch(self, value):
-            self.progressbar_batch.setValue(value*100)
                 
         def updateProgressBar(self, value):
             self.progressbar_tab_motion.setValue(value*100)
@@ -817,6 +764,7 @@ class TableWidget(QWidget):
             
             #set the succeed button to green:
             self.tab_motion.button_succeed_MVs.setStyleSheet("background-color: YellowGreen")
+            self.tab_motion.button_succeed_MVs.setText("Motion available") # improve and move init to tab_motion!
                 
             #enable other buttons for further actions
             self.tab_motion.button_save_MVs.setEnabled(True)

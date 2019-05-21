@@ -13,13 +13,14 @@ class TabMotion(QWidget):
     
     def __init__(self, parent):
         super(TabMotion, self).__init__(parent)
+        self.parent=parent
         self.initUI()
         
     def initUI(self):
         self.info = QTextEdit()
         self.info.setText('In this tab you set the settings for the block-matching algorithm and perform the calculation of the motion vectors or import an old analysis.')
         self.info.setReadOnly(True)
-        self.info.setMaximumHeight(50)
+        self.info.setFixedHeight(50)
         self.info.setFixedWidth(700)
         self.info.setStyleSheet("background-color: LightSkyBlue")
         
@@ -41,13 +42,13 @@ class TabMotion(QWidget):
         self.spinbox_blockwidth.setRange(2,128)
         self.spinbox_blockwidth.setSingleStep(1)
         self.spinbox_blockwidth.setSuffix(' pixels')
-        #self.spinbox_blockwidth.setValue(int(self.config['DEFAULT VALUES']['blockwidth']))
+        self.spinbox_blockwidth.setValue(int(self.parent.config['DEFAULT VALUES']['blockwidth']))
         self.spinbox_delay.setRange(1,10)
         self.spinbox_delay.setSuffix(' frames')
         self.spinbox_delay.setSingleStep(1)
-        #self.spinbox_delay.setValue(int(self.config['DEFAULT VALUES']['delay']))
+        self.spinbox_delay.setValue(int(self.parent.config['DEFAULT VALUES']['delay']))
         self.spinbox_maxShift.setSuffix(' pixels')
-        #self.spinbox_maxShift.setValue(int(self.config['DEFAULT VALUES']['maxShift']))
+        self.spinbox_maxShift.setValue(int(self.parent.config['DEFAULT VALUES']['maxShift']))
         
         self.check_scaling = QCheckBox('Scale the longest side to 1024 px during calculation')
         self.check_scaling.setChecked(True) #connect with config here!
@@ -58,18 +59,18 @@ class TabMotion(QWidget):
         
         self.button_getMVs = QPushButton('Calculate motion vectors')
         #self.button_getMVs.resize(self.button_getMVs.sizeHint())
-        self.button_getMVs.clicked.connect(self.parent().on_getMVs)
+        self.button_getMVs.clicked.connect(self.parent.on_getMVs)
         self.button_getMVs.setEnabled(False)
         self.button_getMVs.setFixedWidth(150)
         
         self.button_save_MVs = QPushButton('Save motion vectors')
         #self.button_save_MVs.resize(self.button_save_MVs.sizeHint())
-        self.button_save_MVs.clicked.connect(self.parent().on_saveMVs)
+        self.button_save_MVs.clicked.connect(self.parent.on_saveMVs)
         self.button_save_MVs.setEnabled(False)
         self.button_save_MVs.setFixedWidth(150)
         
         self.btn_load_ohw = QPushButton('Load motion analysis')
-        self.btn_load_ohw.clicked.connect(self.parent().on_load_ohw)
+        self.btn_load_ohw.clicked.connect(self.parent.on_load_ohw)
         self.btn_load_ohw.setFixedWidth(150)
         
         #succed-button

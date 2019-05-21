@@ -23,7 +23,7 @@ class TabQuiver(QWidget):
     def initUI(self):
         # define + place gui elements
         self.info = QTextEdit()
-        self.info.setText('In this tab, motion is vizualized by heatmaps and quiverplots. Use the slider to look at the different frames. You can save individual frames or the whole video.')
+        self.info.setText('In this tab, motion is vizualized by heatmaps and quiverplots. Use the slider to look at different frames. You can save individual frames or the whole video.')
         self.info.setReadOnly(True)
         self.info.setMaximumHeight(50)
         self.info.setFixedWidth(700)
