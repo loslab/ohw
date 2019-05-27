@@ -20,7 +20,7 @@ class TabMotion(QWidget):
         self.info = QTextEdit()
         self.info.setText('In this tab you set the settings for the block-matching algorithm and perform the calculation of the motion vectors or import an old analysis.')
         self.info.setReadOnly(True)
-        self.info.setFixedHeight(50)
+        self.info.setMaximumHeight(50)
         self.info.setFixedWidth(700)
         self.info.setStyleSheet("background-color: LightSkyBlue")
         

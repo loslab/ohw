@@ -291,7 +291,9 @@ class OHW():
         self.PeakDetection.calculateTimeIntervals()
                 
     def get_peaks(self):
-        return self.PeakDetection.sorted_peaks
+        print(self.PeakDetection.peakindices)
+        return self.PeakDetection.peakindices
+        #return self.PeakDetection.sorted_peaks
         
     def get_peakstatistics(self):
         return self.PeakDetection.peakstatistics

@@ -60,7 +60,20 @@ class PeakDetection():
         self.foundPeaks = self.peaktimes_th.shape[0] #set number of found peaks
         
         print(self.foundPeaks, " peaks found")
+
+        self.peakindices = sorted(list(peakpos_th)) # set peakindices only, clean up...
+    
+    def addPeak(self, index):
+        '''adds peak at specified index'''
+        #self.peakindices = list(self.peakindices)
+        if index not in self.peakindices:
+            self.peakindices.append(index)
         
+    def removePeak(self, index):
+        '''removes peak at specified index'''
+        if index in self.peakindices:
+            self.peakindices.remove(index)
+    
     def analyzePeaks(self): 
         """
             splits peaks into low and high peaks (= relaxation, contraction)
@@ -69,6 +82,13 @@ class PeakDetection():
         
         if self.foundPeaks < 2:
             print("only ", self.foundPeaks, " peaks detected, which are not enough for the analysis")
+            self.sorted_peaks = {"t_peaks_low_sorted":None,"peaks_low_sorted":None,
+                    "t_peaks_high_sorted":None,"peaks_high_sorted":None}
+            self.peakstatistics = {"max_contraction":None, "max_contraction_std": None, 
+                    "max_relaxation": None, "max_relaxation_std": None}
+            # quick fix, to be optimized...
+            #self.sorted_peaks = {"t_peaks_low_sorted":t_peaks_low_sorted,"peaks_low_sorted":peaks_low_sorted,"t_peaks_high_sorted":t_peaks_high_sorted,"peaks_high_sorted":peaks_high_sorted}
+            #self.peakstatistics = {"max_contraction":max_contraction, "max_contraction_std": max_contraction_std, "max_relaxation": max_relaxation, "max_relaxation_std": max_relaxation_std}
             return
         
         sort_index_height = self.peak_heights_th.argsort()

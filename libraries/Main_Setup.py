@@ -23,7 +23,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 #from PyQt5 import QtGui
  
 from libraries import MultipleFoldersByUser, UserDialogs, Filters, helpfunctions, QuiverExportOptions, plotfunctions, OHW
-from libraries.gui import tab_input, tab_motion, tab_TA, tab_quiver, tab_batch
+from libraries.gui import tab_input, tab_motion, tab_TA, tab_quiver, tab_batch, tab_kinetics
 
 class TableWidget(QWidget):
         def __init__(self, parent):   
@@ -48,7 +48,7 @@ class TableWidget(QWidget):
             
             self.tab_input = tab_input.TabInput(self)
             self.tab_motion = tab_motion.TabMotion(self)
-            self.tab3 = QWidget()
+            self.tab_kinetics = tab_kinetics.TabKinetics(self)
             self.tab_quiver = tab_quiver.TabQuiver(self)
             self.tab_TA = tab_TA.TabTA(self)
             self.tab_batch = tab_batch.TabBatch(self)
@@ -59,11 +59,12 @@ class TableWidget(QWidget):
             self.tabs.addTab(self.tab_input,"Video Input ")
             #self.tabs.addTab(self.tabROIs, "Manage ROIs")
             self.tabs.addTab(self.tab_motion,"Compute motion")
-            self.tabs.addTab(self.tab3,"Beating kinetics")
+            self.tabs.addTab(self.tab_kinetics,"Beating kinetics")
             self.tabs.addTab(self.tab_quiver,"Heatmaps and Quiverplots")
             self.tabs.addTab(self.tab_TA,"Time averaged motion")
             self.tabs.addTab(self.tab_batch,"Batch analysis")
             
+            self.tab_kinetics.init_ohw()
             self.tab_TA.init_ohw()
             
             color_for_info = QColor(198, 255, 26)
@@ -144,118 +145,6 @@ class TableWidget(QWidget):
             self.tabROIs.layout.addWidget(self.ROI,                     3,1)
             self.tabROIs.setLayout(self.tabROIs.layout)
             """
-
-########### fill the third tab ##################
-            info_analysisBasic = QTextEdit()
-            info_analysisBasic.setText('In this tab you can plot the motion as an EKG and calculate statistics based on the found peaks. Change the parameters manually to optimize the peak detection. You can save the graphs and export the peaks.')
-            info_analysisBasic.setReadOnly(True)
-            info_analysisBasic.setMaximumHeight(40)
-            info_analysisBasic.setMaximumWidth(800)
-            info_analysisBasic.setStyleSheet("background-color: LightSkyBlue")
-            
-            #create a label for choosing the ROI
-            label_ekg_choose_ROI = QLabel('Choose the ROI to be displayed: ')
-            label_ekg_choose_ROI.setFont(QFont("Times",weight=QFont.Bold))
-            
-            #create a drop-down menu for choosing the ROI to be displayed
-            self.ekg_combobox = QComboBox()
-            self.ekg_combobox.addItem('Full image')    
-            #self.ekg_combobox.activated[str].connect(self.on_chooseROI)
-            self.ekg_combobox.currentIndexChanged[int].connect(self.on_chooseROI)
-            
-            label_results = QLabel('Results: ')
-            label_results.setFont(QFont("Times",weight=QFont.Bold))
-
-            self.fig_kinetics, self.ax_kinetics = plt.subplots(1,1)
-            self.fig_kinetics.set_size_inches(16,12)
-            self.canvas_kinetics = FigureCanvas(self.fig_kinetics)           
-            
-            #spinboxes to choose for manual detection
-            label_ratio = QLabel('Ratio of peaks: ')           
-            self.spinbox_ratio = QDoubleSpinBox()
-            self.spinbox_ratio.setRange(0.01, 0.90)
-            self.spinbox_ratio.setSingleStep(0.01)
-            self.spinbox_ratio.setValue(0.05)           
-            
-            label_neighbours = QLabel('Number of neighbouring values for evaluation:') 
-            self.spinbox_neighbours = QSpinBox()    
-            self.spinbox_neighbours.setRange(2,10)
-            self.spinbox_neighbours.setSingleStep(2)
-            self.spinbox_neighbours.setValue(4)
-            
-            #create labels for the statistics
-            label_max_contraction = QLabel('Detected maximum contraction: ')
-            label_max_relaxation = QLabel('Detected maximum relaxation: ')
-            label_time_contraction = QLabel('Mean contraction interval: ')
-            label_time_relaxation = QLabel('Mean relaxation interval: ')
-            label_time_contr_relax = QLabel('Mean interval between contraction and relaxation: ')
-            label_bpm = QLabel('Heart rate: ')
-            
-            self.label_max_contraction_result = QLabel('... needs to be calculated ...')            
-            self.label_max_relaxation_result = QLabel('... needs to be calculated ...')
-            self.label_time_contraction_result = QLabel('... needs to be calculated ...')
-            self.label_time_relaxation_result = QLabel('... needs to be calculated ...')
-            self.label_time_contr_relax_result = QLabel('... needs to be calculated ...')
-            self.label_bpm_result = QLabel('... needs to be calculated ...')
-            
-            label_furtherAnalysis = QLabel('Further options:')
-            label_furtherAnalysis.setFont(QFont("Times",weight=QFont.Bold))
-            
-            label_evaluate = QLabel('Start evaluation')
-            label_evaluate.setFont(QFont("Times",weight=QFont.Bold))
-            
-            self.button_detectPeaks = QPushButton('Start peak detection')
-            self.button_saveKinetics = QPushButton('Save current EKG graph as ...')
-            self.button_export_peaks = QPushButton('Save raw and analyzed peaks ')
-            self.button_export_ekg_csv = QPushButton('Save EKG as excel file (.xlsx)')
-            self.button_export_statistics = QPushButton('Save statistical analysis ')
-            
-            self.button_detectPeaks.resize(self.button_detectPeaks.sizeHint())
-            self.button_saveKinetics.resize(self.button_saveKinetics.sizeHint())
-            self.button_export_peaks.resize(self.button_export_peaks.sizeHint())
-            self.button_export_ekg_csv.resize(self.button_export_ekg_csv.sizeHint())
-            self.button_export_statistics.resize(self.button_export_statistics.sizeHint())
-            self.button_saveKinetics.setEnabled(False)
-            self.button_export_peaks.setEnabled(False)
-            self.button_export_ekg_csv.setEnabled(False)
-            self.button_export_statistics.setEnabled(False)
-            self.button_detectPeaks.setEnabled(False)
-            
-            self.button_detectPeaks.clicked.connect(self.on_detectPeaks)            
-            self.button_saveKinetics.clicked.connect(self.on_saveKinetics)
-            self.button_export_peaks.clicked.connect(self.on_exportPeaks)
-            self.button_export_ekg_csv.clicked.connect(self.on_exportEKG_CSV)
-            self.button_export_statistics.clicked.connect(self.on_exportStatistics)
-                      
-            self.tab3.layout = QGridLayout(self)
-            self.tab3.layout.addWidget(info_analysisBasic,      0,0)
-            self.tab3.layout.addWidget(label_ekg_choose_ROI,    1,0)
-            self.tab3.layout.addWidget(self.ekg_combobox,       2,0)
-            self.tab3.layout.addWidget(label_results,           3,0)
-            self.tab3.layout.addWidget(label_ratio,             4,0)
-            self.tab3.layout.addWidget(self.spinbox_ratio,      4,1)
-            self.tab3.layout.addWidget(label_neighbours,        5,0)
-            self.tab3.layout.addWidget(self.spinbox_neighbours, 5,1)
-            self.tab3.layout.addWidget(self.button_detectPeaks, 6,0)
-            self.tab3.layout.addWidget(self.canvas_kinetics,    7,0)
-            self.tab3.layout.addWidget(label_max_contraction,   8,0)
-            self.tab3.layout.addWidget(self.label_max_contraction_result, 8,1)
-            self.tab3.layout.addWidget(label_max_relaxation,    9,0)
-            self.tab3.layout.addWidget(self.label_max_relaxation_result, 9,1)
-            self.tab3.layout.addWidget(label_time_contraction,  10,0)
-            self.tab3.layout.addWidget(self.label_time_contraction_result, 10,1)
-            self.tab3.layout.addWidget(label_time_relaxation,   11,0)            
-            self.tab3.layout.addWidget(self.label_time_relaxation_result, 11,1)
-            self.tab3.layout.addWidget(label_time_contr_relax,  12,0)
-            self.tab3.layout.addWidget(self.label_time_contr_relax_result, 12,1)
-            self.tab3.layout.addWidget(label_bpm,               13,0)
-            self.tab3.layout.addWidget(self.label_bpm_result,   13,1)
-            self.tab3.layout.addWidget(label_furtherAnalysis,   14,0)
-            self.tab3.layout.addWidget(self.button_export_ekg_csv, 15,0)
-            self.tab3.layout.addWidget(self.button_saveKinetics,16,0)
-            self.tab3.layout.addWidget(self.button_export_peaks,17,0)
-            self.tab3.layout.addWidget(self.button_export_statistics, 18,0)
-            self.tab3.setLayout(self.tab3.layout)
 
 ###############################################################################
         def change_ROI_names(self, ROI_nr):
@@ -611,63 +500,6 @@ class TableWidget(QWidget):
             current_lineedit.textEdited.connect(lambda: self.change_ROI_names(ROI_nr=ROI_nr))
             self.tabROIs.layout.addWidget(current_lineedit, row, 0)
             self.tabROIs.layout.addWidget(canvas_ROI,row,1) 
-          
-        def on_detectPeaks(self):
-            #detect peaks and draw them as EKG
-            
-            ratio = self.spinbox_ratio.value()
-            number_of_neighbours = self.spinbox_neighbours.value()
-            self.current_ohw.detect_peaks(ratio, number_of_neighbours)
-            self.updatePeaks()
-
-        def updatePeaks(self):
-            """
-                update detected peaks in graph
-            """
-            
-            Peaks = self.current_ohw.get_peaks()     
-            
-            # clear old peaks first
-            if self.plotted_peaks == True:
-                self.highpeaks.remove()
-                self.lowpeaks.remove()
-                self.plotted_peaks = False
-            
-            if type(Peaks["t_peaks_low_sorted"]) == np.ndarray:
-                # plot peaks, low peaks are marked as triangles , high peaks are marked as circles         
-                self.highpeaks, = self.ax_kinetics.plot(Peaks["t_peaks_low_sorted"], Peaks["peaks_low_sorted"], marker='o', ls="", ms=5, color='r' )
-                self.lowpeaks, = self.ax_kinetics.plot(Peaks["t_peaks_high_sorted"], Peaks["peaks_high_sorted"], marker='^', ls="", ms=5, color='r' )       
-                self.plotted_peaks = True
-                
-            self.canvas_kinetics.draw()
-
-            peakstatistics = self.current_ohw.get_peakstatistics()
-            peaktime_intervals = self.current_ohw.get_peaktime_intervals()
-            bpm = self.current_ohw.get_bpm()
-            
-            try:
-                #display statistics
-                text_contraction = str(peakstatistics["max_contraction"]) + ' +- '+ str(peakstatistics["max_contraction"]) +  u' \xb5m/sec'
-                text_relaxation = str(peakstatistics["max_relaxation"]) + ' +- '+ str(peakstatistics["max_relaxation_std"]) +  u' \xb5m/sec'
-                text_time_contraction = str(peaktime_intervals["contraction_interval_mean"]) + ' +- ' + str(peaktime_intervals["contraction_interval_std"]) + ' sec'
-                text_time_relaxation = str(peaktime_intervals["relaxation_interval_mean"]) + ' +- ' + str(peaktime_intervals["relaxation_interval_std"]) + ' sec'
-                text_time_contr_relax = str(peaktime_intervals["contr_relax_interval_mean"]) + ' +- ' + str(peaktime_intervals["contr_relax_interval_std"]) + ' sec'
-                text_bpm = str(bpm["bpm_mean"]) + ' +- ' + str(bpm["bpm_std"]) + ' beats/min'
-            
-            except (NameError, AttributeError):
-                return
-            
-            self.label_max_contraction_result.setText(text_contraction)
-            self.label_max_relaxation_result.setText(text_relaxation)
-            self.label_time_contraction_result.setText(text_time_contraction)
-            self.label_time_relaxation_result.setText(text_time_relaxation)
-            self.label_time_contr_relax_result.setText(text_time_contr_relax)
-            self.label_bpm_result.setText(text_bpm)
-            
-            #enable saving of peaks and statistics
-            self.button_export_peaks.setEnabled(True)
-            self.button_export_ekg_csv.setEnabled(True)
-            self.button_export_statistics.setEnabled(True)
             
         def on_exportPeaks(self):
             
@@ -768,11 +600,11 @@ class TableWidget(QWidget):
                 
             #enable other buttons for further actions
             self.tab_motion.button_save_MVs.setEnabled(True)
-            self.button_detectPeaks.setEnabled(True)
-            self.button_saveKinetics.setEnabled(True)
-            self.button_export_ekg_csv.setEnabled(True)
+            #self.button_detectPeaks.setEnabled(True)
+            #self.button_saveKinetics.setEnabled(True)
+            #self.button_export_ekg_csv.setEnabled(True)
             
-            self.initialize_kinetics()
+            #self.initialize_kinetics()
             
             # fill graphs with data from first frame
             # self.initialize_MV_graphs()
@@ -781,7 +613,8 @@ class TableWidget(QWidget):
             # initialize time averaged motion
             self.tab_TA.init_ohw()
             
-            self.tab_motion.button_getMVs.setEnabled(True) #move to tab...
+            #self.tab_motion.button_getMVs.setEnabled(True) #move to tab...
+            self.tab_kinetics.init_ohw()
             
             #get the current video length and save it to the quiver settings
             #self.quiver_settings['video_length'] = str(1/self.current_ohw.videometa["fps"] * self.current_ohw.absMotions.shape[0])
@@ -797,7 +630,7 @@ class TableWidget(QWidget):
             self.canvas_kinetics = FigureCanvas(self.fig_kinetics)  
             self.fig_kinetics.subplots_adjust(bottom = 0.2)            
             
-            self.tab3.layout.addWidget(self.canvas_kinetics, 7,0)
+            self.tab_kinetics.layout.addWidget(self.canvas_kinetics, 7,0)
             self.canvas_kinetics.draw()
 
         def init_quivers(self):
