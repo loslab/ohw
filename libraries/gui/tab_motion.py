@@ -55,55 +55,33 @@ class TabMotion(QWidget):
         
         #enable/disable filtering
         self.check_filter = QCheckBox("Filter motion vectors during calculation")
-        self.check_filter.setChecked(True)#connect with config here!
+        self.check_filter.setChecked(False)#connect with config here!
+        self.check_filter.setEnabled(False)#to be implemented...
         
-        self.button_getMVs = QPushButton('Calculate motion vectors')
-        #self.button_getMVs.resize(self.button_getMVs.sizeHint())
-        self.button_getMVs.clicked.connect(self.parent.on_getMVs)
-        self.button_getMVs.setEnabled(False)
-        self.button_getMVs.setFixedWidth(150)
+        self.btn_getMVs = QPushButton('Calculate motion vectors')
+        self.btn_getMVs.clicked.connect(self.parent.on_getMVs)
+        self.btn_getMVs.setEnabled(False)
+        self.btn_getMVs.setFixedWidth(150)
         
-        self.button_save_MVs = QPushButton('Save motion vectors')
-        #self.button_save_MVs.resize(self.button_save_MVs.sizeHint())
-        self.button_save_MVs.clicked.connect(self.parent.on_saveMVs)
-        self.button_save_MVs.setEnabled(False)
-        self.button_save_MVs.setFixedWidth(150)
+        self.btn_save_MVs = QPushButton('Save motion vectors')
+        self.btn_save_MVs.clicked.connect(self.parent.on_saveMVs)
+        self.btn_save_MVs.setEnabled(False)
+        self.btn_save_MVs.setFixedWidth(150)
         
         self.btn_load_ohw = QPushButton('Load motion analysis')
         self.btn_load_ohw.clicked.connect(self.parent.on_load_ohw)
         self.btn_load_ohw.setFixedWidth(150)
         
         #succed-button
-        self.button_succeed_MVs = QPushButton('No motion available yet. Calculate new one or load old')
-        self.button_succeed_MVs.setStyleSheet("background-color: IndianRed")
+        self.btn_succeed_MVs = QPushButton('No motion available yet. Calculate new one or load old')
+        self.btn_succeed_MVs.setStyleSheet("background-color: IndianRed")
+        #self.btn_succeed_MVs.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
         #progressbar in tab2    
-        self.progressbar_MVs = QProgressBar(self)
+        self.progressbar_MVs = QProgressBar()
         self.progressbar_MVs.setMaximum(100)
         self.progressbar_MVs.setValue(0)
-        
-        self.grid_overall = QGridLayout()#self._main)
-        
-        self.grid_overall.addWidget(self.info, 0,0,1,4)
-        self.grid_overall.addWidget(self.label_settings, 1,0)
-        self.grid_overall.addWidget(self.label_blockwidth,2,0)
-        self.grid_overall.addWidget(self.spinbox_blockwidth,2,1)
-        self.grid_overall.addWidget(self.label_delay,3,0)
-        self.grid_overall.addWidget(self.spinbox_delay, 3,1)
-        self.grid_overall.addWidget(self.label_maxShift,4,0)
-        self.grid_overall.addWidget(self.spinbox_maxShift,4,1)
-        self.grid_overall.addWidget(self.label_addOptions, 5,0)
-        self.grid_overall.addWidget(self.check_scaling, 6,0,1,2)
-        self.grid_overall.addWidget(self.check_filter, 7,0,1,2)
-        self.grid_overall.addWidget(self.button_getMVs, 9,0)
-        self.grid_overall.addWidget(self.button_save_MVs, 9,1)
-        self.grid_overall.addWidget(self.btn_load_ohw,9,2)        
-        self.grid_overall.addWidget(self.progressbar_MVs, 10,0,1,3)
-        self.grid_overall.addWidget(self.button_succeed_MVs, 11,0,1,3)
-        
-        self.grid_overall.setSpacing(15)        
-        self.grid_overall.setAlignment(Qt.AlignTop|Qt.AlignLeft)      
-        self.setLayout(self.grid_overall)
+        #self.progressbar_MVs.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
         for label in self.findChildren(QLabel):
             label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
@@ -117,6 +95,42 @@ class TabMotion(QWidget):
             CheckBox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         #for btn in self.findChildren(QPushButton):
         #    btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+        ###########
+
+        self.grid_btns = QGridLayout()
+        self.grid_btns.setSpacing(10)
+        self.grid_btns.setAlignment(Qt.AlignTop|Qt.AlignLeft)
+        
+        self.grid_btns.addWidget(self.btn_getMVs, 0,0, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_btns.addWidget(self.btn_save_MVs, 0,1, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_btns.addWidget(self.btn_load_ohw, 0,2, Qt.AlignTop|Qt.AlignLeft)
+
+        btnwidth = 250 
+        self.btn_getMVs.setFixedWidth(btnwidth)
+        self.btn_load_ohw.setFixedWidth(btnwidth)
+        self.btn_save_MVs.setFixedWidth(btnwidth)
+
+        self.grid_overall = QGridLayout()#self._main)
+        self.setLayout(self.grid_overall) 
+        
+        self.grid_overall.setSpacing(15)        
+        self.grid_overall.setAlignment(Qt.AlignTop|Qt.AlignLeft)      
+        
+        self.grid_overall.addWidget(self.info, 0,0,1,4, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.label_settings, 1,0, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.label_blockwidth,2,0, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.spinbox_blockwidth,2,1, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.label_delay,3,0, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.spinbox_delay, 3,1, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.label_maxShift,4,0, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.spinbox_maxShift,4,1, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.label_addOptions, 5,0, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.check_scaling, 6,0,1,2, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.check_filter, 7,0,1,2, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addLayout(self.grid_btns, 8,0,1,4,Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.progressbar_MVs, 9,0,1,4)
+        self.grid_overall.addWidget(self.btn_succeed_MVs, 10,0,1,4)
         
     def init_values(self, config):
         """

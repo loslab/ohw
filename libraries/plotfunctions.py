@@ -10,16 +10,19 @@ from moviepy.video.io.bindings import mplfig_to_npimage
 from libraries import helpfunctions, Filters
 
 
-def plot_Kinetics(timeindex, mean_absMotions, Peaks=None, mark_peaks=False, file_name=None):
+def plot_Kinetics(timeindex, mean_absMotions, plotoptions, file_name=None): #Peaks=None, mark_peaks=False, 
     """
         plots graph for beating kinetics "EKG"
     """
     fig_kinetics, ax_kinetics = plt.subplots(1,1,figsize=(11,7))
     
     ax_kinetics.plot(timeindex, mean_absMotions, '-', linewidth = 2) #self.fig_kinetics
-    ax_kinetics.set_xlim(left = 0, right = timeindex[-1])
-    ax_kinetics.set_ylim(bottom = 0)
-    #fig_kinetics.subplots_adjust(bottom = 0.2)
+    
+    tmax = plotoptions["tmax"] if plotoptions["tmax"] != None else timeindex[-1]
+    ax_kinetics.set_xlim(left = 0, right = tmax)
+    
+    if plotoptions["vmax"] != None:
+        ax_kinetics.set_ylim(bottom = 0, top = plotoptions["vmax"])
     
     #self.ax.set_title('Beating kinetics', fontsize = 26)
     ax_kinetics.set_xlabel('t [s]', fontsize = 22)
@@ -29,14 +32,15 @@ def plot_Kinetics(timeindex, mean_absMotions, Peaks=None, mark_peaks=False, file
     for side in ['top','right','bottom','left']:
         ax_kinetics.spines[side].set_linewidth(2)              
     
+    """
     if (mark_peaks == True): #Peaks["t_peaks_low_sorted"] != None
         # plot peaks, low peaks are marked as triangles , high peaks are marked as circles         
         ax_kinetics.plot(Peaks["t_peaks_low_sorted"], Peaks["peaks_low_sorted"], marker='o', ls="", ms=5, color='r' )
         ax_kinetics.plot(Peaks["t_peaks_high_sorted"], Peaks["peaks_high_sorted"], marker='^', ls="", ms=5, color='r' )  #easier plotting without for loop          
+    """
     
     if file_name != None:
         fig_kinetics.savefig(str(file_name), dpi = 300, bbox_inches = 'tight') #, bbox_inches = 'tight', pad_inches = 0.4)
-    return fig_kinetics, ax_kinetics
 
 def plot_TimeAveragedMotions(ohw_dataset, file_ext='.png'):
     avg_absMotion = ohw_dataset.avg_absMotion

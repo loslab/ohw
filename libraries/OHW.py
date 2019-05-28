@@ -45,6 +45,7 @@ class OHW():
         self.videometa = {}
         self.analysis_meta = {"date": datetime.datetime.now(), "version": self.config['UPDATE']['version'], 
             "motion_calculated":False, "has_MVs": False}
+        self.init_kinplot_options()
     
     def import_video(self, inputpath, *args, **kwargs):        
         self.rawImageStack, self.raw_videometa = videoreader.import_video(inputpath)
@@ -313,14 +314,23 @@ class OHW():
     def exportStatistics(self):
         self.PeakDetection.exportStatistics(self.analysis_meta)
     
-    def plot_beatingKinetics(self, mark_peaks = False, filename=None, keyword=None):
-        if keyword == None:
-            filename = filename[0]
-        if filename is None:
+    def plot_beatingKinetics(self, filename=None):
+        if filename == None:
             filename=self.analysis_meta["results_folder"]/ 'beating_kinetics.png'
-                
-        plotfunctions.plot_Kinetics(self.timeindex, self.mean_absMotions, self.PeakDetection.sorted_peaks, mark_peaks, filename)
-  
+        plotfunctions.plot_Kinetics(self.timeindex, self.mean_absMotions, self.kinplot_options, filename) #self.PeakDetection.sorted_peaks
+
+    def init_kinplot_options(self):
+        self.kinplot_options = dict(self.config._sections['KINPLOT OPTIONS'])
+        for key, value in self.kinplot_options.items():
+            if value == "None":
+                self.kinplot_options[key] = None
+            else:
+                self.kinplot_options[key] = float(value)
+        
+    def set_kinplot_options(self, kinplot_options):
+        self.kinplot_options = kinplot_options
+        #also change config to new value?
+
     def calc_TimeAveragedMotion(self):
         """
             calculates time averaged motion for abs. motion x- and y-motion

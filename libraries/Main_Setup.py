@@ -515,32 +515,10 @@ class TableWidget(QWidget):
             
             self.current_ohw.exportStatistics()
             helpfunctions.msgbox(self, 'Statistics were successfully saved')
-            
-        def on_saveKinetics(self):
-            
-            mark_peaks = self.plotted_peaks
-            
-            #allowed file types:
-            file_types = "PNG (*.png);;JPEG (*.jpeg);;TIFF (*.tiff);;BMP(*.bmp);; Scalable Vector Graphics (*.svg)"
-            #let the user choose a folder from the starting path
-            path = str(pathlib.PureWindowsPath(self.current_ohw.analysis_meta["results_folder"] / 'beating_kinetics.PNG'))
-            filename_save = QFileDialog.getSaveFileName(None, 'Choose a folder and enter a filename', path, file_types)
-
-            #if 'cancel' was pressed: simply do nothing and wait for user to click another button
-            if (filename_save == ('','')):
-                return
-            try:
-                self.current_ohw.plot_beatingKinetics(mark_peaks, filename_save)
-                mainWidget = self.findMainWindow()
-                mainWidget.adjustSize()
-                print('Graphs were saved successfully.')
-                
-            except (IndexError, NameError, AttributeError):
-                pass
-        
+                    
         def on_getMVs(self):
             #disable button to not cause interference between different calculations
-            self.tab_motion.button_getMVs.setEnabled(False)
+            self.tab_motion.btn_getMVs.setEnabled(False)
             
             #get current parameters entered by user
             blockwidth = self.tab_motion.spinbox_blockwidth.value()
@@ -595,11 +573,11 @@ class TableWidget(QWidget):
             self.current_ohw.plot_TimeAveragedMotions('.png')
             
             #set the succeed button to green:
-            self.tab_motion.button_succeed_MVs.setStyleSheet("background-color: YellowGreen")
-            self.tab_motion.button_succeed_MVs.setText("Motion available") # improve and move init to tab_motion!
+            self.tab_motion.btn_succeed_MVs.setStyleSheet("background-color: YellowGreen")
+            self.tab_motion.btn_succeed_MVs.setText("Motion available") # improve and move init to tab_motion!
                 
             #enable other buttons for further actions
-            self.tab_motion.button_save_MVs.setEnabled(True)
+            self.tab_motion.btn_save_MVs.setEnabled(True)
             #self.button_detectPeaks.setEnabled(True)
             #self.button_saveKinetics.setEnabled(True)
             #self.button_export_ekg_csv.setEnabled(True)
@@ -613,7 +591,7 @@ class TableWidget(QWidget):
             # initialize time averaged motion
             self.tab_TA.init_ohw()
             
-            #self.tab_motion.button_getMVs.setEnabled(True) #move to tab...
+            #self.tab_motion.btn_getMVs.setEnabled(True) #move to tab...
             self.tab_kinetics.init_ohw()
             
             #get the current video length and save it to the quiver settings
@@ -709,7 +687,7 @@ class TableWidget(QWidget):
                 self.tab_input.btn_brightness.setEnabled(True)
                 self.set_start_brightness()
                 
-                self.tab_motion.button_getMVs.setEnabled(True)
+                self.tab_motion.btn_getMVs.setEnabled(True)
                 #self.button_succeed_tab1.setStyleSheet("background-color: YellowGreen")
             else:
                 self.display_firstImage()
@@ -717,7 +695,7 @@ class TableWidget(QWidget):
                 self.tab_input.slider_whiteval.setEnabled(False)
                 self.tab_input.btn_brightness.setEnabled(False)
                 
-                self.tab_motion.button_getMVs.setEnabled(False)
+                self.tab_motion.btn_getMVs.setEnabled(False)
                 #self.button_succeed_tab1.setStyleSheet("background-color: IndianRed")
             
             inputpath = str(self.current_ohw.videometa['inputpath'])
