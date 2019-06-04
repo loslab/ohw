@@ -172,6 +172,8 @@ class TabQuiver(QWidget):
             enable sliders/ plot if corresponding data is present
         """
         self.current_ohw = self.parent.current_ohw  #check if this works... looks good
+        self.clear_heatmaps()
+        self.clear_quivers()        
         
         # init heatmap part
         if self.parent.current_ohw.analysis_meta["motion_calculated"]:
@@ -184,7 +186,7 @@ class TabQuiver(QWidget):
             self.btn_heatmap_vid.setEnabled(False)
             self.btn_heatmap_save.setEnabled(False)
             self.slider_heatmaps.setEnabled(False)
-            self.clear_heatmaps()
+            self.placeholder_heatmaps()
         
         # init quiver part
         if self.parent.current_ohw.analysis_meta["has_MVs"] and self.parent.current_ohw.video_loaded:       
@@ -196,12 +198,10 @@ class TabQuiver(QWidget):
         else:
             self.btn_quiver_save.setEnabled(False)
             self.btn_quivers_video.setEnabled(False)
-            self.slider_quiver.setEnabled(False)              
-            self.clear_quivers()
+            self.slider_quiver.setEnabled(False)
+            self.placeholder_quivers()
     
     def init_heatmaps(self):
-        for txt in self.ax_heatmaps.texts:
-            txt.remove() # clear placeholder
             
         scale_max = helpfunctions.get_scale_maxMotion2(self.current_ohw.absMotions) #decide on which scale to use
         self.imshow_heatmaps = self.ax_heatmaps.imshow(self.current_ohw.absMotions[0], 
@@ -220,14 +220,14 @@ class TabQuiver(QWidget):
     def clear_heatmaps(self):
         self.ax_heatmaps.clear()
         self.ax_heatmaps.axis('off')
+        self.canvas_heatmaps.draw()
+    
+    def placeholder_heatmaps(self):
         self.ax_heatmaps.text(0.5, 0.5,'no motion calculated/ loaded',
-            size=16, ha='center', va='center', backgroundcolor='indianred', color='w')
+        size=16, ha='center', va='center', backgroundcolor='indianred', color='w')
         self.canvas_heatmaps.draw()
     
     def init_quivers(self):
-    
-        for txt in self.ax_quivers.texts:
-            txt.remove() # clear placeholder    
 
         blockwidth = self.current_ohw.analysis_meta["MV_parameters"]["blockwidth"]
         microns_per_px = self.current_ohw.videometa["microns_per_px"]
@@ -259,8 +259,11 @@ class TabQuiver(QWidget):
     def clear_quivers(self):
         self.ax_quivers.clear()
         self.ax_quivers.axis('off')
+        self.canvas_quivers.draw()
+        
+    def placeholder_quivers(self):
         self.ax_quivers.text(0.5, 0.5,'no motion + video calculated/ loaded',
-            size=16, ha='center', va='center', backgroundcolor='indianred', color='w')
+        size=16, ha='center', va='center', backgroundcolor='indianred', color='w')
         self.canvas_quivers.draw()
         
     def slider_quiver_valueChanged(self): 

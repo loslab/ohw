@@ -20,16 +20,21 @@ class TabKinetics(QWidget):
     
     def __init__(self, parent):
         super(TabKinetics, self).__init__(parent)
-        self.initUI()
         self.parent=parent
+        self.initUI()
         
     def initUI(self):
         self.move_peak = False #state if peak is selected and moved
         self.Peaks = []
-        self.peakidx = None #don't select any peaks 
-               
+        self.peakidx = None #don't select any peaks
+        self.plotted_peaks = False
+        
         self.info = QTextEdit()
-        self.info.setText('In this tab you can plot beating kinetics and calculate statistics based on found peaks. Change parameters manually to optimize the peak detection. You can save the graphs and export the peaks.')
+        self.info.setText("In this tab, beating kinetics are shown and statistics calculated " \
+                "based on found peaks. By 'Detect Peaks', an automatic peak detection based on " \
+                "the 2 parameters 'ratio of peaks' and 'number of neighbouring values' is conducted. " \
+                "You can manually add a peak (left click), shift a peak (left click + drag) or delete " \
+                "a peak (right click).")
         self.info.setReadOnly(True)
         self.info.setMaximumHeight(50)
         self.info.setMaximumWidth(800)
@@ -91,24 +96,20 @@ class TabKinetics(QWidget):
         
         self.button_detectPeaks = QPushButton('Detect Peaks')
         self.button_detectPeaks.setMaximumWidth(300)
-        self.button_saveKinetics = QPushButton('Save graph as...')
+        self.button_saveKinPlot = QPushButton('Save graph as...')
         self.button_export_peaks = QPushButton('Save peak analysis')
-        self.button_export_ekg_csv = QPushButton('Save EKG as excel file (.xlsx)')
         
         self.btn_plot_settings = QPushButton('Change graph settings')
         self.button_detectPeaks.resize(self.button_detectPeaks.sizeHint())
-        self.button_saveKinetics.resize(self.button_saveKinetics.sizeHint())
+        self.button_saveKinPlot.resize(self.button_saveKinPlot.sizeHint())
         self.button_export_peaks.resize(self.button_export_peaks.sizeHint())
-        self.button_export_ekg_csv.resize(self.button_export_ekg_csv.sizeHint())
 
-        self.button_saveKinetics.setEnabled(False)
+        self.button_saveKinPlot.setEnabled(False)
         self.button_export_peaks.setEnabled(False)
-        self.button_export_ekg_csv.setEnabled(False)
         
         self.button_detectPeaks.clicked.connect(self.on_detectPeaks)            
-        self.button_saveKinetics.clicked.connect(self.on_saveKinetics)
-        #self.button_export_peaks.clicked.connect(self.on_exportPeaks)
-        #self.button_export_ekg_csv.clicked.connect(self.on_exportEKG_CSV)
+        self.button_saveKinPlot.clicked.connect(self.on_saveKinPlot)
+        self.button_export_peaks.clicked.connect(self.on_exportAnalysis)
         self.btn_plot_settings.clicked.connect(self.on_plotSettings)
                   
         self.grid_overall = QGridLayout()
@@ -142,13 +143,11 @@ class TabKinetics(QWidget):
         self.grid_btns.setAlignment(Qt.AlignTop|Qt.AlignLeft)
         
         self.grid_btns.addWidget(self.btn_plot_settings, 0,0)
-        self.grid_btns.addWidget(self.button_saveKinetics, 0,1)
-        self.grid_btns.addWidget(self.button_export_ekg_csv, 0,2)
-        self.grid_btns.addWidget(self.button_export_peaks, 0,3)
+        self.grid_btns.addWidget(self.button_saveKinPlot, 0,1)
+        self.grid_btns.addWidget(self.button_export_peaks, 0,2)
 
         btnwidth = 300 
-        self.button_saveKinetics.setFixedWidth(btnwidth)
-        self.button_export_ekg_csv.setFixedWidth(btnwidth)
+        self.button_saveKinPlot.setFixedWidth(btnwidth)
         self.button_export_peaks.setFixedWidth(btnwidth)
         self.btn_plot_settings.setFixedWidth(btnwidth)
 
@@ -171,46 +170,41 @@ class TabKinetics(QWidget):
         #    btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
     def init_ohw(self):
-        """
-        set values from current_ohw
-        """
+        ''' set values from current_ohw '''
         self.current_ohw = self.parent.current_ohw
         self.timeindex = self.current_ohw.timeindex #easier to referene here...
         self.motion = self.current_ohw.mean_absMotions
-        self.Peaks = [] # better: load saved peaks from ohw
+        self.Peaks, self.hipeaks, self.lopeaks = self.current_ohw.get_peaks()
         
-        # init self.plotsettings based on config/ ohw-file
         self.kinplot_options = self.current_ohw.kinplot_options
         
         self.clear_fig()
         if self.current_ohw.analysis_meta["has_MVs"]:    # change here to appropriate variable
             self.init_kinetics()
             self.button_detectPeaks.setEnabled(True)
-            self.button_saveKinetics.setEnabled(True)
-            self.button_export_ekg_csv.setEnabled(True)
+            self.button_saveKinPlot.setEnabled(True)
             self.btn_plot_settings.setEnabled(True)
             self.button_export_peaks.setEnabled(True)
         else:
-            self.button_saveKinetics.setEnabled(False)
+            self.button_saveKinPlot.setEnabled(False)
             self.button_detectPeaks.setEnabled(False)
-            self.button_export_ekg_csv.setEnabled(False)
             self.btn_plot_settings.setEnabled(False)
             self.button_export_peaks.setEnabled(False)
-            self.plotted_peaks = False
 
     def init_kinetics(self): 
-        """
-        initializes kinetics graph
-        """        
+        ''' initializes kinetics graph and sets statistics'''
         self.ax_kinetics.plot(self.timeindex, self.motion, 
                 '-', linewidth = 2)
         self.ax_kinetics.set_xlim(left = 0, right = self.timeindex[-1])
         self.ax_kinetics.set_ylim(bottom = 0)
 
+        self.plot_Peaks()
+        self.updateStatistics()
         self.canvas_kinetics.draw()
 
     def clear_fig(self):
-        self.ax_kinetics.clear()        
+        self.ax_kinetics.clear()
+        self.plotted_peaks = False        
         self.ax_kinetics.set_xlabel('t [s]', fontsize = 14)
         self.ax_kinetics.set_ylabel(u'Mean Absolute Motion [\xb5m/s]', fontsize = 14)
         self.ax_kinetics.tick_params(labelsize = 14)
@@ -222,24 +216,23 @@ class TabKinetics(QWidget):
         self.canvas_kinetics.draw()
 
     def on_detectPeaks(self):
-        #detect peaks and draw them as EKG
+        '''detect peaks and draw them as 'EKG' '''
         ratio = self.spinbox_ratio.value()
         number_of_neighbours = self.spinbox_neighbours.value()
         self.current_ohw.detect_peaks(ratio, number_of_neighbours)
-        self.Peaks = self.current_ohw.get_peaks()
-        
-        self.updatePeaks()
+        self.Peaks, self.hipeaks, self.lopeaks = self.current_ohw.get_peaks()
+        self.plot_Peaks()
+        self.updateStatistics()
 
-    def updatePeaks(self):
-        """
-            update detected peaks in graph
-        """
+    def plot_Peaks(self):
+        ''' clear old peaks and plot all self.hipeaks, self.lopeaks '''
+        
         # clear old peaks first
         if self.plotted_peaks == True:
             for marker in self.marker:
                 marker.remove()
-        
-        self.hipeaks, self.lopeaks = self.orderPeaks()
+
+        self.Peaks, self.hipeaks, self.lopeaks = self.current_ohw.get_peaks()
         himarker, lomarker = [],[]
         self.markerpeaks = []
         
@@ -254,20 +247,14 @@ class TabKinetics(QWidget):
 
         self.plotted_peaks = True
         self.canvas_kinetics.draw()
-        
+    
+    def update_Peaks(self):
+        ''' update manually changed Peaks with current_ohw '''
+        self.current_ohw.set_peaks(self.Peaks)
         self.updateStatistics()
-        """
-        peakstatistics = self.current_ohw.get_peakstatistics()
-        peaktime_intervals = self.current_ohw.get_peaktime_intervals()
-        bpm = self.current_ohw.get_bpm()
-                
-        #enable saving of peaks and statistics
-        self.button_export_peaks.setEnabled(True)
-        self.button_export_ekg_csv.setEnabled(True)
-        """
     
     def updateStatistics(self):
-        peakstatistics = self.get_peakstatistics()
+        peakstatistics = self.current_ohw.get_peakstatistics()
         text_contraction = str(peakstatistics["max_contraction"]) + ' +- ' + str(peakstatistics["max_contraction_std"]) +  u' \xb5m/s'
         text_relaxation = str(peakstatistics["max_relaxation"]) + ' +- ' + str(peakstatistics["max_relaxation_std"]) +  u' \xb5m/s'
         text_time_contraction = str(peakstatistics["contraction_interval_mean"]) + ' +- ' + str(peakstatistics["contraction_interval_std"]) + ' s'
@@ -281,75 +268,11 @@ class TabKinetics(QWidget):
         self.label_time_relaxation_result.setText(text_time_relaxation)
         self.label_bpm_result.setText(text_bpm)
         self.label_time_contr_relax_result.setText(text_time_contr_relax)
-    
-    def get_peakstatistics(self):
-        decimals = 2
-        motion_high = self.motion[self.hipeaks] if self.hipeaks != None else []
-        motion_low = self.motion[self.lopeaks] if self.lopeaks != None else []
-        times_high = self.timeindex[self.hipeaks] if self.hipeaks != None else []
-        times_low = self.timeindex[self.lopeaks] if self.lopeaks != None else []
-
-        max_contraction = np.round(np.mean(motion_high), decimals)
-        max_contraction_std = np.round(np.std(motion_high),  decimals)        
-        max_relaxation      = np.round(np.mean(motion_low),  decimals)
-        max_relaxation_std  = np.round(np.std(motion_low),   decimals)
-        
-        contraction_intervals = np.diff(np.sort(times_high))
-        relaxation_intervals = np.diff(np.sort(times_low))
-        
-        contraction_interval_mean = np.round(np.mean(contraction_intervals), decimals)
-        contraction_interval_std = np.round(np.std(contraction_intervals), decimals)
-        relaxation_interval_mean = np.round(np.mean(relaxation_intervals), decimals)
-        relaxation_interval_std = np.round(np.std(relaxation_intervals), decimals)    
-        
-        contr_relax_intervals = []
-        
-        if len(self.Peaks) >= 2: # calculate contr_relax only if 1 relax peak after 1 contr peak detected
-            shift = 0 if times_high[0] < times_low[0] else 1
-            for low_peak, high_peak in zip(times_low[shift:], times_high):
-                # depending on which peak is first the true interval might be from the next peak on....
-                time_difference = low_peak - high_peak           
-                contr_relax_intervals.append(time_difference)
-        contr_relax_interval_mean = np.round(np.mean(np.asarray(contr_relax_intervals)), decimals)
-        contr_relax_interval_std = np.round(np.std(np.asarray(contr_relax_intervals)), decimals)            
-
-        bpm_mean = np.round(np.mean(60/contraction_intervals), decimals)
-        bpm_std = np.round(np.std(60/contraction_intervals), decimals)        
-        
-        peakstatistics = {"max_contraction":max_contraction, "max_contraction_std":max_contraction_std,
-                "max_relaxation":max_relaxation, "max_relaxation_std":max_relaxation_std,
-                "contraction_interval_mean":contraction_interval_mean, "contraction_interval_std":contraction_interval_std,
-                "relaxation_interval_mean":relaxation_interval_mean, "relaxation_interval_std":relaxation_interval_std,
-                "bpm_mean":bpm_mean, "bpm_std": bpm_std,
-                "contr_relax_interval_mean":contr_relax_interval_mean, "contr_relax_interval_std":contr_relax_interval_std}
-        
-        return peakstatistics
-    
-    def orderPeaks(self):
-        '''order high/low peaks, return index'''
-        if len(self.Peaks) == 0:
-            return None, None
-        
-        # just order alternating, start with highest peak
-        peakheights = self.motion[self.Peaks]
-        highest_peak = np.argmax(peakheights)
-        
-        even = self.Peaks[::2]
-        odd = self.Peaks[1::2]
-        if highest_peak %2 == 0:    # if highest peak in even index
-            hipeaks = even
-            lopeaks = odd
-        else:
-            hipeaks = odd
-            lopeaks = even
-        return hipeaks, lopeaks
         
     def mouse_press_callback(self, event):
         '''mouse button is pressed'''
-        #if not self.showverts:
-        #    return
-        #if event.inaxes is None:
-        #    return
+        if event.inaxes is None:
+            return
         
         if event.button not in [1,3]: # only accept left/right mouse click
             return
@@ -363,14 +286,12 @@ class TabKinetics(QWidget):
         
         else: # delete peak if peak selected and right mouse click
             Peak = self.Peaks[self.peakidx]
-            print("selected peak: ",self.timeindex[Peak],self.motion[Peak])
+            #print("selected peak: ",self.timeindex[Peak],self.motion[Peak])
             if event.button == 3:
                 self.delete_peak()
     
     def mouse_release_callback(self, event):
         '''mouse button is released'''
-        #if not self.showverts:
-        #    return
         if event.button != 1:
             return
         
@@ -380,15 +301,14 @@ class TabKinetics(QWidget):
             newidx = self.get_closest(event.xdata)
             self.Peaks.append(newidx)
             self.Peaks.sort()  
-            self.updatePeaks()
+            self.update_Peaks()
+            self.plot_Peaks()
             self.move_peak = False
         
         self.peakidx = None
         
     def mouse_move_callback(self, event):
         '''mouse is moved'''
-        #if not self.showverts:
-        #    return
         if self.peakidx is None:
             return
         if event.inaxes is None:
@@ -436,21 +356,22 @@ class TabKinetics(QWidget):
         
     def add_peak(self, event):
         newidx = self.get_closest(event.xdata)
-        #self.current_ohw.add_peak(newidx)
+        
         if newidx not in self.Peaks:
             self.Peaks.append(newidx)
             self.Peaks.sort()
             print("peak added, Peaks:", self.Peaks)
 
-        self.updatePeaks()
+        self.update_Peaks()
+        self.plot_Peaks()
         
     def delete_peak(self):
         removepeak = self.Peaks[self.peakidx]
         self.Peaks.remove(removepeak)
         print("peak deleted, Peaks:", self.Peaks)
-        #self.current_oh.delete_peak(self.peakidx)
 
-        self.updatePeaks()
+        self.update_Peaks()
+        self.plot_Peaks()
     
     def on_plotSettings(self):
         self.dialog_kinoptions = dialog_kinoptions.DialogKinoptions(plotsettings = self.kinplot_options)
@@ -458,27 +379,25 @@ class TabKinetics(QWidget):
         self.kinplot_options = self.dialog_kinoptions.get_settings()
         self.update_plotsettings()
 
-    def on_saveKinetics(self):
+    def on_saveKinPlot(self):
         
-        #mark_peaks = self.plotted_peaks
-        
-        #allowed file types:
         file_types = "PNG (*.png);;JPEG (*.jpeg);;TIFF (*.tiff);;BMP(*.bmp);; Scalable Vector Graphics (*.svg)"
         #let the user choose a folder from the starting path
         path = str(pathlib.PureWindowsPath(self.current_ohw.analysis_meta["results_folder"] / 'beating_kinetics.PNG'))
         filename = QFileDialog.getSaveFileName(None, 'Choose a folder and enter a filename', path, file_types)[0]
 
-        #if 'cancel' was pressed: simply do nothing and wait for user to click another button
-        if (filename == ('','')):
+        if (filename == ''): # if 'cancel' was pressed:
             return
-        try:
-            self.current_ohw.plot_beatingKinetics(filename) # move mark_peaks into kinplot_options
-            helpfunctions.msgbox(self, 'Plot was saved successfully.')
-            
-        except (IndexError, NameError, AttributeError):
-            pass
+
+        self.current_ohw.plot_beatingKinetics(filename) # move mark_peaks into kinplot_options
+        helpfunctions.msgbox(self, 'Plot was saved successfully.')
+
+    def on_exportAnalysis(self):
+        self.current_ohw.export_analysis()
+        helpfunctions.msgbox(self, 'analyzed Peaks were saved successfully.')
 
     def update_plotsettings(self):
+        ''' updates plot appearence after plotoptions like axis extent changed '''
         self.current_ohw.set_kinplot_options(self.kinplot_options)
         if self.kinplot_options["tmax"] != None:
             self.ax_kinetics.set_xlim(right = self.kinplot_options["tmax"])

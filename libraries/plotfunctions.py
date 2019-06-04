@@ -10,13 +10,12 @@ from moviepy.video.io.bindings import mplfig_to_npimage
 from libraries import helpfunctions, Filters
 
 
-def plot_Kinetics(timeindex, mean_absMotions, plotoptions, file_name=None): #Peaks=None, mark_peaks=False, 
+def plot_Kinetics(timeindex, motion, plotoptions, hipeaks, lopeaks, file_name=None):
     """
         plots graph for beating kinetics "EKG"
     """
     fig_kinetics, ax_kinetics = plt.subplots(1,1,figsize=(11,7))
-    
-    ax_kinetics.plot(timeindex, mean_absMotions, '-', linewidth = 2) #self.fig_kinetics
+    ax_kinetics.plot(timeindex, motion, '-', linewidth = 2) #self.fig_kinetics
     
     tmax = plotoptions["tmax"] if plotoptions["tmax"] != None else timeindex[-1]
     ax_kinetics.set_xlim(left = 0, right = tmax)
@@ -32,12 +31,10 @@ def plot_Kinetics(timeindex, mean_absMotions, plotoptions, file_name=None): #Pea
     for side in ['top','right','bottom','left']:
         ax_kinetics.spines[side].set_linewidth(2)              
     
-    """
-    if (mark_peaks == True): #Peaks["t_peaks_low_sorted"] != None
+    if plotoptions["mark_peaks"] == True:
         # plot peaks, low peaks are marked as triangles , high peaks are marked as circles         
-        ax_kinetics.plot(Peaks["t_peaks_low_sorted"], Peaks["peaks_low_sorted"], marker='o', ls="", ms=5, color='r' )
-        ax_kinetics.plot(Peaks["t_peaks_high_sorted"], Peaks["peaks_high_sorted"], marker='^', ls="", ms=5, color='r' )  #easier plotting without for loop          
-    """
+        ax_kinetics.plot(timeindex[hipeaks], motion[hipeaks], marker='o', ls="", ms=5, color='r')
+        ax_kinetics.plot(timeindex[lopeaks], motion[lopeaks], marker='^', ls="", ms=5, color='r')         
     
     if file_name != None:
         fig_kinetics.savefig(str(file_name), dpi = 300, bbox_inches = 'tight') #, bbox_inches = 'tight', pad_inches = 0.4)

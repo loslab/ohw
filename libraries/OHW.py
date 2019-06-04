@@ -144,7 +144,7 @@ class OHW():
             data = pickle.load(loadfile)
         self.analysis_meta, self.videometa, self.rawMVs = data
         self.video_loaded = False
-        self.initialize_motion()
+        self.init_motion()
 
     def calculate_motion(self, method = 'BM', progressSignal = None, **parameters):
         """
@@ -179,7 +179,7 @@ class OHW():
             self.calculate_motion, emit_progSignal=True, **parameters)
         return self.thread_calculate_motion 
     
-    def initialize_motion(self):
+    def init_motion(self):
         '''
             calculate 2D & 1D data representations after motion determination
         '''
@@ -193,7 +193,7 @@ class OHW():
         self.get_mean_absMotion()
         self.prepare_quiver_components()
         self.calc_TimeAveragedMotion()
-        self.PeakDetection.set_data(self.timeindex,self.mean_absMotions)
+        self.PeakDetection.set_data(self.timeindex, self.mean_absMotions) #or pass self directly?
     
     def get_mean_absMotion(self):
         """
@@ -282,45 +282,39 @@ class OHW():
         else:
             return clip_full
     
+    def set_peaks(self, Peaks):
+        ''' update with manually added/ deleted peaks '''
+        self.PeakDetection.set_peaks(Peaks)
+        self.order_peaks()
+    
     def detect_peaks(self, ratio, number_of_neighbours):
-        """
-            peak detection in mean_absMotions
-        """
-        
-        self.PeakDetection.detectPeaks(ratio, number_of_neighbours)
-        self.PeakDetection.analyzePeaks()
-        self.PeakDetection.calculateTimeIntervals()
+        ''' automated peak detection in mean_absMotions'''
+
+        self.PeakDetection.detect_peaks(ratio, number_of_neighbours)
+        self.order_peaks()
+    
+    def order_peaks(self):
+        self.PeakDetection.order_peaks()
                 
     def get_peaks(self):
-        print(self.PeakDetection.peakindices)
-        return self.PeakDetection.peakindices
-        #return self.PeakDetection.sorted_peaks
+        return self.PeakDetection.Peaks, self.PeakDetection.hipeaks, self.PeakDetection.lopeaks
         
     def get_peakstatistics(self):
-        return self.PeakDetection.peakstatistics
-        
-    def get_peaktime_intervals(self):
-        return self.PeakDetection.time_intervals
+        self.PeakDetection.calc_peakstatistics()
+        return self.PeakDetection.get_peakstatistics()
     
-    def get_bpm(self):
-        return self.PeakDetection.bpm
-    
-    def export_peaks(self):
-        self.PeakDetection.export_peaks(self.analysis_meta["results_folder"])
-    
-    def exportEKG_CSV(self):
-        self.PeakDetection.exportEKG_CSV(self.analysis_meta["results_folder"])
-    
-    def exportStatistics(self):
-        self.PeakDetection.exportStatistics(self.analysis_meta)
+    def export_analysis(self):
+        self.PeakDetection.export_analysis(self.analysis_meta["results_folder"])
     
     def plot_beatingKinetics(self, filename=None):
         if filename == None:
             filename=self.analysis_meta["results_folder"]/ 'beating_kinetics.png'
-        plotfunctions.plot_Kinetics(self.timeindex, self.mean_absMotions, self.kinplot_options, filename) #self.PeakDetection.sorted_peaks
+        plotfunctions.plot_Kinetics(self.timeindex, self.mean_absMotions, self.kinplot_options, 
+                self.PeakDetection.hipeaks, self.PeakDetection.lopeaks, filename)
 
     def init_kinplot_options(self):
         self.kinplot_options = dict(self.config._sections['KINPLOT OPTIONS'])
+        self.kinplot_options["mark_peaks"] = True #to do: add this to config and allow to be changed in gui
         for key, value in self.kinplot_options.items():
             if value == "None":
                 self.kinplot_options[key] = None

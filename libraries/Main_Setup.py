@@ -35,14 +35,9 @@ class TableWidget(QWidget):
             
             self.layout = QGridLayout(self)
  
-            # Initialize tab screen
-            self.tabs = QTabWidget()
-            # Add tabs to widget        
+            self.tabs = QTabWidget() 
             self.layout.addWidget(self.tabs)
             self.setLayout(self.layout)
-            #settings for tabs
-            #place tabs at the left side of the GUI:
-            #self.tabs.setTabPosition(QTabWidget.West)
 
             self.plotted_peaks = False
             
@@ -64,16 +59,17 @@ class TableWidget(QWidget):
             self.tabs.addTab(self.tab_TA,"Time averaged motion")
             self.tabs.addTab(self.tab_batch,"Batch analysis")
             
+            # replace with own init_ohw function which calls other init_ohws
+            self.tab_motion.init_ohw()
             self.tab_kinetics.init_ohw()
+            self.tab_quiver.init_ohw()
             self.tab_TA.init_ohw()
             
-            color_for_info = QColor(198, 255, 26)
-            self.pixmap_width = 250
-            self.ROI_coordinates = []
-            self.ROI_names = []
-            self.ROI_OHWs = []
+            #self.ROI_coordinates = []
+            #self.ROI_names = []
+            #self.ROI_OHWs = []
             
-            curr_date = datetime.now().date()
+            curr_date = datetime.now().date()   # move updatecheck into function
             last_check = datetime.strptime(self.config['UPDATE']['last_check'],"%Y-%m-%d").date()
             if curr_date > last_check + timedelta(days=1): #older than a day
                 helpfunctions.check_update(self, self.config['UPDATE']['version'])# self needed for msgbox... get rid at some point?
@@ -324,155 +320,7 @@ class TableWidget(QWidget):
                     if progressSignal != None:
                         self.count_batch_signals += 1
                         progressSignal.emit(self.count_batch_signals/self.maxNumberSignals)
-                      
-        def on_loadVideo(self):
-            self.tab_input.progressbar_loadVideo.setValue(0)
-            
-            #choose a folder
-            msg = 'Choose an input video: file of type .mp4, .avi, .mov or a .tif file in a folder containing a sequence of .tif-images'
-            try:
-                fileName  = UserDialogs.chooseFileByUser(message=msg, input_folder=self.config['LAST SESSION']['input_folder'])  
-            except Exception:
-                fileName  = UserDialogs.chooseFileByUser(message=msg)
-            
-            print(fileName)
-            #if 'cancel' was pressed: simply do nothing and wait for user to click another button
-            if (fileName[0]  == ''):
-                return
-            try:
-                inputpath = pathlib.Path(fileName[0])
-                #save changes to config file
-                self.config.set("LAST SESSION", "input_folder", str((inputpath / "..").resolve()))#easier with parent?
-                helpfunctions.save_config(self.config)
-                
-                # create OHW object to work with motion vectors
-                self.current_ohw = OHW.OHW()
-                
-                #read imagestack
-                self.import_video_thread = self.current_ohw.import_video_thread(inputpath)
-                self.import_video_thread.start()
-                self.tab_input.progressbar_loadVideo.setRange(0,0)
-                self.import_video_thread.finished.connect(self.finish_loadVideo)
-            except Exception:
-                pass 
-                
-        def finish_loadVideo(self):
-            self.tab_input.progressbar_loadVideo.setRange(0,1)
-            self.tab_input.progressbar_loadVideo.setValue(1)
-
-            self.update_tab_input()  #update videoinfos with data from current_ohw
-            self.tab_quiver.init_ohw()
-            self.tab_TA.init_ohw()
-            #self.button_selectROI.setEnabled(True) 
-            
-        def on_reloadVideo(self):
-            """
-                reloads video files into current_ohw
-                e.g. when analysis file is opened
-            """
-            self.tab_input.progressbar_loadVideo.setValue(0)            
-            self.reload_video_thread = self.current_ohw.reload_video_thread()
-            self.reload_video_thread.start()
-            self.tab_input.progressbar_loadVideo.setRange(0,0)
-            self.reload_video_thread.finished.connect(self.finish_reloadVideo)
-        
-        def finish_reloadVideo(self):
-            self.tab_input.progressbar_loadVideo.setRange(0,1)
-            self.tab_input.progressbar_loadVideo.setValue(1)
-            self.update_tab_input()
-            self.current_ohw.set_analysisImageStack(px_longest = self.current_ohw.analysis_meta["px_longest"])
-            self.tab_quiver.init_ohw()
-            self.tab_TA.init_ohw()
-            
-        def on_changeResultsfolder(self):
-            #choose a folder
-            msg = 'Choose a new folder for saving your results'
-            folderName = UserDialogs.chooseFolderByUser(msg, input_folder=self.current_ohw.analysis_meta['results_folder'])#, input_folder=self.config['LAST SESSION']['results_folder'])  
-            
-            #if 'cancel' was pressed: simply do nothing and wait for user to click another button
-            if (folderName == ''):
-                return
-            
-            self.current_ohw.analysis_meta["results_folder"] = pathlib.Path(folderName)
-            self.tab_input.label_results_folder.setText(folderName)
-            # fix for batch and rois!
-            '''
-            if self.sender() == self.tab_input.btn_results_folder:
-                #change the results folder of the OHW class
-                self.current_ohw.results_folder = pathlib.Path(folderName)
-                
-                #change the results folder for all OHW
-                if len(self.ROI_OHWs) is not 0:
-                    for ROI_nr in range(0,len(self.ROI_OHWs)):
-                        self.ROI_OHWs[ROI_nr].results_folder = pathlib.Path(folderName).joinpath(self.ROI_names[ROI_nr])
-                #display
-                current_folder = 'Current results folder: ' + str(pathlib.PureWindowsPath(self.current_ohw.results_folder))
-                self.tab_input.label_results_folder.setText(current_folder)
-                
-
-            elif self.sender() == self.button_batch_resultsfolder:
-                #change the batch results folder!
-                self.results_folder_batch = pathlib.Path(folderName)
-                
-                #display new results folder
-                current_folder = 'Current results folder: ' + str(pathlib.PureWindowsPath(self.results_folder_batch))
-                self.tab_input.label_results_folder_batch.setText(current_folder)
-            '''    
-            print('New results folder: %s' %folderName)            
-            
-        def display_firstImage(self, image = None):
-            self.tab_input.ax_firstIm.clear()
-            self.tab_input.ax_firstIm.axis('off')
-            # display first image and update controls
-            if type(image) == np.ndarray:
-                print(self.current_ohw.videometa["Blackval"], self.current_ohw.videometa["Whiteval"])
-                self.imshow_firstImage = self.tab_input.ax_firstIm.imshow(image, cmap = 'gray', vmin = self.current_ohw.videometa["Blackval"], vmax = self.current_ohw.videometa["Whiteval"])
-            else:
-                self.tab_input.ax_firstIm.text(0.5, 0.5,'no video loaded yet',
-                    size=14, ha='center', va='center', backgroundcolor='indianred', color='w')
-            self.tab_input.canvas_firstImage.draw()
-        
-        def update_brightness(self):
-            vmin, vmax = self.current_ohw.videometa["Blackval"], self.current_ohw.videometa["Whiteval"]
-            self.imshow_firstImage.set_clim(vmin=vmin, vmax=vmax)
-            self.tab_input.canvas_firstImage.draw()
-            
-            if (self.current_ohw.video_loaded and self.current_ohw.analysis_meta["has_MVs"]):
-                self.tab_quiver.updateQuiverBrightness(vmin=vmin, vmax=vmax)
-        
-        def on_change_blackVal(self):          
-            """
-                change the white values for image display
-                using a slider with 2 handles would be easiest option...
-            """
-         
-            # save the new value to videometa
-            self.current_ohw.videometa["Blackval"] = self.tab_input.slider_blackval.value()
-
-            # set allowed whitevals and blackvals           
-            self.tab_input.slider_whiteval.setMinimum(self.current_ohw.videometa["Blackval"])            
-            self.update_brightness()
-
-        def on_change_whiteVal(self):          
-            """
-                change the white values for image display
-            """
-            # save the new value to videometa
-            self.current_ohw.videometa["Whiteval"] = self.tab_input.slider_whiteval.value()
-
-            # set allowed whitevals and blackvals           
-            self.tab_input.slider_blackval.setMaximum(self.current_ohw.videometa["Whiteval"])            
-            self.update_brightness()
-
-        def on_resetBrightness(self):
-            """ resets the image display back to the original values
-            """
-            self.current_ohw.videometa["Blackval"] = self.current_ohw.raw_videometa["Blackval"]
-            self.current_ohw.videometa["Whiteval"] = self.current_ohw.raw_videometa["Whiteval"]
-            
-            self.set_start_brightness()
-            self.update_brightness()
-            
+                    
         def display_ROI(self, ROI, ROI_nr, row):
             fig_ROI, ax_ROI = plt.subplots(1,1)
             ax_ROI.axis('off')
@@ -501,115 +349,14 @@ class TableWidget(QWidget):
             self.tabROIs.layout.addWidget(current_lineedit, row, 0)
             self.tabROIs.layout.addWidget(canvas_ROI,row,1) 
             
-        def on_exportPeaks(self):
+        def init_ohw(self):
+            ''' init tabs to changed ohw '''
             
-            self.current_ohw.export_peaks()            
-            helpfunctions.msgbox(self, 'Raw and analyzed peaks were successfully saved')
-            
-        def on_exportEKG_CSV(self):
-            
-            self.current_ohw.exportEKG_CSV()
-            helpfunctions.msgbox(self, 'EKG values were successfully saved')
-            
-        def on_exportStatistics(self):
-            
-            self.current_ohw.exportStatistics()
-            helpfunctions.msgbox(self, 'Statistics were successfully saved')
-                    
-        def on_getMVs(self):
-            #disable button to not cause interference between different calculations
-            self.tab_motion.btn_getMVs.setEnabled(False)
-            
-            #get current parameters entered by user
-            blockwidth = self.tab_motion.spinbox_blockwidth.value()
-            maxShift = self.tab_motion.spinbox_maxShift.value()
-            delay = self.tab_motion.spinbox_delay.value()
-            
-            px_longest = None
-            scaling_status = self.tab_motion.check_scaling.isChecked()
-            print(scaling_status)
-            if scaling_status == True:
-                px_longest = 1024
-            '''
-            else:                
-                #if at least one ROI was selected, use ROI ImageStack and also calculate the whole image
-                if len(self.ROI_OHWs) is not 0:
-                    for nr_ROI in range(0, len(self.ROI_OHWs)):
-                        #calculate motion vectors for each ROI
-                        self.ROI_OHWs[nr_ROI].scale_ImageStack(self.ROI_OHWs[nr_ROI].ROIImageStack.shape[1], 
-                                                               self.ROI_OHWs[nr_ROI].ROIImageStack.shape[2])
-    
-                        cal_MVs_thread = self.ROI_OHWs[nr_ROI].calculate_MVs_thread(blockwidth = blockwidth, delay = delay, max_shift = maxShift)
-                        cal_MVs_thread.start()
-                        #self.ready = False
-                        cal_MVs_thread.progressSignal.connect(self.updateMVProgressBar)
-                        #initialize_calculatedMVs only for the full image, for the ROIs on-the-fly
-                        #cal_MVs_thread.finished.connect(self.initialize_calculatedMVs)
-
-#                #always calculate the full image
-                self.current_ohw.scale_ImageStack(self.current_ohw.rawImageStack.shape[1], self.current_ohw.rawImageStack.shape[2])     
-            '''
-            
-            self.current_ohw.set_analysisImageStack(px_longest = px_longest) # scale + set roi, , roi=[0,0,500,500]
-            
-            calculate_motion_thread = self.current_ohw.calculate_motion_thread(blockwidth = blockwidth, delay = delay, max_shift = maxShift)
-            calculate_motion_thread.start()
-            calculate_motion_thread.progressSignal.connect(self.updateMVProgressBar)
-            calculate_motion_thread.finished.connect(self.initialize_motion)
-              
-        def updateMVProgressBar(self, value):
-            self.tab_motion.progressbar_MVs.setValue(value*100)
-                
-        def updateProgressBar(self, value):
-            self.progressbar_tab_motion.setValue(value*100)
-        
-        def initialize_motion(self):
-            print('initializing motion')
-            self.current_ohw.initialize_motion()
-            
-            # saves ohw_object when calculation is done and other general results
-            self.current_ohw.exportEKG_CSV()
-            self.current_ohw.save_ohw()
-            self.current_ohw.plot_TimeAveragedMotions('.png')
-            
-            #set the succeed button to green:
-            self.tab_motion.btn_succeed_MVs.setStyleSheet("background-color: YellowGreen")
-            self.tab_motion.btn_succeed_MVs.setText("Motion available") # improve and move init to tab_motion!
-                
-            #enable other buttons for further actions
-            self.tab_motion.btn_save_MVs.setEnabled(True)
-            #self.button_detectPeaks.setEnabled(True)
-            #self.button_saveKinetics.setEnabled(True)
-            #self.button_export_ekg_csv.setEnabled(True)
-            
-            #self.initialize_kinetics()
-            
-            # fill graphs with data from first frame
-            # self.initialize_MV_graphs()
-            self.tab_quiver.init_ohw()
-    
-            # initialize time averaged motion
-            self.tab_TA.init_ohw()
-            
-            #self.tab_motion.btn_getMVs.setEnabled(True) #move to tab...
+            self.tab_input.init_ohw()
+            self.tab_motion.init_ohw()
             self.tab_kinetics.init_ohw()
-            
-            #get the current video length and save it to the quiver settings
-            #self.quiver_settings['video_length'] = str(1/self.current_ohw.videometa["fps"] * self.current_ohw.absMotions.shape[0])
-            
-        def initialize_kinetics(self):
-            """
-                initializes graph for beating kinetics "EKG"
-            """
-            print("initialize beating kinetics graphs")
-            
-            self.fig_kinetics, self.ax_kinetics = plotfunctions.plot_Kinetics(self.current_ohw.timeindex, self.current_ohw.mean_absMotions, Peaks=None, mark_peaks=False, file_name=None)#'test.png'           
-            
-            self.canvas_kinetics = FigureCanvas(self.fig_kinetics)  
-            self.fig_kinetics.subplots_adjust(bottom = 0.2)            
-            
-            self.tab_kinetics.layout.addWidget(self.canvas_kinetics, 7,0)
-            self.canvas_kinetics.draw()
+            self.tab_TA.init_ohw()
+            self.tab_quiver.init_ohw()
 
         def init_quivers(self):
             pass
@@ -622,102 +369,6 @@ class TableWidget(QWidget):
                     #remove scalebar by recalculating the scaled imagestack
                     self.current_ohw.scale_ImageStack(self.current_ohw.rawImageStack.shape[1], self.current_ohw.rawImageStack.shape[2])
             '''
-
-        def on_saveMVs(self):
-            """
-                saves raw MVs to results folder
-            """
-            self.current_ohw.save_MVs()
-            helpfunctions.msgbox(self, 'Motion vectors were successfully saved')
-        
-        def on_load_ohw(self):
-            """
-                loads already calculated motion and initializes gui
-                ... how to optimize loading of rawImageStack?
-            """
-            msg = 'select .pickle-file of previous analysis'
-            path = self.config['LAST SESSION']['input_folder']
-            pickle_file = QFileDialog.getOpenFileName(None, msg, path, 
-                "ohw_analysis (*.pickle)")[0]
-                
-            self.current_ohw = OHW.OHW()    # creates new instance here!
-            self.current_ohw.load_ohw(pickle_file)
-            self.initialize_motion()
-            
-            self.set_motion_param()
-            self.update_tab_input()
-            self.tab_input.btn_reloadVideo.setEnabled(True)
-        
-        def set_motion_param(self):
-            """
-                sets values in gui from loaded ohw-file
-            """
-            self.tab_motion.spinbox_blockwidth.setValue(self.current_ohw.analysis_meta["MV_parameters"]["blockwidth"])
-            self.tab_motion.spinbox_delay.setValue(self.current_ohw.analysis_meta["MV_parameters"]["delay"])
-            self.tab_motion.spinbox_maxShift.setValue(self.current_ohw.analysis_meta["MV_parameters"]["max_shift"])
-        
-        def set_start_brightness(self):
-            """
-                set brightness sliders to raw values
-            """
-            self.tab_input.slider_whiteval.blockSignals(True)# prevent calling on_change_whiteVal/blackVal
-            self.tab_input.slider_blackval.blockSignals(True)
-            self.tab_input.slider_whiteval.setMaximum(self.current_ohw.videometa["Whiteval"]*3)
-            self.tab_input.slider_blackval.setMaximum(self.current_ohw.videometa["Whiteval"])      
-            self.tab_input.slider_whiteval.setValue(self.current_ohw.videometa["Whiteval"])
-            self.tab_input.slider_blackval.setValue(self.current_ohw.videometa["Blackval"])
-            self.tab_input.slider_whiteval.setMinimum(self.current_ohw.videometa["Blackval"])
-            self.tab_input.slider_whiteval.blockSignals(False)
-            self.tab_input.slider_blackval.blockSignals(False)
-        
-        def update_tab_input(self):
-            """
-                updates info displayed in inputtab
-                -> loading of new video or loading of analysis file
-            """
-            self.tab_input.edit_fps.setText(str(self.current_ohw.videometa['fps']))
-            self.tab_input.edit_mpp.setText(str(self.current_ohw.videometa['microns_per_px']))            
-            # disable input field if videoinfos.txt available? if self.current_ohw.videometa['infofile_exists'] == True: ....
-            
-            # check if video is loaded and update controls
-            if self.current_ohw.video_loaded == True:
-                self.display_firstImage(self.current_ohw.rawImageStack[0])
-                self.tab_input.slider_blackval.setEnabled(True)
-                self.tab_input.slider_whiteval.setEnabled(True)
-                self.tab_input.btn_brightness.setEnabled(True)
-                self.set_start_brightness()
-                
-                self.tab_motion.btn_getMVs.setEnabled(True)
-                #self.button_succeed_tab1.setStyleSheet("background-color: YellowGreen")
-            else:
-                self.display_firstImage()
-                self.tab_input.slider_blackval.setEnabled(False)
-                self.tab_input.slider_whiteval.setEnabled(False)
-                self.tab_input.btn_brightness.setEnabled(False)
-                
-                self.tab_motion.btn_getMVs.setEnabled(False)
-                #self.button_succeed_tab1.setStyleSheet("background-color: IndianRed")
-            
-            inputpath = str(self.current_ohw.videometa['inputpath'])
-            self.tab_input.label_input_path.setText(inputpath)
-            
-            results_folder = str(pathlib.PureWindowsPath(self.current_ohw.analysis_meta['results_folder']))
-            self.tab_input.label_results_folder.setText(results_folder)
-            self.tab_input.btn_results_folder.setEnabled(True)
-        
-        def findMainWindow(self): #-> typing.Union[QMainWindow, None]:
-            # Global function to find the (open) QMainWindow in application
-            #....why needed?
-            app = QApplication.instance()
-            for widget in app.topLevelWidgets():
-                if isinstance(widget, QMainWindow):
-                    return widget
-            return None
-        
-        def restartGUI(self):
-            #restarts the application to work with new data
-            python = sys.executable
-            os.execl(python, python, *sys.argv)
         
         def on_change_quiverSettings(self):
             #calculate maximum video length
@@ -731,9 +382,7 @@ class TableWidget(QWidget):
             self.settingsWindow.show()
             
         def save_quiver_settings(self, settings):
-            """
-                receive the signals from quiver settings changed by user
-            """
+            ''' receive the signals from quiver settings changed by user '''
             self.quiver_settings = settings
             
             #save quiver settings to config.ini:
