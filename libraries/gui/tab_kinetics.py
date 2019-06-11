@@ -408,6 +408,6 @@ class TabKinetics(QWidget):
             self.ax_kinetics.set_ylim(top = self.kinplot_options["vmax"])
         else:
             self.ax_kinetics.autoscale(axis = 'y')
-            self.ax_kinetics.set_ylim(bottom = 0)
+        self.ax_kinetics.set_ylim(bottom = 0)
         self.canvas_kinetics.draw()
         

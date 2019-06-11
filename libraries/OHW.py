@@ -216,20 +216,23 @@ class OHW():
     def prepare_quiver_components(self):
         '''
             sets all 0-motions to nan such that they won't be plotted in quiver plot
+            determines scale_max and cuts off all longer vectors
             creates grid of coordinates
         '''
         
         self.MV_zerofiltered = Filters.zeromotion_to_nan(self.unitMVs, copy=True)
-        self.MotionX = self.MV_zerofiltered[:,0,:,:]
-        self.MotionY = self.MV_zerofiltered[:,1,:,:]
+        scale_max = helpfunctions.get_scale_maxMotion2(self.absMotions)        
+        MV_cutoff = Filters.cutoffMVs(self.MV_zerofiltered, max_length = scale_max) #copy=True
+        
+        self.QuiverMotionX = MV_cutoff[:,0,:,:] # changed name to QuiverMotionX as values are manipulated here
+        self.QuiverMotionY = MV_cutoff[:,1,:,:]
         
         bw = self.analysis_meta["MV_parameters"]["blockwidth"]
+        Nx, Ny = MV_cutoff[0,0].shape
         
         self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(
-            np.arange(bw/2, self.analysis_meta["shape"][2]-bw/2, bw)+1, 
-            np.arange(bw/2, self.analysis_meta["shape"][1]-bw/2+1, bw))  #changed arange range, double check!.. inconsistency in x and y?
-            
-            
+            np.arange(Ny)*bw+bw/2,
+            np.arange(Nx)*bw+bw/2) #Nx, Ny exchanged (np vs. image indexing); possible issues with odd bws?
             
     def save_MVs(self):
         """

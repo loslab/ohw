@@ -62,6 +62,9 @@ class TabInput(QWidget):
         self.edit_fps.setFixedWidth(50)
         self.edit_mpp.setFixedWidth(50)
         
+        self.edit_fps.textChanged.connect(self.on_change_fps)
+        self.edit_mpp.textChanged.connect(self.on_change_mpp) 
+        
         self.button_loadVideo = QPushButton('Load video')
         self.button_loadVideo.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
         self.button_loadVideo.clicked.connect(self.on_loadVideo)
@@ -154,21 +157,19 @@ class TabInput(QWidget):
         #choose a folder
         msg = 'Choose an input video: file of type .mp4, .avi, .mov or a .tif file in a folder containing a sequence of .tif-images'
         try:
-            fileName  = UserDialogs.chooseFileByUser(message=msg, input_folder=self.config['LAST SESSION']['input_folder'])  
+            fileName  = UserDialogs.chooseFileByUser(message=msg, input_folder=self.parent.config['LAST SESSION']['input_folder'])
         except Exception:
             fileName  = UserDialogs.chooseFileByUser(message=msg)
         
-        print(fileName)
         #if 'cancel' was pressed: simply do nothing and wait for user to click another button
         if (fileName[0]  == ''):
             return
 
         inputpath = pathlib.Path(fileName[0])
         #save changes to config file
-        print("asdf")
         self.parent.config.set("LAST SESSION", "input_folder", str((inputpath / "..").resolve()))# how to implement with parent?
         helpfunctions.save_config(self.parent.config)
-        print("asdf")
+
         # create OHW object to work with motion vectors
         self.parent.current_ohw = OHW.OHW()
         self.current_ohw = self.parent.current_ohw
@@ -292,6 +293,12 @@ class TabInput(QWidget):
         
         self.set_start_brightness()
         self.update_brightness()
+
+    def on_change_fps(self):
+        self.current_ohw.videometa['fps'] = float(self.edit_fps.text())
+    
+    def on_change_mpp(self):
+        self.current_ohw.videometa['microns_per_px'] = float(self.edit_mpp.text())
         
     def update_brightness(self):
         vmin, vmax = self.current_ohw.videometa["Blackval"], self.current_ohw.videometa["Whiteval"]

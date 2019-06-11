@@ -6,15 +6,22 @@ developed by Oliver Schneider & Carla Sailer at the Loskill Group, Fraunhofer In
 
 https://github.com/loslab/ohw
 
+### 11.06.2019 new release v1.2.0
+
+* allow saving of analysis as .pickle
+* enable manual peak selection
+* introduce checking for new releases
+* restructure gui
+* take care, the new changes are not implemented into the user guide yet
 
 ### Features 
 Analyze your cardiomyocyte videos with OpenHeartWare! With our software, you can
-* Load input videos as .mov/.avi or a series of tiff images
+* Load input videos as .mov/.avi/.mp4 or a series of tiff images
 * Calculate motion vectors 
 * Plot beating kinetics and detect peaks
 * Create heatmap- and quiver-videos highlighting the tissue motion
 * Create heatmaps of the time averaged motion
-* Automatically analyze multiple videos via the batch option
+* Automatically analyze multiple videos via batch operation
 
 ### Install OpenHeartWare
 ##### For Python Beginners: 
@@ -33,8 +40,30 @@ Briefly, you have to:
 * create new env from .yml or install the packages in the Python environment of your choice
 * `python GUI_mainWindow.py`
 
-#### Test OpenHeartWare with Example Input
-We provide exemplary input files in [sampleinput](sampleinput]). You can use the videofile and the tiff-series to check out the features of OpenHeartWare after the installation. Run OpenHeartWare by double-clicking on [run_OpenHeartWare.bat](run_OpenHeartWare.bat) and import the desired video.
+#### Analyzing videos with OpenHeartWare:
+OHW offers two modi for analyzing your videos:
+* single mode: you can load one individual video and analyze it/ detect peaks/ export the graphs you want step by step.
+* batch mode: you can create a list of inputvideos which will all be automatically processed the same way. However, you can still open your results (ohw_analysis.pickle) in single mode after analysis for further adjustments.
+We provide exemplary input files in [sampleinput](sampleinput]). You can use the videofile and the tiff-series to check out the features of OpenHeartWare after the installation. 
+Briefly, a video is analyzed in single mode as following:
+* run OpenHeartWare by double-clicking on [run_OpenHeartWare.bat](run_OpenHeartWare.bat) and import the desired video.
+* specify the framerate and video scale (Note: if you have many similar videos, you can adjust the standard values in the config.ini file)
+* if you plan to export videos, you can adjust the brightness of your video for a better visual appearance
+* a results folder is selected automatically, depending on the path of your videofile. However, you can also adjust the results folder to your own needs
+* in the next tab you can adjust the parameter for motion analysis and start the analysis. In this tab you can also reload a previous analysis(ohw_analysis.pickle)
+* when the analysis is done, the green bar indicates that the motion is calculated such that you can proceed to the next tabs. The analysis is now saved as ohw_analysis.pickle such that you can reload the analysis whenever you want
+* in the beating kinetics tab you see the 1D motion representation (avg. motion over time). You can manually add/ delete peaks by clicking into the graph or perform an automatic peak detection until all desired peaks are detected and export the graph and the obtained peakstatistics
+* in the "Heatmaps and Quiverplots" tab you can investigate the detected motion frame by frame. You can save individual frames or export a whole video
+* in the "Time averaged motion" tab you see and can save the averaged contractility as well as the contractility decomposed into x- and y-motion
+
+### Update OpenHeartWare
+With release v1.2.0 an automatic check for new releases during startup was introduced. Should a newer version be available, you will get notified by a popup-window. However, OpenHeartWare is not updated automatically. To replace your current version with the newest one you have to:
+* Download OpenHeartWare by the green "Clone or download" icon on the top right of this page again and unpack the file in the folder of your choice (e.g. replacing the old folder)
+* run update_OpenHeartWare.bat (with adjusting the filepath as mentioned in the user guide) to install possible new packages
+* from now on, OpenHeartWare can be run again by double-clicking on [run_OpenHeartWare.bat](run_OpenHeartWare.bat) (with adjusting the filepath as mentioned in the user guide. You can of course replace it with the old run_OpenHeartWare.bat file where the path is already adjusted)
+
+### Problems, questions, bugs, feedback and suggestions
+We are happy about any feedback on OpenHeartWare. If you have problems setting up OpenHeartWare or can't analyze your data the way you want, don't hesitate to open an issue on github or contact us under oliver.schneider@igb.fraunhofer.de. The same goes for any bugs or additional features you would like to have implemented. We appreciate all input!
 
 ### License
 Please cite [Schneider et al. 2019](https://www.liebertpub.com/doi/abs/10.1089/ten.TEA.2019.0002) if you use OHW in your publication.

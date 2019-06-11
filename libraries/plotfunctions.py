@@ -20,8 +20,9 @@ def plot_Kinetics(timeindex, motion, plotoptions, hipeaks, lopeaks, file_name=No
     tmax = plotoptions["tmax"] if plotoptions["tmax"] != None else timeindex[-1]
     ax_kinetics.set_xlim(left = 0, right = tmax)
     
+    ax_kinetics.set_ylim(bottom = 0)
     if plotoptions["vmax"] != None:
-        ax_kinetics.set_ylim(bottom = 0, top = plotoptions["vmax"])
+        ax_kinetics.set_ylim(top = plotoptions["vmax"])
     
     #self.ax.set_title('Beating kinetics', fontsize = 26)
     ax_kinetics.set_xlabel('t [s]', fontsize = 22)
@@ -142,7 +143,7 @@ def save_heatmap(ohw_dataset, savepath, singleframe = False, *args, **kwargs):
             return mplfig_to_npimage(savefig_heatmaps) # RGB image of the figure
         
         heatmap_filename = str(savepath / 'heatmapvideo.mp4')
-        duration = 1/fps * absMotions.shape[0]
+        duration = 1/fps * (absMotions.shape[0] - 1)
         animation = mpy.VideoClip(make_frame_mpl, duration=duration)
         # animation.resize((1500,800))
         animation.write_videofile(heatmap_filename, fps=fps)
@@ -164,6 +165,7 @@ def save_quiver(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_c
     scale_max = helpfunctions.get_scale_maxMotion2(absMotions)   
     MV_zerofiltered = Filters.zeromotion_to_nan(unitMVs, copy=True)
     MV_cutoff = Filters.cutoffMVs(MV_zerofiltered, max_length = scale_max, copy=True)
+    # is done twice here... just refer to QuiverMotionX from ohw?
     
     MotionX = MV_cutoff[:,0,:,:]
     MotionY = MV_cutoff[:,1,:,:]
@@ -214,7 +216,7 @@ def save_quiver(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_c
             return mplfig_to_npimage(fig_quivers) # RGB image of the figure
         
         quivers_filename = str(savepath / 'quivervideo.mp4')
-        duration = 1/videometa["fps"] * MotionX.shape[0]
+        duration = 1/videometa["fps"] * (MotionX.shape[0] - 1)
         animation = mpy.VideoClip(make_frame_mpl, duration=duration)
         
         #cut clip if desired by user
@@ -345,7 +347,7 @@ def save_quiver3(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_
             # call adjust_bbox to save only the given area
         
         quivers_filename = str(savepath / 'quivervideo3.mp4')
-        duration = 1/videometa["fps"] * MotionX.shape[0]
+        duration = 1/videometa["fps"] * (MotionX.shape[0] - 1)
         animation = mpy.VideoClip(make_frame_mpl, duration=duration)
         
         animation.write_videofile(quivers_filename, fps=videometa["fps"])

@@ -55,8 +55,8 @@ class TabQuiver(QWidget):
         self.slider_heatmaps.setMinimum(0)
         self.slider_heatmaps.setMaximum(100)
         self.slider_heatmaps.setValue(0)
-        self.slider_heatmaps.setTickPosition(QSlider.TicksBelow)
-        self.slider_heatmaps.setTickInterval(5)
+        #self.slider_heatmaps.setTickPosition(QSlider.TicksBelow)
+        #self.slider_heatmaps.setTickInterval(5)
         self.slider_heatmaps.setFixedWidth(500)
         self.slider_heatmaps.valueChanged.connect(self.slider_heatmaps_valueChanged)
         
@@ -71,9 +71,9 @@ class TabQuiver(QWidget):
         self.slider_quiver.setMaximum(100)
         self.slider_quiver.setValue(0)
         self.slider_quiver.setFixedWidth(500)
-        self.slider_quiver.setTickPosition(QSlider.TicksBelow)
+        #self.slider_quiver.setTickPosition(QSlider.TicksBelow)
         self.slider_quiver.valueChanged.connect(self.slider_quiver_valueChanged)
-        self.slider_quiver.setTickPosition(QSlider.TicksBelow)
+        #self.slider_quiver.setTickPosition(QSlider.TicksBelow)
         self.slider_quiver.setTickInterval(5)
         
         #display the chosen heatmap
@@ -242,15 +242,15 @@ class TabQuiver(QWidget):
         
         self.qslice=(slice(None,None,skipquivers),slice(None,None,skipquivers))
         qslice = self.qslice
-        
+
         self.imshow_quivers = self.ax_quivers.imshow(
                 self.current_ohw.analysisImageStack[0], cmap = "gray", 
                 vmin = self.current_ohw.videometa["Blackval"], vmax = self.current_ohw.videometa["Whiteval"])
         self.quiver_quivers = self.ax_quivers.quiver(
                 self.current_ohw.MotionCoordinatesX[qslice], 
                 self.current_ohw.MotionCoordinatesY[qslice], 
-                self.current_ohw.MotionX[0][qslice], 
-                self.current_ohw.MotionY[0][qslice], 
+                self.current_ohw.QuiverMotionX[0][qslice], 
+                self.current_ohw.QuiverMotionY[0][qslice], 
                 pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", 
                 scale = arrowscale, width = 3, headwidth = 2, headlength = 3) #adjust scale to max. movement   #width = blockwidth / 4?
 
@@ -281,7 +281,7 @@ class TabQuiver(QWidget):
     def updateQuiver(self, frame):
         #callback when slider is moved
         self.imshow_quivers.set_data(self.current_ohw.analysisImageStack[frame])    #introduce a displayImageStack here?
-        self.quiver_quivers.set_UVC(self.current_ohw.MotionX[frame][self.qslice], self.current_ohw.MotionY[frame][self.qslice])
+        self.quiver_quivers.set_UVC(self.current_ohw.QuiverMotionX[frame][self.qslice], self.current_ohw.QuiverMotionY[frame][self.qslice])
         self.canvas_quivers.draw()
         
     def updateHeatMap(self, frame):
