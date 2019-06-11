@@ -105,11 +105,14 @@ def msgbox(self, message, msg_title = 'Successful'):
 def scale_ImageStack(imageStack, px_longest = 1024):
     """
         rescales imageStack such that longest side equals px_longest
+        upscaling of smaller stack is prevented
     """
     w, h = imageStack.shape[1], imageStack.shape[2]
     longest_side = max(w,h)
     scalingfactor = px_longest/longest_side
     
+    if scalingfactor >= 1: #prevent upscaling
+        return imageStack, 1
     
     scaledImages = []
     for image in imageStack:
