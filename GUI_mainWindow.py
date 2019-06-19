@@ -40,7 +40,9 @@ class App(QMainWindow):
         #used for resizing the whole GUI after saving of the plot 
         self.resize(self.width()+1, self.height()+1)
         
-        
+    def closeEvent(self, event):
+        self.table_widget.close_Window()    
+    
 if __name__ == '__main__':
     
     #suppress warnings for the user

@@ -36,7 +36,7 @@ def BM_single(img_prev, img_curr, max_shift, blockwidth, searchblocks=None):
     MVs_hor = math.floor(size_hor/blockwidth)
     
     if type(searchblocks) != np.ndarray:
-        searchblocks = np.ones((MVs_ver, MVs_hor), dtype=bool)
+        searchblocks = np.ones((MVs_ver, MVs_hor), dtype=bool) # is done for each calculation, optimize...
     
     # pad image to enable searching at edge
     # e.g. for max_shift = 7 -> 2x7 + 1 possible shifts
@@ -115,7 +115,7 @@ def BM_getMV(patternToFind, searchRegion, max_shift, methodnr = 4):
     
     return xMotion, yMotion
     
-def BM_stack(imageStack, blockwidth, delay, max_shift, progressSignal = None, *args, **kwargs):
+def BM_stack(imageStack, blockwidth, delay, max_shift, canny = True, progressSignal = None, *args, **kwargs):
     """
         gets optical flow of a complete imagestack, based on blockmatching
         unit is px/frame as no scale is given here yet
@@ -130,7 +130,10 @@ def BM_stack(imageStack, blockwidth, delay, max_shift, progressSignal = None, *a
     MotionVectorsAll = []
     total_frames = imageStack.shape[0] - delay
     
-    searchblocks = find_searchblocks(imageStack[0],blockwidth)
+    if canny:
+        searchblocks = find_searchblocks(imageStack[0],blockwidth)
+    else:
+        searchblocks = None # replace with np.ones here from function BM_single...
     
     for frame, (prev_img, curr_img) in enumerate(zip(imageStack, imageStack[delay:])):
         # iterate pairwise over frames, total pairs: number_frames - delay

@@ -41,10 +41,11 @@ class OHW():
         #self.isROI_OHW = False
         self.config = helpfunctions.read_config() # load current config
         
-        self.raw_videometa = {} # raw info after importing  # dict of video metadata: microns_per_px, fps, blackval, whiteval,
-        self.videometa = {}
+        self.raw_videometa = {"inputpath":""} # raw info after importing  # dict of video metadata: microns_per_px, fps, blackval, whiteval,
+        self.set_default_videometa(self.raw_videometa)
+        self.videometa = self.raw_videometa.copy()
         self.analysis_meta = {"date": datetime.datetime.now(), "version": self.config['UPDATE']['version'], 
-            "motion_calculated":False, "has_MVs": False}
+            "motion_calculated":False, "has_MVs": False, "results_folder":""}
         self.init_kinplot_options()
     
     def import_video(self, inputpath, *args, **kwargs):        
@@ -70,6 +71,7 @@ class OHW():
     def set_default_videometa(self, videometa):
         """
             gets default values from config if not found in input
+            rounds values to specified digits
         """
         for key in ["fps","microns_per_px"]:
             if key not in videometa.keys():
@@ -119,13 +121,15 @@ class OHW():
         self.analysis_meta.update({'shape': self.analysisImageStack.shape})
 
     def save_ohw(self):
-        """
+        '''
             saves ohw analysis object with all necessary info
-            -> no need to recalculate MVs when filters/ plotting parameters are changed
             especially useful after batchrun
-        """
+            -> no need to recalculate MVs when filters/ plotting parameters are changed
+        '''
+        if self.analysis_meta["results_folder"] == "": # don't save when no file loaded
+            return
         filename = str(self.analysis_meta["results_folder"]/'ohw_analysis.pickle')
-        savedata = [self.analysis_meta, self.videometa, self.rawMVs] 
+        savedata = [self.analysis_meta, self.videometa, self.rawMVs, self.PeakDetection.Peaks] 
         # keep saving minimal, everything should be reconstructed from these parameters...
 
         self.analysis_meta["results_folder"].mkdir(parents = True, exist_ok = True)
@@ -142,9 +146,10 @@ class OHW():
         
         with open(filename, 'rb') as loadfile:
             data = pickle.load(loadfile)
-        self.analysis_meta, self.videometa, self.rawMVs = data
+        self.analysis_meta, self.videometa, self.rawMVs, Peaks = data
         self.video_loaded = False
         self.init_motion()
+        self.set_peaks(Peaks) #call after init_motion as this resets peaks
 
     def calculate_motion(self, method = 'BM', progressSignal = None, **parameters):
         """
@@ -187,9 +192,14 @@ class OHW():
         #distinguish between MVs and motion here
         
         scalingfactor, delay = self.analysis_meta["scalingfactor"], self.analysis_meta["MV_parameters"]["delay"]
+        filter = self.analysis_meta["MV_parameters"]["filter"]
+        
+        if filter:
+            self.rawMVs = Filters.filter_singlemov(self.rawMVs)
+        
         self.unitMVs = (self.rawMVs / scalingfactor) * self.videometa["microns_per_px"] * (self.videometa["fps"] / delay)
         self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame        
-    
+
         self.get_mean_absMotion()
         self.prepare_quiver_components()
         self.calc_TimeAveragedMotion()
@@ -329,9 +339,7 @@ class OHW():
         #also change config to new value?
 
     def calc_TimeAveragedMotion(self):
-        """
-            calculates time averaged motion for abs. motion x- and y-motion
-        """
+        ''' calculates time averaged motion for abs. motion, x- and y-motion '''
         
         self.avg_absMotion = np.nanmean(self.absMotions, axis = 0)
         MotionX = self.unitMVs[:,0,:,:]

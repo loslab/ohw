@@ -53,14 +53,12 @@ class TabInput(QWidget):
         self.canvas_firstImage = FigureCanvas(self.fig_firstIm)
         self.canvas_firstImage.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.canvas_firstImage.setFixedSize(500,500)
-
-        self.label_fps.setFixedWidth(120)
         
         self.edit_fps = QLineEdit()
         self.edit_mpp = QLineEdit()
         
-        self.edit_fps.setFixedWidth(50)
-        self.edit_mpp.setFixedWidth(50)
+        self.edit_fps.setFixedWidth(70)
+        self.edit_mpp.setFixedWidth(70)
         
         self.edit_fps.textChanged.connect(self.on_change_fps)
         self.edit_mpp.textChanged.connect(self.on_change_mpp) 
@@ -171,6 +169,7 @@ class TabInput(QWidget):
         helpfunctions.save_config(self.parent.config)
 
         # create OHW object to work with motion vectors
+        self.parent.current_ohw.save_ohw() #save old ohw when loading new file
         self.parent.current_ohw = OHW.OHW()
         self.current_ohw = self.parent.current_ohw
         
@@ -245,7 +244,7 @@ class TabInput(QWidget):
         inputpath = str(self.current_ohw.videometa['inputpath'])
         self.label_input_path.setText(inputpath)
         
-        results_folder = str(pathlib.PureWindowsPath(self.current_ohw.analysis_meta['results_folder']))
+        results_folder = str(self.current_ohw.analysis_meta['results_folder']) #pathlib.PureWindowsPath(
         self.label_results_folder.setText(results_folder)
         self.btn_results_folder.setEnabled(True)
     
@@ -254,7 +253,7 @@ class TabInput(QWidget):
         self.ax_firstIm.axis('off')
         # display first image and update controls
         if type(image) == np.ndarray:
-            print(self.current_ohw.videometa["Blackval"], self.current_ohw.videometa["Whiteval"])
+            #print(self.current_ohw.videometa["Blackval"], self.current_ohw.videometa["Whiteval"])
             self.imshow_firstImage = self.ax_firstIm.imshow(image, cmap = 'gray', vmin = self.current_ohw.videometa["Blackval"], vmax = self.current_ohw.videometa["Whiteval"])
         else:
             self.ax_firstIm.text(0.5, 0.5,'no video loaded yet',

@@ -59,11 +59,7 @@ class TableWidget(QWidget):
         self.tabs.addTab(self.tab_TA,"Time averaged motion")
         self.tabs.addTab(self.tab_batch,"Batch analysis")
         
-        # replace with own init_ohw function which calls other init_ohws
-        self.tab_motion.init_ohw()
-        self.tab_kinetics.init_ohw()
-        self.tab_quiver.init_ohw()
-        self.tab_TA.init_ohw()
+        self.init_ohw()
         
         #self.ROI_coordinates = []
         #self.ROI_names = []
@@ -87,7 +83,11 @@ class TableWidget(QWidget):
     
         for item in ['video_length']:
             self.quiver_settings[item] = self.config.getfloat(section='DEFAULT QUIVER SETTINGS', option=item)
-            
+
+    def close_Window(self):
+        ''' called by closing event'''
+        self.current_ohw.save_ohw() #save on exit (MVs should be automatically saved, peaks might have changed)
+        
     def init_ohw(self):
         ''' init tabs to changed ohw '''
         

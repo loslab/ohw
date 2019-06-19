@@ -56,9 +56,12 @@ class TabMotion(QWidget):
         self.check_scaling.setChecked(True) #connect with config here!
         
         #enable/disable filtering
-        self.check_filter = QCheckBox("Filter motion vectors during calculation")
-        self.check_filter.setChecked(False)#connect with config here!
-        self.check_filter.setEnabled(False)#to be implemented...
+        self.check_filter = QCheckBox("Filter motion vectors after calculation")
+        self.check_filter.setChecked(True)#connect with config here!
+        
+        #canny edge
+        self.check_canny = QCheckBox("Select region for calculation based on Canny filtering")
+        self.check_canny.setChecked(True)#connect with config
         
         self.btn_getMVs = QPushButton('Calculate motion vectors')
         self.btn_getMVs.clicked.connect(self.on_getMVs)
@@ -129,10 +132,11 @@ class TabMotion(QWidget):
         self.grid_overall.addWidget(self.spinbox_maxShift,4,1, Qt.AlignTop|Qt.AlignLeft)
         self.grid_overall.addWidget(self.label_addOptions, 5,0, Qt.AlignTop|Qt.AlignLeft)
         self.grid_overall.addWidget(self.check_scaling, 6,0,1,2, Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.check_filter, 7,0,1,2, Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addLayout(self.grid_btns, 8,0,1,4,Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.progressbar_MVs, 9,0,1,4)
-        self.grid_overall.addWidget(self.btn_succeed_MVs, 10,0,1,4)
+        self.grid_overall.addWidget(self.check_canny, 7,0,1,2, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.check_filter, 8,0,1,2, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addLayout(self.grid_btns, 9,0,1,4,Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.progressbar_MVs, 10,0,1,4)
+        self.grid_overall.addWidget(self.btn_succeed_MVs, 11,0,1,4)
         
     def init_ohw(self):
         ''' set values from current_ohw '''
@@ -163,6 +167,8 @@ class TabMotion(QWidget):
         
         px_longest = None
         scaling_status = self.check_scaling.isChecked()
+        canny_status = self.check_canny.isChecked()
+        filter_status = self.check_filter.isChecked()
 
         if scaling_status == True:
             px_longest = 1024
@@ -188,7 +194,8 @@ class TabMotion(QWidget):
         
         self.current_ohw.set_analysisImageStack(px_longest = px_longest) # scale + set roi, , roi=[0,0,500,500]
         
-        calculate_motion_thread = self.current_ohw.calculate_motion_thread(blockwidth = blockwidth, delay = delay, max_shift = maxShift)
+        calculate_motion_thread = self.current_ohw.calculate_motion_thread(
+            blockwidth = blockwidth, delay = delay, max_shift = maxShift, canny = canny_status, filter = filter_status)
         calculate_motion_thread.start()
         calculate_motion_thread.progressSignal.connect(self.updateMVProgressBar)
         calculate_motion_thread.finished.connect(self.finish_motion)
@@ -212,11 +219,12 @@ class TabMotion(QWidget):
             "ohw_analysis (*.pickle)")[0]
         if (pickle_file == ''):
             return
+        self.parent.current_ohw.save_ohw()
         self.parent.current_ohw = OHW.OHW()    # creates new instance here
         self.current_ohw = self.parent.current_ohw # is not passed to parent automatically!
         self.current_ohw.load_ohw(pickle_file)
 
-        self.current_ohw.init_motion()
+        #self.current_ohw.init_motion() # is already done in load_ohw
         self.parent.init_ohw()
         
         self.set_motion_param() # or move to init_ohw?

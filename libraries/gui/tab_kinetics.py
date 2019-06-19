@@ -66,7 +66,7 @@ class TabKinetics(QWidget):
         self.spinbox_ratio = QDoubleSpinBox()
         self.spinbox_ratio.setRange(0.01, 0.90)
         self.spinbox_ratio.setSingleStep(0.01)
-        self.spinbox_ratio.setValue(0.05)           
+        self.spinbox_ratio.setValue(0.3) #move to config           
         
         self.label_neighbours = QLabel('Number of neighbouring values for evaluation:') 
         self.spinbox_neighbours = QSpinBox()    
