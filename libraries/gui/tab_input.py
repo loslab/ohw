@@ -60,8 +60,8 @@ class TabInput(QWidget):
         self.edit_fps.setFixedWidth(70)
         self.edit_mpp.setFixedWidth(70)
         
-        self.edit_fps.textChanged.connect(self.on_change_fps)
-        self.edit_mpp.textChanged.connect(self.on_change_mpp) 
+        #self.edit_fps.textChanged.connect(self.on_change_fps) # don't connect as this would allow changing of
+        #self.edit_mpp.textChanged.connect(self.on_change_mpp) # values after calculation is already done
         
         self.button_loadVideo = QPushButton('Load video')
         self.button_loadVideo.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
@@ -293,11 +293,11 @@ class TabInput(QWidget):
         self.set_start_brightness()
         self.update_brightness()
 
-    def on_change_fps(self):
-        self.current_ohw.videometa['fps'] = float(self.edit_fps.text())
+    #def on_change_fps(self):
+    #    self.current_ohw.videometa['fps'] = float(self.edit_fps.text())
     
-    def on_change_mpp(self):
-        self.current_ohw.videometa['microns_per_px'] = float(self.edit_mpp.text())
+    #def on_change_mpp(self):
+    #    self.current_ohw.videometa['microns_per_px'] = float(self.edit_mpp.text())
         
     def update_brightness(self):
         vmin, vmax = self.current_ohw.videometa["Blackval"], self.current_ohw.videometa["Whiteval"]

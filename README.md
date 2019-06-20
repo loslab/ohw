@@ -51,7 +51,7 @@ Briefly, a video is analyzed in single mode as following:
 * if you plan to export videos, you can adjust the brightness of your video for a better visual appearance
 * a results folder is selected automatically, depending on the path of your videofile. However, you can also adjust the results folder to your own needs
 * in the next tab you can adjust the parameter for motion analysis and start the analysis. In this tab you can also reload a previous analysis(ohw_analysis.pickle)
-* when the analysis is done, the green bar indicates that the motion is calculated such that you can proceed to the next tabs. The analysis is now saved as ohw_analysis.pickle such that you can reload the analysis whenever you want
+* when the analysis is done, the green bar indicates that the motion is calculated such that you can proceed to the next tabs. The analysis is now saved as ohw_analysis.pickle such that you can reload the analysis whenever you want without having to do the same calculation again 
 * in the beating kinetics tab you see the 1D motion representation (avg. motion over time). You can manually add/ delete peaks by clicking into the graph or perform an automatic peak detection until all desired peaks are detected and export the graph and the obtained peakstatistics
 * in the "Heatmaps and Quiverplots" tab you can investigate the detected motion frame by frame. You can save individual frames or export a whole video
 * in the "Time averaged motion" tab you see and can save the averaged contractility as well as the contractility decomposed into x- and y-motion

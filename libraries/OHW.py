@@ -192,12 +192,15 @@ class OHW():
         #distinguish between MVs and motion here
         
         scalingfactor, delay = self.analysis_meta["scalingfactor"], self.analysis_meta["MV_parameters"]["delay"]
-        filter = self.analysis_meta["MV_parameters"]["filter"]
+        filter = self.analysis_meta["filter_status"]
         
         if filter:
-            self.rawMVs = Filters.filter_singlemov(self.rawMVs)
+            print("filtering single movements")
+            rawMVs_filt = Filters.filter_singlemov(self.rawMVs) #don't change rawMVs! repeated loading would vary it each time
+        else:
+            rawMVs_filt = self.rawMVs
         
-        self.unitMVs = (self.rawMVs / scalingfactor) * self.videometa["microns_per_px"] * (self.videometa["fps"] / delay)
+        self.unitMVs = (rawMVs_filt / scalingfactor) * self.videometa["microns_per_px"] * (self.videometa["fps"] / delay)
         self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame        
 
         self.get_mean_absMotion()
@@ -270,9 +273,9 @@ class OHW():
             plotfunctions.save_heatmap, ohw_dataset = self, savepath = savepath, singleframe=False)
         return self.thread_save_heatmap
 
-    def save_quiver3(self, singleframe):
+    def save_quiver3(self, singleframe, skipquivers = 1):
         savepath = self.analysis_meta["results_folder"]/'quiver_results'
-        plotfunctions.save_quiver3(ohw_dataset = self, savepath = savepath, singleframe=singleframe)
+        plotfunctions.save_quiver3(ohw_dataset = self, savepath = savepath, singleframe=singleframe, skipquivers=skipquivers)
     
     def save_quiver3_thread(self, singleframe, skipquivers):#t_cut
         savepath = self.analysis_meta["results_folder"]/'quiver_results'
@@ -327,10 +330,13 @@ class OHW():
 
     def init_kinplot_options(self):
         self.kinplot_options = dict(self.config._sections['KINPLOT OPTIONS'])
-        self.kinplot_options["mark_peaks"] = True #to do: add this to config and allow to be changed in gui
-        for key, value in self.kinplot_options.items():
+        for key, value in self.kinplot_options.items(): # can be definitely improved...
             if value == "None":
                 self.kinplot_options[key] = None
+            elif value == "true":
+                self.kinplot_options[key] = True
+            elif value == "false":
+                self.kinplot_options[key] = False
             else:
                 self.kinplot_options[key] = float(value)
         

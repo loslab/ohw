@@ -23,6 +23,7 @@ class TabBatch(QWidget):
         self.initUI()
         
         self.videofiles = []
+        self.stopBatch = False
 
     def initUI(self):
 
@@ -86,12 +87,14 @@ class TabBatch(QWidget):
         label_batchOptions.setFont(QFont("Times",weight=QFont.Bold))
         
         self.checkFilter = QCheckBox("Filter motion vectors during calculation")
+        self.checkCanny = QCheckBox("Select region for calculation based on Canny filtering")
         self.checkHeatmaps = QCheckBox("Create heatmap video")
         self.checkQuivers = QCheckBox("Create quiver plot video")
-        self.checkTimeAveraged = QCheckBox("Create plots for time averaged motion")
+        #self.checkTimeAveraged = QCheckBox("Create plots for time averaged motion")
         self.checkSaveMotionVectors = QCheckBox("Save the generated motion vectors")
-        self.checkScaling = QCheckBox("Scale the longest side to 1024 px during calculation")
+        self.checkScaling = QCheckBox("Scale longest side to 1024 px during calculation")
         self.check_batchresultsFolder = QCheckBox("Use standard results folder, individual for each video")
+        self.check_autoPeak = QCheckBox("Detect Peaks and export graph")
         
         # create a variable for the checkbox status
         # actually not needed anymore...
@@ -103,12 +106,14 @@ class TabBatch(QWidget):
         self.check_batchresultsFolder.setChecked(True)
         self.check_batchresultsFolder.setEnabled(False) # to be implemented...
         
-        self.checkFilter.setChecked(False)
-        self.checkFilter.setEnabled(False)  # to be implemented...
+        self.checkFilter.setChecked(True)
+        self.checkCanny.setChecked(True)
+        self.check_autoPeak.setChecked(True)
+        #self.checkFilter.setEnabled(False)  # to be implemented...
         self.checkSaveMotionVectors.setChecked(self.saveMotionVectors_status)
         self.checkHeatmaps.setChecked(self.heatmap_status)
         self.checkQuivers.setChecked(self.quiver_status)
-        self.checkTimeAveraged.setChecked(self.timeAver_status)
+        #self.checkTimeAveraged.setChecked(self.timeAver_status)
         self.checkScaling.setChecked(self.scaling_status)
         
         self.btn_startBatch = QPushButton('Start the automated analysis of chosen folders')
@@ -164,17 +169,19 @@ class TabBatch(QWidget):
         
         self.grid_overall.addLayout(self.grid_param,            6,0,1,3,Qt.AlignTop|Qt.AlignLeft)#,Qt.AlignTop|Qt.AlignLeft)
         self.grid_overall.addWidget(label_batchOptions,         7,0)#,Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.checkScaling,          8,0)
-        self.grid_overall.addWidget(self.check_batchresultsFolder,   9,0)
-        self.grid_overall.addWidget(self.checkFilter,           10,0)
-        self.grid_overall.addWidget(self.checkHeatmaps,         11,0)
-        self.grid_overall.addWidget(self.checkQuivers,          12,0)
-        self.grid_overall.addWidget(self.label_results_folder,  13,0)
-        self.grid_overall.addWidget(self.btn_resultsfolder,  14,0)
-        self.grid_overall.addWidget(self.btn_startBatch,        14,1)
-        self.grid_overall.addWidget(self.btn_stopBatch,         14,2)
-        self.grid_overall.addWidget(self.progressbar,          15,0,1,3)
-        self.grid_overall.addWidget(self.label_state,          16,0,1,3)
+        self.grid_overall.addWidget(self.check_batchresultsFolder,   8,0)
+        self.grid_overall.addWidget(self.checkScaling,          9,0)
+        self.grid_overall.addWidget(self.checkCanny,            10,0)
+        self.grid_overall.addWidget(self.checkFilter,           11,0)
+        self.grid_overall.addWidget(self.check_autoPeak,        12,0)
+        self.grid_overall.addWidget(self.checkHeatmaps,         13,0)
+        self.grid_overall.addWidget(self.checkQuivers,          14,0)
+        self.grid_overall.addWidget(self.label_results_folder,  15,0)
+        self.grid_overall.addWidget(self.btn_resultsfolder,     16,0)
+        self.grid_overall.addWidget(self.btn_startBatch,        16,1)
+        self.grid_overall.addWidget(self.btn_stopBatch,         16,2)
+        self.grid_overall.addWidget(self.progressbar,           17,0,1,3)
+        self.grid_overall.addWidget(self.label_state,           18,0,1,3)
        
         self.grid_overall.setSpacing(15)        
         self.grid_overall.setAlignment(Qt.AlignTop|Qt.AlignLeft)
@@ -196,9 +203,11 @@ class TabBatch(QWidget):
         
     def on_addBatchVideo(self):
     
-        new_file = UserDialogs.chooseFileByUser("Select video to add for batch analysis", input_folder=self.parent.config['LAST SESSION']['input_folder'])
-        if new_file[0] not in self.videofiles:
-            self.qlist_batchvideos.addItem(new_file[0])
+        new_files = UserDialogs.chooseFilesByUser("Select video to add for batch analysis", input_folder=self.parent.config['LAST SESSION']['input_folder'])
+
+        for new_file in new_files[0]:
+            if new_file not in self.videofiles:
+                self.qlist_batchvideos.addItem(new_file)
         # allow selection of folders/multiple files...
         #folderDialog = MultipleFoldersByUser.MultipleFoldersDialog()
         #chosen_folders = folderDialog.getSelection()
@@ -253,25 +262,34 @@ class TabBatch(QWidget):
                 if self.param["scaling"]:
                     curr_analysis.set_analysisImageStack(px_longest = 1024)
                 else:
-                    curr_analysis.set_analysisImageStack()                
+                    curr_analysis.set_analysisImageStack()
+                
+                curr_analysis.analysis_meta["scaling_status"] = self.param["scaling"]
+                curr_analysis.analysis_meta["filter_status"] = self.param["filter"]
                 
                 if self.stop_flag: break
                 self.set_state(filenr,'mcalc')
                 curr_analysis.calculate_motion(**self.param)
-                curr_analysis.initialize_motion()
-                curr_analysis.save_MVs()
-                curr_analysis.save_ohw()
-                curr_analysis.plot_TimeAveragedMotions('.png')
+                curr_analysis.init_motion()
+                #curr_analysis.save_MVs()
+                #curr_analysis.plot_TimeAveragedMotions('.png') # make available via settings...
                 if self.stop_flag: break
             
+                if self.param["autoPeak"]:
+                    curr_analysis.detect_peaks(0.3, 4)  #take care, values hardcoded here so far!
+                    kinplot_path = curr_analysis.analysis_meta["results_folder"] / 'beating_kinetics.PNG'
+                    curr_analysis.plot_beatingKinetics(kinplot_path)
+                
                 if self.param["heatmaps"]:
                     self.set_state(filenr,'heatmapvideo')
                     curr_analysis.save_heatmap(singleframe = False)
                 if self.stop_flag: break
                 if self.param["quivers"]:
                     self.set_state(filenr,'quivervideo')
-                    curr_analysis.save_quiver3(singleframe = False) #allow to choose between quiver and quiver3 in future
-        
+                    curr_analysis.save_quiver3(singleframe = False, skipquivers = 4) #allow to choose between quiver and quiver3 in future
+                
+                curr_analysis.save_ohw()
+                
         def isAlive(self):
             self.isAlive()
             
@@ -282,6 +300,9 @@ class TabBatch(QWidget):
             self.stop_flag = True
     
     def on_startBatch(self):
+        self.parent.current_ohw.save_ohw() # saves again as marked peaks might have changed
+        self.parent.current_ohw = OHW.OHW() # clears loaded analysis such that no crosstalk takes place
+        self.parent.init_ohw()
         print('Starting batch analysis...')
         self.btn_addVid.setEnabled(False)
         self.btn_remVid.setEnabled(False)
@@ -296,8 +317,11 @@ class TabBatch(QWidget):
         scaling = self.checkScaling.isChecked()
         heatmaps = self.checkHeatmaps.isChecked()
         quivers = self.checkQuivers.isChecked()
+        filter = self.checkFilter.isChecked()
+        canny = self.checkCanny.isChecked()
+        autoPeak = self.check_autoPeak.isChecked()
         param = {"blockwidth":blockwidth, "delay":delay, "max_shift":max_shift, "scaling":scaling,
-                    "heatmaps":heatmaps, "quivers":quivers}
+                    "heatmaps":heatmaps, "quivers":quivers, "canny":canny,"filter":filter, "autoPeak":autoPeak}
 
         #create a thread for batch analysis:
         self.thread_batch = self.BatchThread(self.videofiles, param)

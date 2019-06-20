@@ -131,6 +131,7 @@ def BM_stack(imageStack, blockwidth, delay, max_shift, canny = True, progressSig
     total_frames = imageStack.shape[0] - delay
     
     if canny:
+        print("performing Canny edge detection on first frame to select region")
         searchblocks = find_searchblocks(imageStack[0],blockwidth)
     else:
         searchblocks = None # replace with np.ones here from function BM_single...

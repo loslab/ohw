@@ -180,6 +180,7 @@ class TabQuiver(QWidget):
             self.btn_heatmap_vid.setEnabled(True)
             self.btn_heatmap_save.setEnabled(True)
             self.slider_heatmaps.setMaximum(self.current_ohw.absMotions.shape[0]-1)
+            self.slider_heatmaps.setValue(0)
             self.slider_heatmaps.setEnabled(True)
             self.init_heatmaps()
         else:
@@ -193,6 +194,7 @@ class TabQuiver(QWidget):
             self.btn_quiver_save.setEnabled(True)
             self.btn_quivers_video.setEnabled(True)
             self.slider_quiver.setMaximum(self.current_ohw.mean_absMotions.shape[0]-1)# or introduce new variable which counts the amount of motion timepoints
+            self.slider_quiver.setValue(0)
             self.slider_quiver.setEnabled(True)
             self.init_quivers()
         else:

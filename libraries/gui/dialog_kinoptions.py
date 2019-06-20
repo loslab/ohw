@@ -33,6 +33,8 @@ class DialogKinoptions(QDialog):
         self.edit_tmax = QLineEdit()
         self.edit_vmax = QLineEdit()
         
+        self.check_mark_peaks = QCheckBox('mark export peaks')
+        
         validator = QDoubleValidator() # constrain input tu float numbers
         self.edit_tmax.setValidator(validator)
         self.edit_vmax.setValidator(validator)
@@ -45,6 +47,7 @@ class DialogKinoptions(QDialog):
         self.grid.addWidget(self.check_vmax, 2,  0)
         self.grid.addWidget(self.label_vmax, 2,  1)
         self.grid.addWidget(self.edit_vmax, 2,  2)
+        self.grid.addWidget(self.check_mark_peaks,3,0)
         
         self.grid.setAlignment(Qt.AlignTop|Qt.AlignLeft)
         self.init_settings()
@@ -61,6 +64,8 @@ class DialogKinoptions(QDialog):
         else:
             self.check_tmax.setChecked(False)
             self.edit_tmax.setText(str(self.plotsettings["tmax"]))
+    
+        self.check_mark_peaks.setChecked(self.plotsettings["mark_peaks"])
     
     def change_status(self):
         """
@@ -87,6 +92,7 @@ class DialogKinoptions(QDialog):
             vmax = None
         else:
             vmax = float(self.edit_vmax.text()) if self.edit_vmax.text() != "" else None
-        settings = {"vmax":vmax,"tmax":tmax}
+        mark_peaks = self.check_mark_peaks.isChecked()
+        settings = {"vmax":vmax,"tmax":tmax,"mark_peaks":mark_peaks}
         
         return settings

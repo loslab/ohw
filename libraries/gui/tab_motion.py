@@ -20,7 +20,7 @@ class TabMotion(QWidget):
         
     def initUI(self):
         self.info = QTextEdit()
-        self.info.setText('In this tab you set the settings for the block-matching algorithm and perform the calculation of the motion vectors or import an old analysis.')
+        self.info.setText('In this tab you set the settings for the block-matching algorithm and perform the calculation of the motion vectors or import an old analysis. Calculated motion vectors can be exported as numpy-array for further analysis')
         self.info.setReadOnly(True)
         self.info.setMaximumHeight(50)
         self.info.setFixedWidth(700)
@@ -44,7 +44,7 @@ class TabMotion(QWidget):
         self.spinbox_blockwidth.setRange(2,128)
         self.spinbox_blockwidth.setSingleStep(1)
         self.spinbox_blockwidth.setSuffix(' pixels')
-        self.spinbox_blockwidth.setValue(int(self.parent.config['DEFAULT VALUES']['blockwidth']))
+        self.spinbox_blockwidth.setValue(int(self.parent.config['DEFAULT VALUES']['blockwidth'])) # move to function
         self.spinbox_delay.setRange(1,10)
         self.spinbox_delay.setSuffix(' frames')
         self.spinbox_delay.setSingleStep(1)
@@ -52,7 +52,7 @@ class TabMotion(QWidget):
         self.spinbox_maxShift.setSuffix(' pixels')
         self.spinbox_maxShift.setValue(int(self.parent.config['DEFAULT VALUES']['maxShift']))
         
-        self.check_scaling = QCheckBox('Scale the longest side to 1024 px during calculation')
+        self.check_scaling = QCheckBox('Scale longest side to 1024 px during calculation')
         self.check_scaling.setChecked(True) #connect with config here!
         
         #enable/disable filtering
@@ -161,6 +161,9 @@ class TabMotion(QWidget):
         self.btn_getMVs.setEnabled(False)
         
         #get current parameters entered by user
+        self.current_ohw.videometa['fps'] = float(self.parent.tab_input.edit_fps.text())
+        self.current_ohw.videometa['microns_per_px'] = float(self.parent.tab_input.edit_mpp.text())
+        
         blockwidth = self.spinbox_blockwidth.value()
         maxShift = self.spinbox_maxShift.value()
         delay = self.spinbox_delay.value()
@@ -193,9 +196,11 @@ class TabMotion(QWidget):
         '''
         
         self.current_ohw.set_analysisImageStack(px_longest = px_longest) # scale + set roi, , roi=[0,0,500,500]
+        self.current_ohw.analysis_meta["scaling_status"] = scaling_status
+        self.current_ohw.analysis_meta["filter_status"] = filter_status
         
         calculate_motion_thread = self.current_ohw.calculate_motion_thread(
-            blockwidth = blockwidth, delay = delay, max_shift = maxShift, canny = canny_status, filter = filter_status)
+            blockwidth = blockwidth, delay = delay, max_shift = maxShift, canny = canny_status)
         calculate_motion_thread.start()
         calculate_motion_thread.progressSignal.connect(self.updateMVProgressBar)
         calculate_motion_thread.finished.connect(self.finish_motion)
@@ -206,7 +211,7 @@ class TabMotion(QWidget):
         self.parent.init_ohw()
         
         self.current_ohw.save_ohw()
-        self.current_ohw.plot_TimeAveragedMotions('.png')
+        #self.current_ohw.plot_TimeAveragedMotions('.png') #not really necessary
         
     def on_load_ohw(self):
         """
@@ -242,6 +247,10 @@ class TabMotion(QWidget):
         self.spinbox_blockwidth.setValue(self.current_ohw.analysis_meta["MV_parameters"]["blockwidth"])
         self.spinbox_delay.setValue(self.current_ohw.analysis_meta["MV_parameters"]["delay"])
         self.spinbox_maxShift.setValue(self.current_ohw.analysis_meta["MV_parameters"]["max_shift"])
+        
+        self.check_canny.setChecked(self.current_ohw.analysis_meta["MV_parameters"]["canny"])
+        self.check_filter.setChecked(self.current_ohw.analysis_meta["filter_status"])
+        self.check_scaling.setChecked(self.current_ohw.analysis_meta["scaling_status"])
         
     def init_values(self, config):
         """
