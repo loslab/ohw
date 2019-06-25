@@ -279,6 +279,8 @@ class TabBatch(QWidget):
                     curr_analysis.detect_peaks(0.3, 4)  #take care, values hardcoded here so far!
                     kinplot_path = curr_analysis.analysis_meta["results_folder"] / 'beating_kinetics.PNG'
                     curr_analysis.plot_beatingKinetics(kinplot_path)
+                    curr_analysis.get_peakstatistics()
+                    curr_analysis.export_analysis()
                 
                 if self.param["heatmaps"]:
                     self.set_state(filenr,'heatmapvideo')
