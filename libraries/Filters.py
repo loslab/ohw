@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+import cv2
 
 def zeromotion_to_nan(MotionVectors, copy = False):
     """
@@ -18,9 +19,7 @@ def zeromotion_to_nan(MotionVectors, copy = False):
     return MotionVectorsFiltered
     
 def cutoffMVs(MotionVectors, max_length, copy = False):
-    """
-        sets length all MVs larger than a certain value to specific value
-    """
+    ''' sets length of all MVs larger than max_length to max_length '''
     
     if copy:  
         MotionVectorsFiltered = np.copy(MotionVectors)
@@ -35,3 +34,30 @@ def cutoffMVs(MotionVectors, max_length, copy = False):
     MotionVectorsFiltered[:,1][mask] = MotionVectorsFiltered[:,1][mask] / maskscale
 
     return MotionVectorsFiltered
+
+def filter_singlemov(MVs, copy = True):
+    ''' filter MVs by binary erosion + dilation to remove single moving spots'''
+    
+    if copy:  
+        MVs_filt = np.copy(MVs)
+    else:
+        MVs_filt = MVs
+    
+    Amp = np.sqrt(MVs[:,0]**2 + MVs[:,1]**2)
+    filter_frames = np.zeros(Amp.shape,dtype=bool) #4D arr with filtering for each frame
+    move = Amp > 0 #select spots with movement
+    move = move.astype(np.uint8) #for cv2
+    kernel = np.ones((2,2), np.uint8)
+    
+    for framenr, frame in enumerate(move):
+        eroded = cv2.erode(frame,kernel)
+        dilated = cv2.dilate(eroded, kernel)
+        filter_frames[framenr] = dilated.astype(bool)
+    filter_mask = np.any(filter_frames, axis=0) # select regions with any movement over time
+    
+    #filter_mask = np.broadcast_to(filter_mask, MVs.shape)
+    #return MVs[:,:,filter_mask] # will return flattened array, as boolean mask only selects values
+    #MVs_filt[:,:,~filter_mask] = 0 
+    MVs_filt = np.where(filter_mask,MVs,0) # easier version, all nonmasked values will be replaced by 0
+    # ... zeromotion_to_nan can be modified the same way
+    return MVs_filt

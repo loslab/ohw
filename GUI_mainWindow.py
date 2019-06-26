@@ -16,12 +16,11 @@ class App(QMainWindow):
         self.resize(1150,800)
         self.center()
         self.setWindowTitle(self.title)
-        self.setWindowIcon(QIcon('icons/icon_color.PNG'))
+        self.setWindowIcon(QIcon('icons/ohw-icon.PNG'))
         
         #create a TableWidget to use different tabs in the GUI       
         self.table_widget = TableWidget(self)
         self.setCentralWidget(self.table_widget)
- 
         self.show()
     
     def center(self):
@@ -41,7 +40,9 @@ class App(QMainWindow):
         #used for resizing the whole GUI after saving of the plot 
         self.resize(self.width()+1, self.height()+1)
         
-        
+    def closeEvent(self, event):
+        self.table_widget.close_Window()    
+    
 if __name__ == '__main__':
     
     #suppress warnings for the user
@@ -54,7 +55,8 @@ if __name__ == '__main__':
         #os.environ["PYTHONWARNINGS"] = "default" # Also affect subprocesses
    
     #start the application
-    app = QApplication(sys.argv) 
+    app = QApplication(sys.argv)
+    app.setAttribute(Core.Qt.AA_DisableHighDpiScaling)
     app.aboutToQuit.connect(app.deleteLater)
     heartware_gui = App()    
     app.exec_()
