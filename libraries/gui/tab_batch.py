@@ -24,6 +24,7 @@ class TabBatch(QWidget):
         
         self.videofiles = []
         self.stopBatch = False
+        self.global_resultsfolder = None
 
     def initUI(self):
 
@@ -83,7 +84,7 @@ class TabBatch(QWidget):
         self.spinbox_maxShift.setValue(max_shift)
         
         #options for automated analysis
-        label_batchOptions = QLabel('Choose options for automated analysis of chosen folders:')
+        label_batchOptions = QLabel('Choose options for automated analysis of chosen files')
         label_batchOptions.setFont(QFont("Times",weight=QFont.Bold))
         
         self.checkFilter = QCheckBox("Filter motion vectors during calculation")
@@ -104,7 +105,7 @@ class TabBatch(QWidget):
         self.scaling_status = True
         self.saveMotionVectors_status = False
         self.check_batchresultsFolder.setChecked(True)
-        self.check_batchresultsFolder.setEnabled(False) # to be implemented...
+        #self.check_batchresultsFolder.setEnabled(False) # to be implemented...
         
         self.checkFilter.setChecked(True)
         self.checkCanny.setChecked(True)
@@ -125,12 +126,14 @@ class TabBatch(QWidget):
         self.btn_stopBatch.setEnabled(False)
         
         #label to display current results folder
-        self.label_results_folder = QLabel('Current results folder: ')
-        self.label_results_folder.setFont(QFont("Times",weight=QFont.Bold))
+        self.label_results = QLabel('Current results folder: ')
+        self.label_results.setFont(QFont("Times",weight=QFont.Bold))
+        
+        self.label_results_folder = QLabel()
         
         #button for changing the results folder
         self.btn_resultsfolder = QPushButton('Change results folder ')
-        #self.btn_resultsfolder.clicked.connect(self.on_changeResultsfolder)
+        self.btn_resultsfolder.clicked.connect(self.on_changeResultsfolder)
         self.btn_resultsfolder.setEnabled(False)
         self.check_batchresultsFolder.stateChanged.connect(self.changeStatus)
         
@@ -176,7 +179,8 @@ class TabBatch(QWidget):
         self.grid_overall.addWidget(self.check_autoPeak,        12,0)
         self.grid_overall.addWidget(self.checkHeatmaps,         13,0)
         self.grid_overall.addWidget(self.checkQuivers,          14,0)
-        self.grid_overall.addWidget(self.label_results_folder,  15,0)
+        self.grid_overall.addWidget(self.label_results,         15,0)
+        self.grid_overall.addWidget(self.label_results_folder,  15,1,1,2)
         self.grid_overall.addWidget(self.btn_resultsfolder,     16,0)
         self.grid_overall.addWidget(self.btn_startBatch,        16,1)
         self.grid_overall.addWidget(self.btn_stopBatch,         16,2)
@@ -267,6 +271,16 @@ class TabBatch(QWidget):
                 curr_analysis.analysis_meta["scaling_status"] = self.param["scaling"]
                 curr_analysis.analysis_meta["filter_status"] = self.param["filter"]
                 
+                # adjust each results folder if option selected
+                if self.param["global_resultsfolder"] != None:
+                    #print("change resultsfolder to...",self.param["global_resultsfolder"])
+                    inputpath = curr_analysis.videometa["inputpath"] 
+                    curr_analysis.analysis_meta["results_folder"] = self.param["global_resultsfolder"]/("results_" + str(inputpath.stem) )
+                    #print("resultsfolder:", curr_analysis.analysis_meta["results_folder"])
+                        
+                    #if self.videometa["input_type"] == 'videofile':
+                    #    self.analysis_meta["results_folder"] = inputpath.parent / ("results_" + str(inputpath.stem) )
+                
                 if self.stop_flag: break
                 self.set_state(filenr,'mcalc')
                 curr_analysis.calculate_motion(**self.param)
@@ -322,8 +336,11 @@ class TabBatch(QWidget):
         filter = self.checkFilter.isChecked()
         canny = self.checkCanny.isChecked()
         autoPeak = self.check_autoPeak.isChecked()
+        
+        global_resultsfolder = self.global_resultsfolder if self.check_batchresultsFolder.isChecked() == False else None #if check == True, then standard results folder is used
+        
         param = {"blockwidth":blockwidth, "delay":delay, "max_shift":max_shift, "scaling":scaling,
-                    "heatmaps":heatmaps, "quivers":quivers, "canny":canny,"filter":filter, "autoPeak":autoPeak}
+                    "heatmaps":heatmaps, "quivers":quivers, "canny":canny,"filter":filter, "autoPeak":autoPeak, "global_resultsfolder":global_resultsfolder}
 
         #create a thread for batch analysis:
         self.thread_batch = self.BatchThread(self.videofiles, param)
@@ -362,3 +379,18 @@ class TabBatch(QWidget):
             self.stopBatch = False
         self.progressbar.setRange(0,1)
         self.progressbar.setValue(1)
+    
+    def on_changeResultsfolder(self):
+        
+        msg = 'Choose a global results folder for saving batch results'
+        folderName = UserDialogs.chooseFolderByUser(msg)#, input_folder=self.current_ohw.analysis_meta['results_folder'])#, input_folder=self.config['LAST SESSION']['results_folder'])  
+        
+        if (folderName == ''): #cancel pressed
+            return
+        
+        self.global_resultsfolder = pathlib.Path(folderName)
+        restext = str(self.global_resultsfolder)
+        if len(restext) > 80:
+            restext = restext[-80:]
+            restext = "..." + restext[3:]
+        self.label_results_folder.setText(restext)

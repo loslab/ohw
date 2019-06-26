@@ -6,7 +6,7 @@ developed by Oliver Schneider & Carla Sailer at the Loskill Group, Fraunhofer In
 
 https://github.com/loslab/ohw
 
-### 11.06.2019 new release v1.2.0
+### 26.06.2019 new release v1.2.0
 
 * allow saving of analysis as .pickle
 * enable manual peak selection
