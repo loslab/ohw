@@ -147,6 +147,8 @@ class OHW():
         with open(filename, 'rb') as loadfile:
             data = pickle.load(loadfile)
         self.analysis_meta, self.videometa, self.rawMVs, Peaks = data
+        #print(self.analysis_meta)
+        
         self.video_loaded = False
         self.init_motion()
         self.set_peaks(Peaks) #call after init_motion as this resets peaks
@@ -184,6 +186,9 @@ class OHW():
             self.calculate_motion, emit_progSignal=True, **parameters)
         return self.thread_calculate_motion 
     
+    def set_filter(self, filter = 'None'):
+        self.analysis_meta['filter'] = filter
+    
     def init_motion(self):
         '''
             calculate 2D & 1D data representations after motion determination
@@ -192,9 +197,9 @@ class OHW():
         #distinguish between MVs and motion here
         
         scalingfactor, delay = self.analysis_meta["scalingfactor"], self.analysis_meta["MV_parameters"]["delay"]
-        filter = self.analysis_meta["filter_status"]
+        filter = self.analysis_meta["filter"]
         
-        if filter:
+        if filter == 'filter_singlemov':
             print("filtering single movements")
             rawMVs_filt = Filters.filter_singlemov(self.rawMVs) #don't change rawMVs! repeated loading would vary it each time
         else:

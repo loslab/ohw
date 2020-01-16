@@ -196,8 +196,11 @@ class TabMotion(QWidget):
         '''
         
         self.current_ohw.set_analysisImageStack(px_longest = px_longest) # scale + set roi, , roi=[0,0,500,500]
-        self.current_ohw.analysis_meta["scaling_status"] = scaling_status
-        self.current_ohw.analysis_meta["filter_status"] = filter_status
+        #self.current_ohw.analysis_meta["scaling_status"] = scaling_status # do not set directly on instance, implement method!
+        #self.current_ohw.analysis_meta["filter_status"] = filter_status
+        if filter_status == True:
+            self.current_ohw.set_filter(filter = 'filter_singlemov')
+        
         
         calculate_motion_thread = self.current_ohw.calculate_motion_thread(
             blockwidth = blockwidth, delay = delay, max_shift = maxShift, canny = canny_status)
@@ -249,9 +252,17 @@ class TabMotion(QWidget):
         self.spinbox_maxShift.setValue(self.current_ohw.analysis_meta["MV_parameters"]["max_shift"])
         
         self.check_canny.setChecked(self.current_ohw.analysis_meta["MV_parameters"]["canny"])
-        self.check_filter.setChecked(self.current_ohw.analysis_meta["filter_status"])
-        self.check_scaling.setChecked(self.current_ohw.analysis_meta["scaling_status"])
         
+        if self.current_ohw.analysis_meta["filter"] == 'filter_singlemov':  #  to be replaced with other filter types
+            self.check_filter.setChecked(True)
+        else:
+            self.check_filter.setChecked(False)
+        
+        if self.current_ohw.analysis_meta["px_longest"] == 1024:
+            self.check_scaling.setChecked(True)
+        else: 
+            self.check_scaling.setChecked(False)
+            
     def init_values(self, config):
         """
             set values from config
