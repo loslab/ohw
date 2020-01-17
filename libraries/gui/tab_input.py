@@ -78,7 +78,7 @@ class TabInput(QWidget):
         self.progressbar_loadVideo.setValue(0)
         self.progressbar_loadVideo.setFixedWidth(250)
         self.progressbar_loadVideo.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed)
-                
+
         self.label_slider_blackval = QLabel('Black value')
         self.slider_blackval = QSlider(Qt.Vertical)
         self.slider_blackval.setMinimum(0)
@@ -103,6 +103,17 @@ class TabInput(QWidget):
         self.btn_brightness = QPushButton('Reset brightness')
         self.btn_brightness.clicked.connect(self.on_resetBrightness)
         self.btn_brightness.setEnabled(False)
+        
+        self.label_ROI = QLabel('ROI settings:')
+        self.label_ROI.setFont(QFont("Times",weight=QFont.Bold))
+        
+        self.btn_selROI = QPushButton('select ROI')
+        self.btn_selROI.clicked.connect(self.on_selROI)
+        self.btn_selROI.setEnabled(False)
+        
+        self.btn_resetROI = QPushButton('reset ROI')
+        self.btn_resetROI.clicked.connect(self.on_resetROI)
+        self.btn_resetROI.setEnabled(False)
         
         self.grid_prop = QGridLayout()        
         self.grid_prop.setSpacing(10)
@@ -132,12 +143,21 @@ class TabInput(QWidget):
         self.grid_slider.addWidget(self.slider_blackval,2,0, Qt.AlignHCenter)
         self.grid_slider.addWidget(self.slider_whiteval,2,1, Qt.AlignHCenter)
         self.grid_slider.addWidget(self.btn_brightness,1,2)
-             
+        
+        self.grid_ROI = QGridLayout()        
+        self.grid_ROI.setSpacing(10)
+        self.grid_ROI.setAlignment(Qt.AlignTop|Qt.AlignLeft)
+        
+        self.grid_ROI.addWidget(self.label_ROI,0,0)
+        self.grid_ROI.addWidget(self.btn_selROI,1,0)
+        self.grid_ROI.addWidget(self.btn_resetROI,1,1)
+        
         self.grid_overall = QGridLayout()#self._main)
         self.grid_overall.addWidget(self.info,0,0,1,2)
         self.grid_overall.addLayout(self.grid_prop,1,0)
-        self.grid_overall.addLayout(self.grid_slider,2,0,Qt.AlignTop|Qt.AlignLeft) # has to be added here?
-        self.grid_overall.addWidget(self.canvas_firstImage,1,1,2,1,Qt.AlignTop|Qt.AlignLeft)#-1,1
+        self.grid_overall.addLayout(self.grid_ROI,2,0)
+        self.grid_overall.addLayout(self.grid_slider,3,0,Qt.AlignTop|Qt.AlignLeft) # has to be added here?
+        self.grid_overall.addWidget(self.canvas_firstImage,1,1,2,1,Qt.AlignTop|Qt.AlignLeft)#-1,1  ## somehow messes up alignment of previous buttons
         self.grid_overall.setAlignment(Qt.AlignTop|Qt.AlignLeft)      
         
         self.setLayout(self.grid_overall) 
@@ -232,6 +252,8 @@ class TabInput(QWidget):
             self.slider_whiteval.setEnabled(True)
             self.btn_brightness.setEnabled(True)
             self.btn_reloadVideo.setEnabled(False)
+            self.btn_selROI.setEnabled(True)
+            self.btn_resetROI.setEnabled(True)
             self.set_start_brightness()
 
         else:
@@ -240,6 +262,8 @@ class TabInput(QWidget):
             self.slider_whiteval.setEnabled(False)
             self.btn_brightness.setEnabled(False)
             self.btn_reloadVideo.setEnabled(True)
+            self.btn_selROI.setEnabled(False)
+            self.btn_resetROI.setEnabled(False)
         
         inputpath = str(self.current_ohw.videometa['inputpath'])
         self.label_input_path.setText(inputpath)
@@ -298,6 +322,19 @@ class TabInput(QWidget):
     
     #def on_change_mpp(self):
     #    self.current_ohw.videometa['microns_per_px'] = float(self.edit_mpp.text())
+
+    def on_selROI(self):
+        """
+            opens cv2 window where roi can be selected
+        """
+        self.current_ohw.selROI()      
+        # show error if False is returned (?)
+    
+    def on_resetROI(self):
+        """ resets ROI to original image dimensions)
+        """
+        self.current_ohw.resetROI()
+        
         
     def update_brightness(self):
         vmin, vmax = self.current_ohw.videometa["Blackval"], self.current_ohw.videometa["Whiteval"]

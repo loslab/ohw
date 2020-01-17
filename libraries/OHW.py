@@ -45,7 +45,7 @@ class OHW():
         self.set_default_videometa(self.raw_videometa)
         self.videometa = self.raw_videometa.copy()
         self.analysis_meta = {"date": datetime.datetime.now(), "version": self.config['UPDATE']['version'], 
-            "motion_calculated":False, "has_MVs": False, "results_folder":""}
+            "motion_calculated":False, "has_MVs": False, "results_folder":"", "roi":None}
         self.init_kinplot_options()
     
     def import_video(self, inputpath, *args, **kwargs):        
@@ -97,21 +97,22 @@ class OHW():
             self.analysis_meta["results_folder"] = inputpath.parent / "results"
         self.analysis_meta["inputpath"] = inputpath
          
-    def set_analysisImageStack(self, px_longest = None, roi = None):
+    def set_analysisImageStack(self, px_longest = None):
         '''
             specifies resolution + roi of video to be analyzed
             px_longest: resolution of longest side
             if px_longest = None: original resolution is used
             roi: specify region of interest, coordinates of rectangular that was selected as ROI in unmodified coordinates
+            if no special roi is given, the roi saved in analysis_meta is used
         '''
         
-        self.analysis_meta.update({'px_longest': px_longest, 'roi': roi, "scalingfactor":1})
+        self.analysis_meta.update({'px_longest': px_longest, "scalingfactor":1})
         
         self.analysisImageStack = self.rawImageStack
         # select roi
+        roi = self.analysis_meta["roi"]
         if roi != None:
             self.analysisImageStack = self.analysisImageStack[:,int(roi[1]):int(roi[1]+roi[3]), int(roi[0]):int(roi[0]+roi[2])]
-            pass
         
         # rescale input
         # take original resoltuion if no other specified
@@ -165,13 +166,14 @@ class OHW():
             -MM: musclemotion
         """
 
-        #store parameters which wwill be used for the calculation of MVs
+        #store parameters which will be used for the calculation of MVs
         self.analysis_meta.update({'Motion_method': method, 'MV_parameters': parameters})
         
         if method == 'BM':   
             self.rawMVs = OFlowCalc.BM_stack(self.analysisImageStack, 
                 progressSignal = progressSignal, **parameters)
             self.analysis_meta["has_MVs"], self.analysis_meta["motion_calculated"] = True, True
+            self.set_filter('None') # init to no filter after calculation
 
         elif method == 'GF':
             pass
@@ -366,6 +368,48 @@ class OHW():
     
     def plot_TimeAveragedMotions(self, file_ext='.png'):
         plotfunctions.plot_TimeAveragedMotions(self, file_ext)
+
+    def selROI(self, roi = None):
+        """
+            if no roi is specified:
+            opens a cv2 window which allows the selection of a roi of the currently loaded video
+        """
+        if self.video_loaded == False:
+            print("no video loaded, can't select a ROI")
+            return False
+        
+        if roi != None:
+            # use these coordinates as roi
+            return True
+        
+        # if video is loaded:
+        window_height = 800
+        
+        img = cv2.cvtColor(self.rawImageStack[0], cv2.COLOR_GRAY2RGB)      
+        hpercent = (window_height / float(img.shape[1]))
+        wsize = int((float(img.shape[0]) * float(hpercent)))
+        image_scaled = cv2.resize(img, (wsize, window_height))    
+        
+        roi = list(cv2.selectROI('Press Enter to save the currently selected ROI:', image_scaled, fromCenter=False))
+        cv2.destroyAllWindows()
+        # returns: xstart, ystart, xwidth, ywidth, in display coordinates
+        # returns old roi if ESC is pressed
+        
+        # if selection is draw outside window: crop
+        if (roi[0] + roi[2] > wsize):
+            roi[2] = wsize - roi [0]
+        if (roi[1] + roi[3] > wsize):
+            roi[3] = wsize - roi [1]    
+        
+        roi_px = [int(coord/hpercent) for coord in roi]   
+        self.analysis_meta["roi"] = roi_px
+
+    def resetROI(self):
+        if self.video_loaded == False:
+            print("no video loaded, can't reset ROI")
+            return False
+        self.analysis_meta["roi"] = None
+
     
     def createROIImageStack(self, r):
         #r are coordinates of rectangular that was selected as ROI
