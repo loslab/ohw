@@ -112,6 +112,7 @@ class TabInput(QWidget):
         self.btn_selROI.setEnabled(False)
         
         self.btn_resetROI = QPushButton('reset ROI')
+        #self.btn_resetROI.setSizePolicy(QSizePolicy.Fixed,QSizePolicy.Fixed) # can mess with alignment
         self.btn_resetROI.clicked.connect(self.on_resetROI)
         self.btn_resetROI.setEnabled(False)
         
@@ -142,7 +143,8 @@ class TabInput(QWidget):
         self.grid_slider.addWidget(self.label_slider_whiteval,1,1)
         self.grid_slider.addWidget(self.slider_blackval,2,0, Qt.AlignHCenter)
         self.grid_slider.addWidget(self.slider_whiteval,2,1, Qt.AlignHCenter)
-        self.grid_slider.addWidget(self.btn_brightness,1,2)
+        self.grid_slider.addWidget(self.btn_brightness,1,2, Qt.AlignTop|Qt.AlignLeft)
+        #self.grid_slider.setRowStretch(3, 1)
         
         self.grid_ROI = QGridLayout()        
         self.grid_ROI.setSpacing(10)
@@ -150,15 +152,17 @@ class TabInput(QWidget):
         
         self.grid_ROI.addWidget(self.label_ROI,0,0)
         self.grid_ROI.addWidget(self.btn_selROI,1,0)
-        self.grid_ROI.addWidget(self.btn_resetROI,1,1)
+        self.grid_ROI.addWidget(self.btn_resetROI,1,1,Qt.AlignTop|Qt.AlignLeft) # button will otherwise expand; somehow needed despite grid_ROI.set_alignment...?
         
         self.grid_overall = QGridLayout()#self._main)
         self.grid_overall.addWidget(self.info,0,0,1,2)
         self.grid_overall.addLayout(self.grid_prop,1,0)
         self.grid_overall.addLayout(self.grid_ROI,2,0)
-        self.grid_overall.addLayout(self.grid_slider,3,0,Qt.AlignTop|Qt.AlignLeft) # has to be added here?
-        self.grid_overall.addWidget(self.canvas_firstImage,1,1,2,1,Qt.AlignTop|Qt.AlignLeft)#-1,1  ## somehow messes up alignment of previous buttons
-        self.grid_overall.setAlignment(Qt.AlignTop|Qt.AlignLeft)      
+        self.grid_overall.addLayout(self.grid_slider,3,0)#,Qt.AlignTop|Qt.AlignLeft) # has to be added here?
+        self.grid_overall.addWidget(self.canvas_firstImage,1,1,3,1,Qt.AlignTop|Qt.AlignLeft)#-1,1  ## somehow messes up alignment of previous buttons
+        self.grid_overall.setAlignment(Qt.AlignTop|Qt.AlignLeft) # pushes individual grids to top left 
+        #self.grid_overall.setRowStretch(4,1) # would be alternative solution, not 100 % recommended:
+        # https://stackoverflow.com/questions/10082299/qvboxlayout-how-to-vertically-align-widgets-to-the-top-instead-of-the-center
         
         self.setLayout(self.grid_overall) 
 
