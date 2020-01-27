@@ -174,3 +174,30 @@ def read_config():
 def save_config(config):
     with open('config.ini', 'w') as configfile:
         config.write(configfile)
+
+def sel_roi(img):
+    """
+        allows selection of roi in image
+        returns roi xstart, ystart, xwidth, ywidth in px
+    """
+    window_height = 800
+    
+    img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)      
+    hpercent = (window_height / float(img.shape[1]))
+    wsize = int((float(img.shape[0]) * float(hpercent)))
+    image_scaled = cv2.resize(img, (wsize, window_height))    
+    
+    roi = list(cv2.selectROI('Press Enter to save the currently selected ROI:', image_scaled, fromCenter=False))
+    cv2.destroyAllWindows()
+    # returns: xstart, ystart, xwidth, ywidth, in display coordinates
+    # returns old roi if ESC is pressed
+    
+    # if selection is draw outside window: crop
+    if (roi[0] + roi[2] > wsize):
+        roi[2] = wsize - roi [0]
+    if (roi[1] + roi[3] > wsize):
+        roi[3] = wsize - roi [1]    
+    
+    roi_px = [int(coord/hpercent) for coord in roi]
+    
+    return roi_px
