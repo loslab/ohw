@@ -175,16 +175,30 @@ def save_config(config):
     with open('config.ini', 'w') as configfile:
         config.write(configfile)
 
+def create_prev(img, height = 800):
+    """ creates preview image to be stored in ohw class in 800 px """
+    if len(img.shape) == 3: # converts to gray if rgb image
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    (h, w) = img.shape[:2]
+    scale = height/h
+    width = int(scale*w)
+    img_prev = cv2.resize(img, (width, height))
+    
+    return img_prev
+
 def sel_roi(img):
     """
         allows selection of roi in image
         returns roi xstart, ystart, xwidth, ywidth in px
     """
+    # to do: add something to prevent display of crazy aspect ratios
+    
     window_height = 800
     
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)      
-    hpercent = (window_height / float(img.shape[1]))
-    wsize = int((float(img.shape[0]) * float(hpercent)))
+    hpercent = (window_height / float(img.shape[0]))
+    wsize = int((float(img.shape[1]) * float(hpercent)))
     image_scaled = cv2.resize(img, (wsize, window_height))    
     
     roi = list(cv2.selectROI('Press Enter to save the currently selected ROI:', image_scaled, fromCenter=False))

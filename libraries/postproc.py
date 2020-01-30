@@ -8,7 +8,6 @@ class Postproc():
     """
     # depending on analysis there can be various MVs/variables to store/track
     
-    
     def __init__(self):
         self.filters = {"filter_singlemov":{"on":False, "par": "parval"}}
         self.roi = None

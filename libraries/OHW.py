@@ -19,7 +19,7 @@ class OHW():
     def __init__(self):
         
         self.rawImageStack = None       # array for raw imported imagestack
-        #self.ROIImageStack = None      # array for ROIs
+        #ImageStack = None      # array for ROIs
         self.rawMVs = None              # array for raw motion vectors (MVs)
         self.unitMVs = None             # MVs in correct unit (microns)
 
@@ -54,6 +54,8 @@ class OHW():
         self.videometa = self.raw_videometa.copy()
         self.set_auto_results_folder()
         self.video_loaded = True
+        self.videometa["prev800px"] = helpfunctions.create_prev(self.rawImageStack[0], 800)
+        self.videometa["prev_scale"] = 800/self.videometa["frameHeight"]
         
     def import_video_thread(self, inputpath):
         self.thread_import_video = helpfunctions.turn_function_into_thread(self.import_video, emit_progSignal = True, inputpath = inputpath)
@@ -373,17 +375,22 @@ class OHW():
         """
             if no roi is specified:
             opens a cv2 window which allows the selection of a roi of the currently loaded video
+            roi is always specified in coordinates of original video resolution
         """
         if self.video_loaded == False:
             print("no video loaded, can't select a ROI")
             return False
         
         if roi is None:
-            self.analysis_meta["roi"] = helpfunctions.sel_roi(self.rawImageStack[0])
+            sel_roi = helpfunctions.sel_roi(self.videometa["prev800px"]) # select roi in 800 px preview img
+            sel_roi = [int(coord/self.videometa["prev_scale"]) for coord in sel_roi] # rescale to coord in orig inputdata
+            self.analysis_meta["roi"] = sel_roi #self.rawImageStack[0])
+            print(sel_roi)
             return True
         
         if isinstance(roi, list):
-            self.roi = roi
+            self.analysis_meta["roi"] = roi
+            print("manually setting roi to", roi)
             # use these coordinates as roi
             return True
 
