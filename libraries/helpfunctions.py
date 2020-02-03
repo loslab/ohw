@@ -215,3 +215,37 @@ def sel_roi(img):
     roi_px = [int(coord/hpercent) for coord in roi]
     
     return roi_px
+    
+import math
+
+def get_slice_from_roi(roi, blockwidth):
+    """ input roi: [xs, ys, wx, wy]
+        so far: includes only MVs which are completely in roi
+    """
+    
+    xs,ys,wx,wy = roi
+    
+    bw = blockwidth
+    
+    xs = xs
+    ys = ys
+    
+    xe = xs + wx
+    ye = ys + wy
+    
+    MVxs = math.ceil(xs/bw)
+    MVxe = math.floor(xe/bw)
+    
+    if MVxe < MVxs: # special case if start and end are in same MV, would lead to slice
+        MVxe = MVxs
+    
+    MVys = math.ceil(ys/bw)
+    MVye = math.floor(ye/bw)
+    
+    if MVye < MVys: 
+        MVye = MVys
+        
+    slicex = slice(MVxs, MVxe)
+    slicey = slice(MVys, MVye)
+    
+    return(slicex, slicey)
