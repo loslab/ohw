@@ -168,7 +168,6 @@ def BM_stack(imageStack, blockwidth, delay, max_shift, canny = True, progressSig
     return np.array(MotionVectorsAll)
     
     
-    
 def find_searchblocks(inputimage, blockwidth):
     ''' 
         perform canny edge detection and binary operations 
@@ -194,3 +193,24 @@ def find_searchblocks(inputimage, blockwidth):
     #edges = np.ones((MVs_ver, MVs_hor), dtype=bool)
     searchblocks = block_reduce(cleaned, block_size=(blockwidth,blockwidth), func=np.any) #downsample detected edge -> if any value in block = True -> calculate optical flow
     return searchblocks[:MVs_ver,:MVs_hor] #cut off overlapping values
+    
+def get_mean_absMotion(absMotions):
+    """
+        calculates movement mask (eliminates all pixels where no movement occurs through all frames)
+        applies mask to absMotions and calculate mean motion per frame
+    """
+
+    summed_absMotions = np.sum(absMotions, axis = 0)  # select only points in array with nonzero movement
+    movement_mask = (summed_absMotions == 0)
+    
+    filtered_absMotions = np.copy(absMotions) #copy needed, don't influence absMotions
+    filtered_absMotions[:,movement_mask] = np.nan
+    mean_absMotions = np.nanmean(filtered_absMotions, axis=(1,2))
+    
+    return mean_absMotions
+    
+    #self.analysis_meta["results_folder"].mkdir(parents = True, exist_ok = True) #create folder for results if it doesn't exist
+    #self.timeindex = (np.arange(self.mean_absMotions.shape[0]) / self.videometa["fps"]).round(2)
+    
+    #np.save(str(self.analysis_meta["results_folder"] / 'beating_kinetics.npy'), np.array([self.timeindex,self.mean_absMotions]))
+    #save in own function if desired...

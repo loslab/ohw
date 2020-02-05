@@ -217,6 +217,7 @@ class OHW():
         self.calc_TimeAveragedMotion()
         self.PeakDetection.set_data(self.timeindex, self.mean_absMotions) #or pass self directly?
     
+    # moved to OFlowCalc
     def get_mean_absMotion(self):
         """
             calculates movement mask (eliminates all pixels where no movement occurs through all frames)
@@ -234,7 +235,7 @@ class OHW():
         self.timeindex = (np.arange(self.mean_absMotions.shape[0]) / self.videometa["fps"]).round(2)
         #np.save(str(self.analysis_meta["results_folder"] / 'beating_kinetics.npy'), np.array([self.timeindex,self.mean_absMotions]))
         #save in own function if desired...
-        
+    
     def prepare_quiver_components(self):
         '''
             sets all 0-motions to nan such that they won't be plotted in quiver plot

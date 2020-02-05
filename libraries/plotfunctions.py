@@ -14,6 +14,13 @@ def plot_Kinetics(timeindex, motion, plotoptions, hipeaks, lopeaks, file_name=No
     """
         plots graph for beating kinetics "EKG"
     """
+    
+    plotoptions_default = {"tmax":None, "vmax":None, "mark_peaks":False} # default plot parameters, changed if dict is available, implement better checking in future...
+    if plotoptions is None:
+        plotoptions = plotoptions_default
+    else:
+        plotoptions = plotoptions_default.update(plotoptions)
+    
     fig_kinetics, ax_kinetics = plt.subplots(1,1,figsize=(11,7))
     ax_kinetics.plot(timeindex, motion, '-', linewidth = 2) #self.fig_kinetics
     
