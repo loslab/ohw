@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+import numpy as np
+from libraries import OFlowCalc, plotfunctions, Filters, helpfunctions, PeakDetection
+
 class Postproc():
     """
         postprocessor class
@@ -7,10 +10,19 @@ class Postproc():
         or specific filters and subsequent motion calculation
     """
     # depending on analysis there can be various MVs/variables to store/track
+    # TODO: decide what happens if cohw = None
     
-    def __init__(self):
+    def __init__(self, cohw, name=None):
         self.filters = {"filter_singlemov":{"on":False, "par": "parval"}}
         self.roi = None
+        self.PeakDetection = PeakDetection.PeakDetection()    # class which detects + saves peaks
+        
+        if name is None:
+            name = "default"
+        self.set_name(name)
+        
+        self.link_ohw(cohw)
+        
         # link to config somehow/ default pars somehow
         # init somewhere else?
 
@@ -58,14 +70,17 @@ class Postproc():
         bw = self.cohw.analysis_meta["MV_parameters"]['blockwidth']
         
         # select MVs of calculation (possibly done in a roi of inputvid) by subroi:
-
-        roi = self.roi
-        # scale roi to adjusted imagestack resolution used for calculation
-        roi = [int(coord*scalingfactor) for coord in roi] 
         
-        MVslice_x, MVslice_y = get_slice_from_roi(roi,bw)
-        #print("orig shape:",  self.cohw.rawMVs.shape)
-        rawMVs_filt = self.cohw.rawMVs[:,:,MVslice_x, MVslice_y] 
+        if self.roi is None:
+            rawMVs_filt = self.cohw.rawMVs[:,:,:,:]
+        else:
+            roi = self.roi
+            # scale roi to adjusted imagestack resolution used for calculation
+            roi = [int(coord*scalingfactor) for coord in roi] 
+            
+            MVslice_x, MVslice_y = get_slice_from_roi(roi,bw)
+            #print("orig shape:",  self.cohw.rawMVs.shape)
+            rawMVs_filt = self.cohw.rawMVs[:,:,MVslice_x, MVslice_y] 
         
         #print("selected shape:",rawMVs_filt.shape)
         #print("slices", MVslice_x, MVslice_y)
@@ -79,18 +94,16 @@ class Postproc():
         
         #print("absMotions shape: ", self.absMotions.shape)
         
-        mean_absMotions = libraries.OFlowCalc.get_mean_absMotion(self.absMotions)
-        #self.analysis_meta["results_folder"].mkdir(parents = True, exist_ok = True) #create folder for results if it doesn't exist
-        #self.timeindex = (np.arange(self.mean_absMotions.shape[0]) / self.videometa["fps"]).round(2)
-        #libraries.plotfunctions.plot_Kinetics(timeindex, motion, plotoptions, hipeaks, lopeaks, file_name=None):
-        timeindex = (np.arange(mean_absMotions.shape[0]) / self.cohw.videometa["fps"]).round(2)
-        #libraries.plotfunctions.plot_Kinetics(timeindex, mean_absMotions, None, None, None, file_name=None)
+        self.mean_absMotions = OFlowCalc.get_mean_absMotion(self.absMotions)
+        self.timeindex = (np.arange(self.mean_absMotions.shape[0]) / self.cohw.videometa["fps"]).round(2)
         
-        # now stored in OHW... move to postprocessor class or even another module?
-        #self.get_mean_absMotion()
-        #self.prepare_quiver_components()
-        #self.calc_TimeAveragedMotion()
-        #self.PeakDetection.set_data(stelf.timeindex, self.mean_absMotions) #or pass self directly?
+        self.prepare_quiver_components()
+        self.calc_TimeAveragedMotion()
+        self.PeakDetection.set_data(self.timeindex, self.mean_absMotions) #or pass self directly?
+        
+        # when to create results folder?
+        #self.analysis_meta["results_folder"].mkdir(parents = True, exist_ok = True) #create folder for results if it doesn't exist
+        #plotfunctions.plot_Kinetics(timeindex, mean_absMotions, None, None, None, file_name=None)
     
     def set_filter(self, filtername = "", on = True, **filterparameters):
         """ turns specific filter on/ off and sets specified parameters to filter """
@@ -115,3 +128,42 @@ class Postproc():
     
     # add flag to track if processing already took place
     # allow export, save + reimport of parameters + rois (also detected peaks)
+    
+    def get_peaks(self):
+        return self.PeakDetection.Peaks, self.PeakDetection.hipeaks, self.PeakDetection.lopeaks
+    
+    def prepare_quiver_components(self):
+        '''
+            sets all 0-motions to nan such that they won't be plotted in quiver plot
+            determines scale_max and cuts off all longer vectors
+            creates grid of coordinates
+        '''
+        
+        MV_zerofiltered = Filters.zeromotion_to_nan(self.unitMVs, copy=True)
+        scale_max = helpfunctions.get_scale_maxMotion2(self.absMotions)        
+        MV_cutoff = Filters.cutoffMVs(MV_zerofiltered, max_length = scale_max) #copy=True
+        
+        self.QuiverMotionX = MV_cutoff[:,0,:,:] # changed name to QuiverMotionX as values are manipulated here
+        self.QuiverMotionY = MV_cutoff[:,1,:,:]
+        
+        bw = self.cohw.analysis_meta["MV_parameters"]["blockwidth"]
+        Nx, Ny = MV_cutoff[0,0].shape
+        
+        self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(
+            np.arange(Ny)*bw+bw/2,
+            np.arange(Nx)*bw+bw/2) #Nx, Ny exchanged (np vs. image indexing); possible issues with odd bws?
+            
+    def calc_TimeAveragedMotion(self):
+        ''' calculates time averaged motion for abs. motion, x- and y-motion '''
+        
+        self.avg_absMotion = np.nanmean(self.absMotions, axis = 0)
+        MotionX = self.unitMVs[:,0,:,:]
+        MotionY = self.unitMVs[:,1,:,:]    #squeeze not necessary anymore, dimension reduced
+        
+        absMotionX = np.abs(MotionX)    #calculate mean of absolute values!
+        self.avg_MotionX = np.nanmean(absMotionX, axis = 0)
+
+        absMotionY = np.abs(MotionY)
+        self.avg_MotionY = np.nanmean(absMotionY, axis = 0)
+
+        self.max_avgMotion = np.max ([self.avg_absMotion, self.avg_MotionX, self.avg_MotionY]) # avg_absMotion should be enough

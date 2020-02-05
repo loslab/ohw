@@ -251,7 +251,7 @@ class TabInput(QWidget):
         
         # check if video is loaded and update controls
         if self.current_ohw.video_loaded == True:
-            self.display_firstImage(self.current_ohw.rawImageStack[0])
+            self.display_firstImage(self.current_ohw.videometa["prev800px"])
             self.slider_blackval.setEnabled(True)
             self.slider_whiteval.setEnabled(True)
             self.btn_brightness.setEnabled(True)

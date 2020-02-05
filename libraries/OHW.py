@@ -5,7 +5,7 @@ import tifffile, cv2, datetime, pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
-from libraries import OFlowCalc, Filters, plotfunctions, helpfunctions, PeakDetection, videoreader
+from libraries import OFlowCalc, Filters, plotfunctions, helpfunctions, PeakDetection, videoreader, postproc
 
 import moviepy.editor as mpy
 from moviepy.video.io.bindings import mplfig_to_npimage
@@ -34,7 +34,11 @@ class OHW():
         self.max_avgMotion = None       # maximum of time averaged motions
         self.timeindex = None           # time index for 1D-representation
 
-        self.PeakDetection = PeakDetection.PeakDetection()    # class which detects + saves peaks
+        self.postprocs = {"post1":postproc.Postproc(cohw=self, name="post1")}
+        self.set_ceval("post1")
+        
+        # move to postproc
+        #self.PeakDetection = PeakDetection.PeakDetection()    # class which detects + saves peaks
         self.video_loaded = False       # tells state if video is connected to ohw-objecet
        
         #self.exceptions = None
@@ -193,36 +197,54 @@ class OHW():
     def set_filter(self, filter = 'None'):
         self.analysis_meta['filter'] = filter
     
+    def set_ceval(self, eval_name):
+        '''
+            sets active postprocess/ current evaluation for use in viewing/ interaction
+            active postprocess = ceval (current evaluation) with name ceval_name
+        '''
+        # TODO: check if name exists in all postprocs
+        
+        self.ceval_name = eval_name # rename ceval_name to sth shorter!
+        self.ceval = self.postprocs[self.ceval_name]
+    
     def init_motion(self):
         '''
             calculate 2D & 1D data representations after motion determination
+            2D: motionvectors (MVs)
+            1D: motion (calculated from MVs or other attributes...)
         '''
         
-        #distinguish between MVs and motion here
+        # transfer to postproc class here:
         
-        scalingfactor, delay = self.analysis_meta["scalingfactor"], self.analysis_meta["MV_parameters"]["delay"]
-        filter = self.analysis_meta["filter"]
+        self.ceval.process()
         
-        if filter == 'filter_singlemov':
-            print("filtering single movements")
-            rawMVs_filt = Filters.filter_singlemov(self.rawMVs) #don't change rawMVs! repeated loading would vary it each time
-        else:
-            rawMVs_filt = self.rawMVs
+        #scalingfactor, delay = self.analysis_meta["scalingfactor"], self.analysis_meta["MV_parameters"]["delay"]
+        #filter = self.analysis_meta["filter"]
         
-        self.unitMVs = (rawMVs_filt / scalingfactor) * self.videometa["microns_per_px"] * (self.videometa["fps"] / delay)
-        self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame        
+        #if filter == 'filter_singlemov':
+        #    print("filtering single movements")
+        #    rawMVs_filt = Filters.filter_singlemov(self.rawMVs) #don't change rawMVs! repeated loading would vary it each time
+        #else:
+        #    rawMVs_filt = self.rawMVs
+        
+        #self.unitMVs = (rawMVs_filt / scalingfactor) * self.videometa["microns_per_px"] * (self.videometa["fps"] / delay)
+        #self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame        
 
-        self.get_mean_absMotion()
+        #self.get_mean_absMotion()
+        
+        """
         self.prepare_quiver_components()
         self.calc_TimeAveragedMotion()
         self.PeakDetection.set_data(self.timeindex, self.mean_absMotions) #or pass self directly?
+        """
     
     # moved to OFlowCalc
+    """
     def get_mean_absMotion(self):
-        """
+        '''
             calculates movement mask (eliminates all pixels where no movement occurs through all frames)
             applies mask to absMotions and calculate mean motion per frame
-        """
+        '''
         # move into filter module in future?
         summed_absMotions = np.sum(self.absMotions, axis = 0)  # select only points in array with nonzero movement
         movement_mask = (summed_absMotions == 0)
@@ -235,7 +257,10 @@ class OHW():
         self.timeindex = (np.arange(self.mean_absMotions.shape[0]) / self.videometa["fps"]).round(2)
         #np.save(str(self.analysis_meta["results_folder"] / 'beating_kinetics.npy'), np.array([self.timeindex,self.mean_absMotions]))
         #save in own function if desired...
+    """
     
+    # moved to postproc
+    """
     def prepare_quiver_components(self):
         '''
             sets all 0-motions to nan such that they won't be plotted in quiver plot
@@ -256,7 +281,8 @@ class OHW():
         self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(
             np.arange(Ny)*bw+bw/2,
             np.arange(Nx)*bw+bw/2) #Nx, Ny exchanged (np vs. image indexing); possible issues with odd bws?
-            
+    """
+    
     def save_MVs(self):
         """
             saves raw MVs as npy file
@@ -323,7 +349,7 @@ class OHW():
         self.PeakDetection.order_peaks()
                 
     def get_peaks(self):
-        return self.PeakDetection.Peaks, self.PeakDetection.hipeaks, self.PeakDetection.lopeaks
+        return self.ceval.get_peaks()
         
     def get_peakstatistics(self):
         self.PeakDetection.calc_peakstatistics()
@@ -354,6 +380,7 @@ class OHW():
         self.kinplot_options = kinplot_options
         #also change config to new value?
 
+    """ # moved to postproc
     def calc_TimeAveragedMotion(self):
         ''' calculates time averaged motion for abs. motion, x- and y-motion '''
         
@@ -368,6 +395,7 @@ class OHW():
         self.avg_MotionY = np.nanmean(absMotionY, axis = 0)
 
         self.max_avgMotion = np.max ([self.avg_absMotion, self.avg_MotionX, self.avg_MotionY]) # avg_absMotion should be enough
+    """
     
     def plot_TimeAveragedMotions(self, file_ext='.png'):
         plotfunctions.plot_TimeAveragedMotions(self, file_ext)
@@ -400,18 +428,6 @@ class OHW():
             print("no video loaded, can't reset ROI")
             return False
         self.analysis_meta["roi"] = None
-
-    
-    def createROIImageStack(self, r):
-        #r are coordinates of rectangular that was selected as ROI
-   #     print(r)
-        self.ROIImageStack = []
-        for idx in range(0, self.rawImageStack.shape[0]):
-            image_ROI = self.rawImageStack[idx][int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])]
-            self.ROIImageStack.append(image_ROI)
-        self.ROIImageStack = np.asarray(self.ROIImageStack)
-      #  self.ROIImageStack = [img[int(r[1]):int(r[1]+r[3]), int(r[0]):int(r[0]+r[2])] for img in self.rawImageStack.tolist()]
-      #  self.ROIImageStack = np.asarray(self.ROIImageStack)
             
 if __name__ == "__main__":
     OHW = OHW()
