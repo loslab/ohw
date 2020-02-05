@@ -172,14 +172,15 @@ class TabQuiver(QWidget):
             enable sliders/ plot if corresponding data is present
         """
         self.cohw = self.parent.cohw  #check if this works... looks good
+        self.ceval = self.cohw.ceval
         self.clear_heatmaps()
         self.clear_quivers()        
         
         # init heatmap part
-        if self.parent.cohw.analysis_meta["motion_calculated"]:
+        if self.cohw.analysis_meta["motion_calculated"]:
             self.btn_heatmap_vid.setEnabled(True)
             self.btn_heatmap_save.setEnabled(True)
-            self.slider_heatmaps.setMaximum(self.cohw.absMotions.shape[0]-1)
+            self.slider_heatmaps.setMaximum(self.ceval.absMotions.shape[0]-1)
             self.slider_heatmaps.setValue(0)
             self.slider_heatmaps.setEnabled(True)
             self.init_heatmaps()
@@ -190,10 +191,10 @@ class TabQuiver(QWidget):
             self.placeholder_heatmaps()
         
         # init quiver part
-        if self.parent.cohw.analysis_meta["has_MVs"] and self.parent.cohw.video_loaded:       
+        if self.parent.cohw.analysis_meta["has_MVs"] and self.cohw.video_loaded:       
             self.btn_quiver_save.setEnabled(True)
             self.btn_quivers_video.setEnabled(True)
-            self.slider_quiver.setMaximum(self.cohw.mean_absMotions.shape[0]-1)# or introduce new variable which counts the amount of motion timepoints
+            self.slider_quiver.setMaximum(self.ceval.mean_absMotions.shape[0]-1)# or introduce new variable which counts the amount of motion timepoints
             self.slider_quiver.setValue(0)
             self.slider_quiver.setEnabled(True)
             self.init_quivers()
@@ -205,8 +206,8 @@ class TabQuiver(QWidget):
     
     def init_heatmaps(self):
             
-        scale_max = helpfunctions.get_scale_maxMotion2(self.cohw.absMotions) #decide on which scale to use
-        self.imshow_heatmaps = self.ax_heatmaps.imshow(self.cohw.absMotions[0], 
+        scale_max = helpfunctions.get_scale_maxMotion2(self.ceval.absMotions) #decide on which scale to use
+        self.imshow_heatmaps = self.ax_heatmaps.imshow(self.ceval.absMotions[0], 
             vmin = 0, vmax = scale_max, cmap = 'jet', interpolation = 'bilinear')
 
         self.canvas_heatmaps.draw()
@@ -234,7 +235,7 @@ class TabQuiver(QWidget):
         blockwidth = self.cohw.analysis_meta["MV_parameters"]["blockwidth"]
         microns_per_px = self.cohw.videometa["microns_per_px"]
         scalingfactor = self.cohw.analysis_meta["scalingfactor"]
-        scale_max = helpfunctions.get_scale_maxMotion2(self.cohw.absMotions)
+        scale_max = helpfunctions.get_scale_maxMotion2(self.ceval.absMotions)
         
         skipquivers =  int(self.parent.config["DEFAULT QUIVER SETTINGS"]['quiver_density']) # store in ohw object!
         distance_between_arrows = blockwidth * skipquivers
@@ -249,10 +250,10 @@ class TabQuiver(QWidget):
                 self.cohw.analysisImageStack[0], cmap = "gray", 
                 vmin = self.cohw.videometa["Blackval"], vmax = self.cohw.videometa["Whiteval"])
         self.quiver_quivers = self.ax_quivers.quiver(
-                self.cohw.MotionCoordinatesX[qslice], 
-                self.cohw.MotionCoordinatesY[qslice], 
-                self.cohw.QuiverMotionX[0][qslice], 
-                self.cohw.QuiverMotionY[0][qslice], 
+                self.ceval.MotionCoordinatesX[qslice], 
+                self.ceval.MotionCoordinatesY[qslice], 
+                self.ceval.QuiverMotionX[0][qslice], 
+                self.ceval.QuiverMotionY[0][qslice], 
                 pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", 
                 scale = arrowscale, width = 3, headwidth = 2, headlength = 3) #adjust scale to max. movement   #width = blockwidth / 4?
 
@@ -283,12 +284,12 @@ class TabQuiver(QWidget):
     def updateQuiver(self, frame):
         #callback when slider is moved
         self.imshow_quivers.set_data(self.cohw.analysisImageStack[frame])    #introduce a displayImageStack here?
-        self.quiver_quivers.set_UVC(self.cohw.QuiverMotionX[frame][self.qslice], self.cohw.QuiverMotionY[frame][self.qslice])
+        self.quiver_quivers.set_UVC(self.ceval.QuiverMotionX[frame][self.qslice], self.ceval.QuiverMotionY[frame][self.qslice])
         self.canvas_quivers.draw()
         
     def updateHeatMap(self, frame):
         #callback when slider is moved
-        self.imshow_heatmaps.set_data(self.cohw.absMotions[frame])
+        self.imshow_heatmaps.set_data(self.ceval.absMotions[frame])
         self.canvas_heatmaps.draw()
     
     def updateQuiverBrightness(self,vmin,vmax):

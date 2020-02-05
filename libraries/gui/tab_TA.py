@@ -120,6 +120,7 @@ class TabTA(QWidget):
             set values from cohw
             enable save button if MVs are present
         """
+        self.ceval = self.parent.cohw.ceval
         if self.parent.cohw.analysis_meta["has_MVs"]:
             self.btn_save_TA.setEnabled(True)
             self.init_TAmotion()
@@ -128,13 +129,13 @@ class TabTA(QWidget):
             self.clear_figs()
 
     def init_TAmotion(self): 
-        max_motion = self.parent.cohw.max_avgMotion
+        max_motion = self.ceval.max_avgMotion
         
-        self.imshow_motion_total = self.ax_TA_tot.imshow(self.parent.cohw.avg_absMotion, 
+        self.imshow_motion_total = self.ax_TA_tot.imshow(self.ceval.avg_absMotion, 
             vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")
-        self.imshow_motion_x = self.ax_TA_x.imshow(self.parent.cohw.avg_MotionX, 
+        self.imshow_motion_x = self.ax_TA_x.imshow(self.ceval.avg_MotionX, 
             vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")
-        self.imshow_motion_y = self.ax_TA_y.imshow(self.parent.cohw.avg_MotionY, 
+        self.imshow_motion_y = self.ax_TA_y.imshow(self.ceval.avg_MotionY, 
             vmin = 0, vmax = max_motion, cmap="jet", interpolation="bilinear")
         
         self.canvas_TA_tot.draw()

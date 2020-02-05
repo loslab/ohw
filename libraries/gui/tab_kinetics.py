@@ -98,6 +98,7 @@ class TabKinetics(QWidget):
         self.button_detectPeaks.setMaximumWidth(300)
         self.button_saveKinPlot = QPushButton('Save graph as...')
         self.button_export_peaks = QPushButton('Save peak analysis')
+        self.btn_roi = QPushButton('Select subroi')
         
         self.btn_plot_settings = QPushButton('Change graph settings')
         self.button_detectPeaks.resize(self.button_detectPeaks.sizeHint())
@@ -107,7 +108,8 @@ class TabKinetics(QWidget):
         self.button_saveKinPlot.setEnabled(False)
         self.button_export_peaks.setEnabled(False)
         
-        self.button_detectPeaks.clicked.connect(self.on_detectPeaks)            
+        self.button_detectPeaks.clicked.connect(self.on_detectPeaks)
+        self.btn_roi.clicked.connect(self.on_roi)
         self.button_saveKinPlot.clicked.connect(self.on_saveKinPlot)
         self.button_export_peaks.clicked.connect(self.on_exportAnalysis)
         self.btn_plot_settings.clicked.connect(self.on_plotSettings)
@@ -122,6 +124,7 @@ class TabKinetics(QWidget):
         self.grid_overall.addWidget(self.label_neighbours,        2,0)
         self.grid_overall.addWidget(self.spinbox_neighbours, 2,1)
         self.grid_overall.addWidget(self.button_detectPeaks, 2,2)
+        self.grid_overall.addWidget(self.btn_roi, 2,3)
         self.grid_overall.addWidget(self.canvas_kinetics,    3,0,1,6)
         
         self.grid_overall.addWidget(self.label_max_contraction,   4,0)
@@ -225,6 +228,9 @@ class TabKinetics(QWidget):
         self.Peaks, self.hipeaks, self.lopeaks = self.cohw.get_peaks()
         self.plot_Peaks()
         self.updateStatistics()
+
+    def on_roi(self):
+        self.ceval.set_roi()
 
     def plot_Peaks(self):
         ''' clear old peaks and plot all self.hipeaks, self.lopeaks '''

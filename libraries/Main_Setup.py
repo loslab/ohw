@@ -99,8 +99,8 @@ class TableWidget(QWidget):
         self.tab_input.init_ohw()
         self.tab_motion.init_ohw()
         self.tab_kinetics.init_ohw()
-        #self.tab_TA.init_ohw()
-        #self.tab_quiver.init_ohw()
+        self.tab_TA.init_ohw()
+        self.tab_quiver.init_ohw()
         
     """
 ########### fill the ROI selection tab ###########
