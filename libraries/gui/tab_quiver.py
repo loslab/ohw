@@ -168,18 +168,18 @@ class TabQuiver(QWidget):
         
     def init_ohw(self):
         """
-            set values from current_ohw
+            set values from cohw
             enable sliders/ plot if corresponding data is present
         """
-        self.current_ohw = self.parent.current_ohw  #check if this works... looks good
+        self.cohw = self.parent.cohw  #check if this works... looks good
         self.clear_heatmaps()
         self.clear_quivers()        
         
         # init heatmap part
-        if self.parent.current_ohw.analysis_meta["motion_calculated"]:
+        if self.parent.cohw.analysis_meta["motion_calculated"]:
             self.btn_heatmap_vid.setEnabled(True)
             self.btn_heatmap_save.setEnabled(True)
-            self.slider_heatmaps.setMaximum(self.current_ohw.absMotions.shape[0]-1)
+            self.slider_heatmaps.setMaximum(self.cohw.absMotions.shape[0]-1)
             self.slider_heatmaps.setValue(0)
             self.slider_heatmaps.setEnabled(True)
             self.init_heatmaps()
@@ -190,10 +190,10 @@ class TabQuiver(QWidget):
             self.placeholder_heatmaps()
         
         # init quiver part
-        if self.parent.current_ohw.analysis_meta["has_MVs"] and self.parent.current_ohw.video_loaded:       
+        if self.parent.cohw.analysis_meta["has_MVs"] and self.parent.cohw.video_loaded:       
             self.btn_quiver_save.setEnabled(True)
             self.btn_quivers_video.setEnabled(True)
-            self.slider_quiver.setMaximum(self.current_ohw.mean_absMotions.shape[0]-1)# or introduce new variable which counts the amount of motion timepoints
+            self.slider_quiver.setMaximum(self.cohw.mean_absMotions.shape[0]-1)# or introduce new variable which counts the amount of motion timepoints
             self.slider_quiver.setValue(0)
             self.slider_quiver.setEnabled(True)
             self.init_quivers()
@@ -205,8 +205,8 @@ class TabQuiver(QWidget):
     
     def init_heatmaps(self):
             
-        scale_max = helpfunctions.get_scale_maxMotion2(self.current_ohw.absMotions) #decide on which scale to use
-        self.imshow_heatmaps = self.ax_heatmaps.imshow(self.current_ohw.absMotions[0], 
+        scale_max = helpfunctions.get_scale_maxMotion2(self.cohw.absMotions) #decide on which scale to use
+        self.imshow_heatmaps = self.ax_heatmaps.imshow(self.cohw.absMotions[0], 
             vmin = 0, vmax = scale_max, cmap = 'jet', interpolation = 'bilinear')
 
         self.canvas_heatmaps.draw()
@@ -231,28 +231,28 @@ class TabQuiver(QWidget):
     
     def init_quivers(self):
 
-        blockwidth = self.current_ohw.analysis_meta["MV_parameters"]["blockwidth"]
-        microns_per_px = self.current_ohw.videometa["microns_per_px"]
-        scalingfactor = self.current_ohw.analysis_meta["scalingfactor"]
-        scale_max = helpfunctions.get_scale_maxMotion2(self.current_ohw.absMotions)
+        blockwidth = self.cohw.analysis_meta["MV_parameters"]["blockwidth"]
+        microns_per_px = self.cohw.videometa["microns_per_px"]
+        scalingfactor = self.cohw.analysis_meta["scalingfactor"]
+        scale_max = helpfunctions.get_scale_maxMotion2(self.cohw.absMotions)
         
         skipquivers =  int(self.parent.config["DEFAULT QUIVER SETTINGS"]['quiver_density']) # store in ohw object!
         distance_between_arrows = blockwidth * skipquivers
         arrowscale = 1 / (distance_between_arrows / scale_max)
         
-        #self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.current_ohw.scaledImageStack.shape[2]-blockwidth/2, blockwidth)+1, np.arange(blockwidth/2, self.current_ohw.scaledImageStack.shape[1]-blockwidth/2+1, blockwidth))  #changed arange range, double check!
+        #self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.cohw.scaledImageStack.shape[2]-blockwidth/2, blockwidth)+1, np.arange(blockwidth/2, self.cohw.scaledImageStack.shape[1]-blockwidth/2+1, blockwidth))  #changed arange range, double check!
         
         self.qslice=(slice(None,None,skipquivers),slice(None,None,skipquivers))
         qslice = self.qslice
 
         self.imshow_quivers = self.ax_quivers.imshow(
-                self.current_ohw.analysisImageStack[0], cmap = "gray", 
-                vmin = self.current_ohw.videometa["Blackval"], vmax = self.current_ohw.videometa["Whiteval"])
+                self.cohw.analysisImageStack[0], cmap = "gray", 
+                vmin = self.cohw.videometa["Blackval"], vmax = self.cohw.videometa["Whiteval"])
         self.quiver_quivers = self.ax_quivers.quiver(
-                self.current_ohw.MotionCoordinatesX[qslice], 
-                self.current_ohw.MotionCoordinatesY[qslice], 
-                self.current_ohw.QuiverMotionX[0][qslice], 
-                self.current_ohw.QuiverMotionY[0][qslice], 
+                self.cohw.MotionCoordinatesX[qslice], 
+                self.cohw.MotionCoordinatesY[qslice], 
+                self.cohw.QuiverMotionX[0][qslice], 
+                self.cohw.QuiverMotionY[0][qslice], 
                 pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", 
                 scale = arrowscale, width = 3, headwidth = 2, headlength = 3) #adjust scale to max. movement   #width = blockwidth / 4?
 
@@ -270,25 +270,25 @@ class TabQuiver(QWidget):
         
     def slider_quiver_valueChanged(self): 
         frame = self.slider_quiver.value()
-        time = round(frame / self.current_ohw.videometa["fps"], 3)
+        time = round(frame / self.cohw.videometa["fps"], 3)
         self.updateQuiver(frame)
         self.label_quiver_result.setText('Quiverplot of frame ' + str(frame) + ' at t = ' + str(time) + ' s')
 
     def slider_heatmaps_valueChanged(self):
         frame = self.slider_heatmaps.value()
-        time = round(frame / self.current_ohw.videometa["fps"], 3)
+        time = round(frame / self.cohw.videometa["fps"], 3)
         self.updateHeatMap(frame)
         self.label_heatmap_result.setText('Heatmap of frame ' + str(frame) + ' at t = ' + str(time) + ' s')
 
     def updateQuiver(self, frame):
         #callback when slider is moved
-        self.imshow_quivers.set_data(self.current_ohw.analysisImageStack[frame])    #introduce a displayImageStack here?
-        self.quiver_quivers.set_UVC(self.current_ohw.QuiverMotionX[frame][self.qslice], self.current_ohw.QuiverMotionY[frame][self.qslice])
+        self.imshow_quivers.set_data(self.cohw.analysisImageStack[frame])    #introduce a displayImageStack here?
+        self.quiver_quivers.set_UVC(self.cohw.QuiverMotionX[frame][self.qslice], self.cohw.QuiverMotionY[frame][self.qslice])
         self.canvas_quivers.draw()
         
     def updateHeatMap(self, frame):
         #callback when slider is moved
-        self.imshow_heatmaps.set_data(self.current_ohw.absMotions[frame])
+        self.imshow_heatmaps.set_data(self.cohw.absMotions[frame])
         self.canvas_heatmaps.draw()
     
     def updateQuiverBrightness(self,vmin,vmax):
@@ -306,20 +306,20 @@ class TabQuiver(QWidget):
         """
         if self.quiver_settings['one_view']:
             #export one view quivers
-            save_quiver1_thread = self.current_ohw.save_quiver_thread(singleframe = False, skipquivers = int(self.quiver_settings['quiver_density']), t_cut=float(self.quiver_settings['video_length']))
+            save_quiver1_thread = self.cohw.save_quiver_thread(singleframe = False, skipquivers = int(self.quiver_settings['quiver_density']), t_cut=float(self.quiver_settings['video_length']))
             save_quiver1_thread.start()
             self.progressbar_quivers.setRange(0,0)
             save_quiver1_thread.finished.connect(self.finish_saveQuivervideo)
                           
         if self.quiver_settings['three_views']:
             #export three views quivers
-            save_quiver3_thread = self.current_ohw.save_quivervid3_thread(skipquivers = int(self.quiver_settings['quiver_density']), t_cut=float(self.quiver_settings['video_length']))
+            save_quiver3_thread = self.cohw.save_quivervid3_thread(skipquivers = int(self.quiver_settings['quiver_density']), t_cut=float(self.quiver_settings['video_length']))
             save_quiver3_thread.start()
             self.progressbar_quivers.setRange(0,0)
             save_quiver3_thread.finished.connect(self.finish_saveQuivervideo)
         """
         
-        save_quiver_thread = self.current_ohw.save_quiver3_thread(singleframe = False, skipquivers = 4)
+        save_quiver_thread = self.cohw.save_quiver3_thread(singleframe = False, skipquivers = 4)
         save_quiver_thread.start()
         self.progressbar_quivers.setRange(0,0)
         save_quiver_thread.finished.connect(self.finish_saveQuivervideo)
@@ -337,12 +337,12 @@ class TabQuiver(QWidget):
         #save the different views if chosen by the user
         if self.quiver_settings['one_view']:
 
-            self.current_ohw.save_quiver(singleframe = singleframe, skipquivers = int(self.quiver_settings['quiver_density']))
+            self.cohw.save_quiver(singleframe = singleframe, skipquivers = int(self.quiver_settings['quiver_density']))
         
         if self.quiver_settings['three_views']:
-            self.current_ohw.save_quivervid3(singleframe = singleframe, skipquivers = int(self.quiver_settings['quiver_density']))
+            self.cohw.save_quivervid3(singleframe = singleframe, skipquivers = int(self.quiver_settings['quiver_density']))
         """
-        self.current_ohw.save_quiver3(singleframe = singleframe)
+        self.cohw.save_quiver3(singleframe = singleframe)
         helpfunctions.msgbox(self, 'Quiver of frame ' + str(singleframe) + ' was saved successfully')
 
     def on_saveHeatmapvideo(self):
@@ -351,7 +351,7 @@ class TabQuiver(QWidget):
         """
         self.progressbar_heatmaps.setValue(0)
         
-        save_heatmap_thread = self.current_ohw.save_heatmap_thread(singleframe = False)
+        save_heatmap_thread = self.cohw.save_heatmap_thread(singleframe = False)
         save_heatmap_thread.start()
         self.progressbar_heatmaps.setRange(0,0)
         save_heatmap_thread.finished.connect(self.finish_saveHeatmapvideo)
@@ -366,5 +366,5 @@ class TabQuiver(QWidget):
             saves the selected frame (singleframe = framenumber)
         """
         singleframe=self.slider_heatmaps.value()
-        self.current_ohw.save_heatmap(singleframe = singleframe)
+        self.cohw.save_heatmap(singleframe = singleframe)
         helpfunctions.msgbox(self, 'Heatmap of frame ' + str(singleframe) + ' was saved successfully')        

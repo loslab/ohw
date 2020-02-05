@@ -13,6 +13,10 @@ class Postproc():
     # TODO: decide what happens if cohw = None
     
     def __init__(self, cohw, name=None):
+    
+        self.timeindex = None           # time index for 1D-representation
+        self.mean_absMotions = None     # for 1D-representation
+    
         self.filters = {"filter_singlemov":{"on":False, "par": "parval"}}
         self.roi = None
         self.PeakDetection = PeakDetection.PeakDetection()    # class which detects + saves peaks
@@ -116,6 +120,10 @@ class Postproc():
     # might be best to turn filters in future in class (derived from general filter class)?
     # only rudimental filter implementation so far
     
+    def get_filter(self):
+        ''' gets filterdict from current eval/postproc'''
+        return self.filters
+    
     def get_processpar(self):
         """ shows all filters and parameters"""
         print("set roi: ", self.roi)
@@ -131,6 +139,25 @@ class Postproc():
     
     def get_peaks(self):
         return self.PeakDetection.Peaks, self.PeakDetection.hipeaks, self.PeakDetection.lopeaks
+    
+    def set_peaks(self, Peaks):
+        ''' update with manually added/ deleted peaks '''
+
+        self.PeakDetection.set_peaks(Peaks)
+        self.order_peaks()  #leave here or move to separate module for better organization?
+
+    def detect_peaks(self, ratio, number_of_neighbours):
+        ''' automated peak detection in mean_absMotions'''
+
+        self.PeakDetection.detect_peaks(ratio, number_of_neighbours)
+        self.order_peaks()
+    
+    def order_peaks(self):
+        self.PeakDetection.order_peaks()
+    
+    def get_peakstatistics(self):
+        self.PeakDetection.calc_peakstatistics()
+        return self.PeakDetection.get_peakstatistics()
     
     def prepare_quiver_components(self):
         '''

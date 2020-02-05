@@ -170,16 +170,18 @@ class TabKinetics(QWidget):
         #    btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
     def init_ohw(self):
-        ''' set values from current_ohw '''
-        self.current_ohw = self.parent.current_ohw
-        self.timeindex = self.current_ohw.timeindex #easier to referene here...
-        self.motion = self.current_ohw.mean_absMotions
-        self.Peaks, self.hipeaks, self.lopeaks = self.current_ohw.get_peaks()
+        ''' set values from cohw '''
+        self.cohw = self.parent.cohw
+        self.ceval = self.cohw.ceval
         
-        self.kinplot_options = self.current_ohw.kinplot_options
+        self.timeindex = self.ceval.timeindex #easier to referene here...
+        self.motion = self.ceval.mean_absMotions
+        self.Peaks, self.hipeaks, self.lopeaks = self.ceval.get_peaks()
+        
+        self.kinplot_options = self.cohw.kinplot_options
         
         self.clear_fig()
-        if self.current_ohw.analysis_meta["has_MVs"]:    # change here to appropriate variable
+        if self.cohw.analysis_meta["has_MVs"]:    # change here to appropriate variable
             self.init_kinetics()
             self.button_detectPeaks.setEnabled(True)
             self.button_saveKinPlot.setEnabled(True)
@@ -219,8 +221,8 @@ class TabKinetics(QWidget):
         '''detect peaks and draw them as 'EKG' '''
         ratio = self.spinbox_ratio.value()
         number_of_neighbours = self.spinbox_neighbours.value()
-        self.current_ohw.detect_peaks(ratio, number_of_neighbours)
-        self.Peaks, self.hipeaks, self.lopeaks = self.current_ohw.get_peaks()
+        self.cohw.detect_peaks(ratio, number_of_neighbours)
+        self.Peaks, self.hipeaks, self.lopeaks = self.cohw.get_peaks()
         self.plot_Peaks()
         self.updateStatistics()
 
@@ -232,7 +234,7 @@ class TabKinetics(QWidget):
             for marker in self.marker:
                 marker.remove()
 
-        self.Peaks, self.hipeaks, self.lopeaks = self.current_ohw.get_peaks()
+        self.Peaks, self.hipeaks, self.lopeaks = self.cohw.get_peaks()
         himarker, lomarker = [],[]
         self.markerpeaks = []
         
@@ -249,12 +251,12 @@ class TabKinetics(QWidget):
         self.canvas_kinetics.draw()
     
     def update_Peaks(self):
-        ''' update manually changed Peaks with current_ohw '''
-        self.current_ohw.set_peaks(self.Peaks)
+        ''' update manually changed Peaks with cohw '''
+        self.cohw.set_peaks(self.Peaks)
         self.updateStatistics()
     
     def updateStatistics(self):
-        peakstatistics = self.current_ohw.get_peakstatistics()
+        peakstatistics = self.cohw.get_peakstatistics()
         text_contraction = str(peakstatistics["max_contraction"]) + ' +- ' + str(peakstatistics["max_contraction_std"]) +  u' \xb5m/s'
         text_relaxation = str(peakstatistics["max_relaxation"]) + ' +- ' + str(peakstatistics["max_relaxation_std"]) +  u' \xb5m/s'
         text_time_contraction = str(peakstatistics["contraction_interval_mean"]) + ' +- ' + str(peakstatistics["contraction_interval_std"]) + ' s'
@@ -383,22 +385,22 @@ class TabKinetics(QWidget):
         
         file_types = "PNG (*.png);;JPEG (*.jpeg);;TIFF (*.tiff);;BMP(*.bmp);; Scalable Vector Graphics (*.svg)"
         #let the user choose a folder from the starting path
-        path = str(pathlib.PureWindowsPath(self.current_ohw.analysis_meta["results_folder"] / 'beating_kinetics.PNG'))
+        path = str(pathlib.PureWindowsPath(self.cohw.analysis_meta["results_folder"] / 'beating_kinetics.PNG'))
         filename = QFileDialog.getSaveFileName(None, 'Choose a folder and enter a filename', path, file_types)[0]
 
         if (filename == ''): # if 'cancel' was pressed:
             return
 
-        self.current_ohw.plot_beatingKinetics(filename) # move mark_peaks into kinplot_options
+        self.cohw.plot_beatingKinetics(filename) # move mark_peaks into kinplot_options
         helpfunctions.msgbox(self, 'Plot was saved successfully.')
 
     def on_exportAnalysis(self):
-        self.current_ohw.export_analysis()
+        self.cohw.export_analysis()
         helpfunctions.msgbox(self, 'analyzed Peaks were saved successfully.')
 
     def update_plotsettings(self):
         ''' updates plot appearence after plotoptions like axis extent changed '''
-        self.current_ohw.set_kinplot_options(self.kinplot_options)
+        self.cohw.set_kinplot_options(self.kinplot_options)
         if self.kinplot_options["tmax"] != None:
             self.ax_kinetics.set_xlim(right = self.kinplot_options["tmax"])
         else:

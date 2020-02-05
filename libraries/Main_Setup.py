@@ -31,7 +31,7 @@ class TableWidget(QWidget):
 
         #read config file
         self.config = helpfunctions.read_config()
-        self.current_ohw = OHW.OHW()
+        self.cohw = OHW.OHW()
         
         self.layout = QGridLayout(self)
  
@@ -85,8 +85,13 @@ class TableWidget(QWidget):
             self.quiver_settings[item] = self.config.getfloat(section='DEFAULT QUIVER SETTINGS', option=item)
 
     def close_Window(self):
-        ''' called by closing event'''
-        self.current_ohw.save_ohw() #save on exit (MVs should be automatically saved, peaks might have changed)
+        ''' 
+            called by closing event
+            save analysis on exit (MVs should be already automatically saved,
+            peaks might have changed)
+        '''
+        #self.cohw.save_ohw()
+        pass
         
     def init_ohw(self):
         ''' init tabs to changed ohw '''
@@ -94,8 +99,8 @@ class TableWidget(QWidget):
         self.tab_input.init_ohw()
         self.tab_motion.init_ohw()
         self.tab_kinetics.init_ohw()
-        self.tab_TA.init_ohw()
-        self.tab_quiver.init_ohw()
+        #self.tab_TA.init_ohw()
+        #self.tab_quiver.init_ohw()
         
     """
 ########### fill the ROI selection tab ###########
@@ -164,7 +169,7 @@ class TableWidget(QWidget):
         self.ROI_names[ROI_nr] = new_name
         
         #change the resultsfolder name in the corresponding ROI_OHW
-        self.ROI_OHWs[ROI_nr].results_folder = self.current_ohw.results_folder.joinpath(self.ROI_names[ROI_nr])
+        self.ROI_OHWs[ROI_nr].results_folder = self.cohw.results_folder.joinpath(self.ROI_names[ROI_nr])
         
         #change the items in all the comboboxes, first item is the full image 
         self.ekg_combobox.setItemText(ROI_nr+1,         new_name)
@@ -174,15 +179,15 @@ class TableWidget(QWidget):
     def on_chooseROI(self, current_index):
         ''' choose a ROI for displaying and analyzing results in beating_kinetics, heatmaps and quiverplots '''
         if current_index == 0:
-            self.current_ohw = self.current_ohw
+            self.cohw = self.cohw
         #self.current_ROI is specified as ROI_nr, index in self.ROI_OHWs!
         else:
             self.current_ROI_idx = current_index-1
-            self.current_ohw = self.ROI_OHWs[self.current_ROI_idx]
+            self.cohw = self.ROI_OHWs[self.current_ROI_idx]
             print(self.ROI_names[self.current_ROI_idx])
         
         if self.sender() == self.ekg_combobox:
-            self.current_ohw.initialize_calculatedMVs()
+            self.cohw.initialize_calculatedMVs()
             self.initialize_kinetics()
         
         elif self.sender() == self.advanced_combobox:
@@ -200,7 +205,7 @@ class TableWidget(QWidget):
         widget_height = self.frameSize().height()
         
         #take the first image of rawImageStack and scale to fit on display
-        img = cv2.cvtColor(self.current_ohw.rawImageStack[0], cv2.COLOR_GRAY2RGB)      
+        img = cv2.cvtColor(self.cohw.rawImageStack[0], cv2.COLOR_GRAY2RGB)      
         hpercent = (widget_height / float(img.shape[1]))
         wsize = int((float(img.shape[0]) * float(hpercent)))
         image_scaled = cv2.resize(img, (wsize, widget_height))
@@ -241,9 +246,9 @@ class TableWidget(QWidget):
         self.ROI_OHWs = []
         for nr_ROI in range(0, len(self.ROI_coordinates)):
             #create new OHW object for each ROI
-            current_ROI_OHW = copy.deepcopy(self.current_ohw)
+            current_ROI_OHW = copy.deepcopy(self.cohw)
             #create new subfolder for storing ROI analysis
-            current_ROI_OHW.results_folder = self.current_ohw.results_folder.joinpath(self.ROI_names[nr_ROI])
+            current_ROI_OHW.results_folder = self.cohw.results_folder.joinpath(self.ROI_names[nr_ROI])
             #mark as ROI_OHW
             current_ROI_OHW.isROI_OHW = True
             current_ROI_OHW.createROIImageStack(self.ROI_coordinates[nr_ROI])
@@ -269,17 +274,17 @@ class TableWidget(QWidget):
            
             print('Start Analysis for folder %s:' %folder)
         #### perform analysis for one folder:
-            current_ohw = OHW.OHW()
+            cohw = OHW.OHW()
             
             # create a subfolder for the results 
            # save_subfolder = self.results_folder_batch / folder.split('/')[-1]
             save_subfolder = str(pathlib.PureWindowsPath(self.results_folder_batch)) + '/' + folder.split('/')[-1] #+ '/results'
             if not os.path.exists(str(save_subfolder)):
                 os.makedirs(str(save_subfolder))
-            current_ohw.results_folder = save_subfolder
+            cohw.results_folder = save_subfolder
 
             # read data
-            current_ohw.read_imagestack(folder)
+            cohw.read_imagestack(folder)
             print('    ... finished reading data.')
             #progress signal for finishing reading data
             if progressSignal != None:
@@ -288,15 +293,15 @@ class TableWidget(QWidget):
                 
             # scale data if desired
             if self.batch_scaling_status == True:
-                current_ohw.scale_ImageStack()
+                cohw.scale_ImageStack()
             else:
-              #  current_ohw.scale_ImageStack(current_ohw.rawImageStack.shape[0][1])   # too hacky, refactor...
-                if current_ohw.ROIImageStack is not None:
-                    current_ohw.scale_ImageStack(current_ohw.ROIImageStack.shape[1], current_ohw.ROIImageStack[2])
+              #  cohw.scale_ImageStack(cohw.rawImageStack.shape[0][1])   # too hacky, refactor...
+                if cohw.ROIImageStack is not None:
+                    cohw.scale_ImageStack(cohw.ROIImageStack.shape[1], cohw.ROIImageStack[2])
                 else: 
-                    current_ohw.scale_ImageStack(current_ohw.rawImageStack.shape[1], current_ohw.rawImageStack[2])     
+                    cohw.scale_ImageStack(cohw.rawImageStack.shape[1], cohw.rawImageStack[2])     
             # calculate MVs
-            current_ohw.calculate_MVs(blockwidth=self.blockwidth_batch, delay=self.delay_batch, max_shift=self.maxShift_batch)
+            cohw.calculate_MVs(blockwidth=self.blockwidth_batch, delay=self.delay_batch, max_shift=self.maxShift_batch)
             print('    ... finished calculating motion vectors.')
             #progress signal for finishing calc MVs
             if progressSignal != None:
@@ -305,12 +310,12 @@ class TableWidget(QWidget):
          
             # plot beating kinetics
             current_filename = str(save_subfolder) +'/' + 'beating_kinetics.png'
-            current_ohw.plot_beatingKinetics(filename=current_filename, keyword='batch')
+            cohw.plot_beatingKinetics(filename=current_filename, keyword='batch')
             print('    ... finished plotting beating kinetics.')
             
             # create heatmap video if chosen by user
             if self.batch_heatmap_status == True:
-                current_ohw.save_heatmap(subfolder=pathlib.Path(save_subfolder), keyword='batch')
+                cohw.save_heatmap(subfolder=pathlib.Path(save_subfolder), keyword='batch')
                 print('    ... finished saving heatmaps.')
             #progress signal for finishing heatmap data
                 if progressSignal != None:
@@ -319,7 +324,7 @@ class TableWidget(QWidget):
 
             # create quiver video if chosen by user
             if self.batch_quiver_status == True:
-                current_ohw.save_quiver(subfolder=pathlib.Path(save_subfolder), keyword='batch')
+                cohw.save_quiver(subfolder=pathlib.Path(save_subfolder), keyword='batch')
                 print('    ... finished saving quivers.')
                 #progress signal for finishing quiver data
                 if progressSignal != None:
@@ -337,7 +342,7 @@ class TableWidget(QWidget):
         ax_ROI.add_patch(frame)
         
         # canvas_ROI.drawRectangle([0,0, ROI.shape[1], ROI.shape[0]])
-        imshow_ROI = ax_ROI.imshow(ROI, cmap = 'gray', vmin = self.current_ohw.videometa["Blackval"], vmax = self.current_ohw.videometa["Whiteval"])
+        imshow_ROI = ax_ROI.imshow(ROI, cmap = 'gray', vmin = self.cohw.videometa["Blackval"], vmax = self.cohw.videometa["Whiteval"])
 
 #        #adapt size
 #        fig_size = plt.rcParams["figure.figsize"]
@@ -358,7 +363,7 @@ class TableWidget(QWidget):
         #calculate maximum video length
         # del self.quiver_settings['video_length']
         self.quiver_settings['video_length'] = str(
-            1/self.current_ohw.videometa["fps"] * self.current_ohw.absMotions.shape[0])
+            1/self.cohw.videometa["fps"] * self.cohw.absMotions.shape[0])
 
         # open new window and let user change export settings
         self.settingsWindow = QuiverExportOptions.QuiverExportOptions(prevSettings = self.quiver_settings)

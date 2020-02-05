@@ -19,25 +19,22 @@ class OHW():
     def __init__(self):
         
         self.rawImageStack = None       # array for raw imported imagestack
-        #ImageStack = None      # array for ROIs
         self.rawMVs = None              # array for raw motion vectors (MVs)
         self.unitMVs = None             # MVs in correct unit (microns)
-
-        #self.MV_parameters = None       # dict for MV parameters
         
         # bundle these parameters in dict?
-        self.absMotions = None          # absolulte motions, either from MVs or from intensity
-        self.mean_absMotions = None     # for 1D-representation
+        #self.absMotions = None          # absolulte motions, either from MVs or from intensity
+        #self.mean_absMotions = None     # for 1D-representation
         self.avg_absMotion = None       # time averaged absolute motion
         self.avg_MotionX = None         # time averaged x-motion
         self.avg_MotionY = None         # time averaged y-motion
         self.max_avgMotion = None       # maximum of time averaged motions
-        self.timeindex = None           # time index for 1D-representation
+        #self.timeindex = None           # time index for 1D-representation
 
-        self.postprocs = {"post1":postproc.Postproc(cohw=self, name="post1")}
+        self.postprocs = {"post1":postproc.Postproc(cohw=self, name="post1")} # rename to evals?
         self.set_ceval("post1")
         
-        # move to postproc
+        # moved to postproc
         #self.PeakDetection = PeakDetection.PeakDetection()    # class which detects + saves peaks
         self.video_loaded = False       # tells state if video is connected to ohw-objecet
        
@@ -179,7 +176,7 @@ class OHW():
             self.rawMVs = OFlowCalc.BM_stack(self.analysisImageStack, 
                 progressSignal = progressSignal, **parameters)
             self.analysis_meta["has_MVs"], self.analysis_meta["motion_calculated"] = True, True
-            self.set_filter('None') # init to no filter after calculation
+            #self.set_filter('None') # init to no filter after calculation
 
         elif method == 'GF':
             pass
@@ -194,15 +191,29 @@ class OHW():
             self.calculate_motion, emit_progSignal=True, **parameters)
         return self.thread_calculate_motion 
     
+    def set_filter(self, filtername = "", on = False, **filterparameters):
+        ''' sets specified filtername on/ off + parameters '''
+        # TODO: better error handling if filter does not exist (what's the best way?)
+        self.ceval.set_filter(filtername, on, **filterparameters)
+    
+    def get_filter(self):
+        ''' gets filterdict from current eval/postproc'''
+        return self.ceval.get_filter()
+    
+    """
     def set_filter(self, filter = 'None'):
+        '''
+            sets filter
+        '''
         self.analysis_meta['filter'] = filter
+    """
     
     def set_ceval(self, eval_name):
         '''
             sets active postprocess/ current evaluation for use in viewing/ interaction
             active postprocess = ceval (current evaluation) with name ceval_name
         '''
-        # TODO: check if name exists in all postprocs
+        # TODO: check if name exists in postproc dict
         
         self.ceval_name = eval_name # rename ceval_name to sth shorter!
         self.ceval = self.postprocs[self.ceval_name]
@@ -336,24 +347,23 @@ class OHW():
     
     def set_peaks(self, Peaks):
         ''' update with manually added/ deleted peaks '''
-        self.PeakDetection.set_peaks(Peaks)
-        self.order_peaks()
+        self.ceval.set_peaks(Peaks)
     
     def detect_peaks(self, ratio, number_of_neighbours):
         ''' automated peak detection in mean_absMotions'''
-
-        self.PeakDetection.detect_peaks(ratio, number_of_neighbours)
-        self.order_peaks()
+        self.ceval.detect_peaks(ratio, number_of_neighbours)
     
+    # moved to postproc
+    """
     def order_peaks(self):
         self.PeakDetection.order_peaks()
-                
+    """
+       
     def get_peaks(self):
         return self.ceval.get_peaks()
         
     def get_peakstatistics(self):
-        self.PeakDetection.calc_peakstatistics()
-        return self.PeakDetection.get_peakstatistics()
+        return self.ceval.get_peakstatistics()
     
     def export_analysis(self):
         self.PeakDetection.export_analysis(self.analysis_meta["results_folder"])

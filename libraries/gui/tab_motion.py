@@ -139,15 +139,15 @@ class TabMotion(QWidget):
         self.grid_overall.addWidget(self.btn_succeed_MVs, 11,0,1,4)
         
     def init_ohw(self):
-        ''' set values from current_ohw '''
-        self.current_ohw = self.parent.current_ohw
+        ''' set values from cohw '''
+        self.cohw = self.parent.cohw
         
-        if self.current_ohw.video_loaded:
+        if self.cohw.video_loaded:
             self.btn_getMVs.setEnabled(True)
         else:
             self.btn_getMVs.setEnabled(False)    
         
-        if self.current_ohw.analysis_meta["has_MVs"]:    # change here to appropriate variable
+        if self.cohw.analysis_meta["has_MVs"]:    # change here to appropriate variable
             self.btn_succeed_MVs.setStyleSheet("background-color: YellowGreen")
             self.btn_succeed_MVs.setText("Motion available")
             self.btn_save_MVs.setEnabled(True)
@@ -161,8 +161,8 @@ class TabMotion(QWidget):
         self.btn_getMVs.setEnabled(False)
         
         #get current parameters entered by user
-        self.current_ohw.videometa['fps'] = float(self.parent.tab_input.edit_fps.text())
-        self.current_ohw.videometa['microns_per_px'] = float(self.parent.tab_input.edit_mpp.text())
+        self.cohw.videometa['fps'] = float(self.parent.tab_input.edit_fps.text())
+        self.cohw.videometa['microns_per_px'] = float(self.parent.tab_input.edit_mpp.text())
         
         blockwidth = self.spinbox_blockwidth.value()
         maxShift = self.spinbox_maxShift.value()
@@ -192,17 +192,16 @@ class TabMotion(QWidget):
                     #cal_MVs_thread.finished.connect(self.initialize_calculatedMVs)
     
 #            #always calculate the full image
-            self.current_ohw.scale_ImageStack(self.current_ohw.rawImageStack.shape[1], self.current_ohw.rawImageStack.shape[2])     
+            self.cohw.scale_ImageStack(self.cohw.rawImageStack.shape[1], self.cohw.rawImageStack.shape[2])     
         '''
         
-        self.current_ohw.set_analysisImageStack(px_longest = px_longest) # scale + set roi, , roi=[0,0,500,500]
-        #self.current_ohw.analysis_meta["scaling_status"] = scaling_status # do not set directly on instance, implement method!
-        #self.current_ohw.analysis_meta["filter_status"] = filter_status
+        self.cohw.set_analysisImageStack(px_longest = px_longest) # scale + set roi, , roi=[0,0,500,500]
+        #self.cohw.analysis_meta["scaling_status"] = scaling_status # do not set directly on instance, implement method!
+        #self.cohw.analysis_meta["filter_status"] = filter_status
         if filter_status == True:
-            self.current_ohw.set_filter(filter = 'filter_singlemov')
-        
-        
-        calculate_motion_thread = self.current_ohw.calculate_motion_thread(
+            self.cohw.set_filter(filter = 'filter_singlemov', on = True)
+
+        calculate_motion_thread = self.cohw.calculate_motion_thread(
             blockwidth = blockwidth, delay = delay, max_shift = maxShift, canny = canny_status)
         calculate_motion_thread.start()
         calculate_motion_thread.progressSignal.connect(self.updateMVProgressBar)
@@ -210,11 +209,10 @@ class TabMotion(QWidget):
 
     def finish_motion(self):
         # saves ohw_object when calculation is done and other general results
-        self.current_ohw.init_motion()
+        self.cohw.init_motion()
         self.parent.init_ohw()
         
-        self.current_ohw.save_ohw()
-        #self.current_ohw.plot_TimeAveragedMotions('.png') #not really necessary
+        # self.cohw.save_ohw()
         
     def on_load_ohw(self):
         """
@@ -227,12 +225,12 @@ class TabMotion(QWidget):
             "ohw_analysis (*.pickle)")[0]
         if (pickle_file == ''):
             return
-        self.parent.current_ohw.save_ohw()
-        self.parent.current_ohw = OHW.OHW()    # creates new instance here
-        self.current_ohw = self.parent.current_ohw # is not passed to parent automatically!
-        self.current_ohw.load_ohw(pickle_file)
+        self.parent.cohw.save_ohw()
+        self.parent.cohw = OHW.OHW()    # creates new instance here
+        self.cohw = self.parent.cohw # is not passed to parent automatically!
+        self.cohw.load_ohw(pickle_file)
 
-        #self.current_ohw.init_motion() # is already done in load_ohw
+        #self.cohw.init_motion() # is already done in load_ohw
         self.parent.init_ohw()
         
         self.set_motion_param() # or move to init_ohw?
@@ -242,23 +240,25 @@ class TabMotion(QWidget):
 
     def on_saveMVs(self):
         ''' saves raw MVs to results folder '''
-        self.current_ohw.save_MVs()
+        self.cohw.save_MVs()
         helpfunctions.msgbox(self, 'Motion vectors were successfully saved')
         
     def set_motion_param(self):
         ''' sets values in gui from loaded ohw-file '''
-        self.spinbox_blockwidth.setValue(self.current_ohw.analysis_meta["MV_parameters"]["blockwidth"])
-        self.spinbox_delay.setValue(self.current_ohw.analysis_meta["MV_parameters"]["delay"])
-        self.spinbox_maxShift.setValue(self.current_ohw.analysis_meta["MV_parameters"]["max_shift"])
+        self.spinbox_blockwidth.setValue(self.cohw.analysis_meta["MV_parameters"]["blockwidth"])
+        self.spinbox_delay.setValue(self.cohw.analysis_meta["MV_parameters"]["delay"])
+        self.spinbox_maxShift.setValue(self.cohw.analysis_meta["MV_parameters"]["max_shift"])
         
-        self.check_canny.setChecked(self.current_ohw.analysis_meta["MV_parameters"]["canny"])
+        self.check_canny.setChecked(self.cohw.analysis_meta["MV_parameters"]["canny"])
         
-        if self.current_ohw.analysis_meta["filter"] == 'filter_singlemov':  #  to be replaced with other filter types
+        
+        if self.cohw.get_filter()["filter_singlemov"]["on"] == True: # definitely to be improved
+        #if self.cohw.analysis_meta["filter"] == 'filter_singlemov':  #  to be replaced with other filter types
             self.check_filter.setChecked(True)
         else:
             self.check_filter.setChecked(False)
         
-        if self.current_ohw.analysis_meta["px_longest"] == 1024:
+        if self.cohw.analysis_meta["px_longest"] == 1024:
             self.check_scaling.setChecked(True)
         else: 
             self.check_scaling.setChecked(False)

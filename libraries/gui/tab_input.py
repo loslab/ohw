@@ -193,12 +193,12 @@ class TabInput(QWidget):
         helpfunctions.save_config(self.parent.config)
 
         # create OHW object to work with motion vectors
-        self.parent.current_ohw.save_ohw() #save old ohw when loading new file
-        self.parent.current_ohw = OHW.OHW()
-        self.current_ohw = self.parent.current_ohw
+        self.parent.cohw.save_ohw() #save old ohw when loading new file
+        self.parent.cohw = OHW.OHW()
+        self.cohw = self.parent.cohw
         
         #read imagestack
-        self.import_video_thread = self.current_ohw.import_video_thread(inputpath)
+        self.import_video_thread = self.cohw.import_video_thread(inputpath)
         self.import_video_thread.start()
         self.progressbar_loadVideo.setRange(0,0)
         self.import_video_thread.finished.connect(self.finish_loadVideo)
@@ -207,15 +207,15 @@ class TabInput(QWidget):
         self.progressbar_loadVideo.setRange(0,1)
         self.progressbar_loadVideo.setValue(1)
         self.parent.init_ohw()
-        #update videoinfos with data from current_ohw
+        #update videoinfos with data from cohw
 
     def on_reloadVideo(self):
         """
-            reloads video files into current_ohw
+            reloads video files into cohw
             e.g. when analysis file is opened
         """
         self.progressbar_loadVideo.setValue(0)            
-        self.reload_video_thread = self.current_ohw.reload_video_thread()
+        self.reload_video_thread = self.cohw.reload_video_thread()
         self.reload_video_thread.start()
         self.progressbar_loadVideo.setRange(0,0)
         self.reload_video_thread.finished.connect(self.finish_reloadVideo)
@@ -223,20 +223,20 @@ class TabInput(QWidget):
     def on_changeResultsfolder(self):
         #choose a folder
         msg = 'Choose a new folder for saving your results'
-        folderName = UserDialogs.chooseFolderByUser(msg, input_folder=self.current_ohw.analysis_meta['results_folder'])#, input_folder=self.config['LAST SESSION']['results_folder'])  
+        folderName = UserDialogs.chooseFolderByUser(msg, input_folder=self.cohw.analysis_meta['results_folder'])#, input_folder=self.config['LAST SESSION']['results_folder'])  
         
         #if 'cancel' was pressed: simply do nothing and wait for user to click another button
         if (folderName == ''):
             return
         
-        self.current_ohw.analysis_meta["results_folder"] = pathlib.Path(folderName)
+        self.cohw.analysis_meta["results_folder"] = pathlib.Path(folderName)
         self.label_results_folder.setText(folderName)
         # print('New results folder: %s' %folderName)
         
     def finish_reloadVideo(self):
         self.progressbar_loadVideo.setRange(0,1)
         self.progressbar_loadVideo.setValue(1)
-        self.current_ohw.set_analysisImageStack(px_longest = self.current_ohw.analysis_meta["px_longest"])
+        self.cohw.set_analysisImageStack(px_longest = self.cohw.analysis_meta["px_longest"])
         self.parent.init_ohw()
         
     def init_ohw(self): #was update_tab_input
@@ -244,14 +244,14 @@ class TabInput(QWidget):
             updates info displayed in inputtab
             -> loading of new video or loading of analysis file
         """
-        self.current_ohw = self.parent.current_ohw
-        self.edit_fps.setText(str(self.current_ohw.videometa['fps']))
-        self.edit_mpp.setText(str(self.current_ohw.videometa['microns_per_px']))            
-        # disable input field if videoinfos.txt available? if self.current_ohw.videometa['infofile_exists'] == True: ....
+        self.cohw = self.parent.cohw
+        self.edit_fps.setText(str(self.cohw.videometa['fps']))
+        self.edit_mpp.setText(str(self.cohw.videometa['microns_per_px']))            
+        # disable input field if videoinfos.txt available? if self.cohw.videometa['infofile_exists'] == True: ....
         
         # check if video is loaded and update controls
-        if self.current_ohw.video_loaded == True:
-            self.display_firstImage(self.current_ohw.videometa["prev800px"])
+        if self.cohw.video_loaded == True:
+            self.display_firstImage(self.cohw.videometa["prev800px"])
             self.slider_blackval.setEnabled(True)
             self.slider_whiteval.setEnabled(True)
             self.btn_brightness.setEnabled(True)
@@ -269,10 +269,10 @@ class TabInput(QWidget):
             self.btn_selROI.setEnabled(False)
             self.btn_resetROI.setEnabled(False)
         
-        inputpath = str(self.current_ohw.videometa['inputpath'])
+        inputpath = str(self.cohw.videometa['inputpath'])
         self.label_input_path.setText(inputpath)
         
-        results_folder = str(self.current_ohw.analysis_meta['results_folder']) #pathlib.PureWindowsPath(
+        results_folder = str(self.cohw.analysis_meta['results_folder']) #pathlib.PureWindowsPath(
         self.label_results_folder.setText(results_folder)
         self.btn_results_folder.setEnabled(True)
     
@@ -281,8 +281,8 @@ class TabInput(QWidget):
         self.ax_firstIm.axis('off')
         # display first image and update controls
         if type(image) == np.ndarray:
-            #print(self.current_ohw.videometa["Blackval"], self.current_ohw.videometa["Whiteval"])
-            self.imshow_firstImage = self.ax_firstIm.imshow(image, cmap = 'gray', vmin = self.current_ohw.videometa["Blackval"], vmax = self.current_ohw.videometa["Whiteval"])
+            #print(self.cohw.videometa["Blackval"], self.cohw.videometa["Whiteval"])
+            self.imshow_firstImage = self.ax_firstIm.imshow(image, cmap = 'gray', vmin = self.cohw.videometa["Blackval"], vmax = self.cohw.videometa["Whiteval"])
         else:
             self.ax_firstIm.text(0.5, 0.5,'no video loaded yet',
                 size=14, ha='center', va='center', backgroundcolor='indianred', color='w')
@@ -295,10 +295,10 @@ class TabInput(QWidget):
         """
      
         # save the new value to videometa
-        self.current_ohw.videometa["Blackval"] = self.slider_blackval.value()
+        self.cohw.videometa["Blackval"] = self.slider_blackval.value()
 
         # set allowed whitevals and blackvals           
-        self.slider_whiteval.setMinimum(self.current_ohw.videometa["Blackval"])            
+        self.slider_whiteval.setMinimum(self.cohw.videometa["Blackval"])            
         self.update_brightness()
 
     def on_change_whiteVal(self):          
@@ -306,56 +306,56 @@ class TabInput(QWidget):
             change the white values for image display
         """
         # save the new value to videometa
-        self.current_ohw.videometa["Whiteval"] = self.slider_whiteval.value()
+        self.cohw.videometa["Whiteval"] = self.slider_whiteval.value()
 
         # set allowed whitevals and blackvals           
-        self.slider_blackval.setMaximum(self.current_ohw.videometa["Whiteval"])            
+        self.slider_blackval.setMaximum(self.cohw.videometa["Whiteval"])            
         self.update_brightness()
 
     def on_resetBrightness(self):
         """ resets the image display back to the original values
         """
-        self.current_ohw.videometa["Blackval"] = self.current_ohw.raw_videometa["Blackval"]
-        self.current_ohw.videometa["Whiteval"] = self.current_ohw.raw_videometa["Whiteval"]
+        self.cohw.videometa["Blackval"] = self.cohw.raw_videometa["Blackval"]
+        self.cohw.videometa["Whiteval"] = self.cohw.raw_videometa["Whiteval"]
         
         self.set_start_brightness()
         self.update_brightness()
 
     #def on_change_fps(self):
-    #    self.current_ohw.videometa['fps'] = float(self.edit_fps.text())
+    #    self.cohw.videometa['fps'] = float(self.edit_fps.text())
     
     #def on_change_mpp(self):
-    #    self.current_ohw.videometa['microns_per_px'] = float(self.edit_mpp.text())
+    #    self.cohw.videometa['microns_per_px'] = float(self.edit_mpp.text())
 
     def on_selROI(self):
         """
             opens cv2 window where roi can be selected
         """
-        self.current_ohw.selROI()      
+        self.cohw.selROI()      
         # show error if False is returned (?)
     
     def on_resetROI(self):
         """ resets ROI to original image dimensions)
         """
-        self.current_ohw.resetROI()
+        self.cohw.resetROI()
         
         
     def update_brightness(self):
-        vmin, vmax = self.current_ohw.videometa["Blackval"], self.current_ohw.videometa["Whiteval"]
+        vmin, vmax = self.cohw.videometa["Blackval"], self.cohw.videometa["Whiteval"]
         self.imshow_firstImage.set_clim(vmin=vmin, vmax=vmax)
         self.canvas_firstImage.draw()
         
-        if (self.current_ohw.video_loaded and self.current_ohw.analysis_meta["has_MVs"]):
+        if (self.cohw.video_loaded and self.cohw.analysis_meta["has_MVs"]):
             self.parent.tab_quiver.updateQuiverBrightness(vmin=vmin, vmax=vmax) # how can this be done in a nice way?
             
     def set_start_brightness(self):
         ''' set brightness sliders to raw values '''
         self.slider_whiteval.blockSignals(True)# prevent calling on_change_whiteVal/blackVal
         self.slider_blackval.blockSignals(True)
-        self.slider_whiteval.setMaximum(self.current_ohw.videometa["Whiteval"]*3)
-        self.slider_blackval.setMaximum(self.current_ohw.videometa["Whiteval"])      
-        self.slider_whiteval.setValue(self.current_ohw.videometa["Whiteval"])
-        self.slider_blackval.setValue(self.current_ohw.videometa["Blackval"])
-        self.slider_whiteval.setMinimum(self.current_ohw.videometa["Blackval"])
+        self.slider_whiteval.setMaximum(self.cohw.videometa["Whiteval"]*3)
+        self.slider_blackval.setMaximum(self.cohw.videometa["Whiteval"])      
+        self.slider_whiteval.setValue(self.cohw.videometa["Whiteval"])
+        self.slider_blackval.setValue(self.cohw.videometa["Blackval"])
+        self.slider_whiteval.setMinimum(self.cohw.videometa["Blackval"])
         self.slider_whiteval.blockSignals(False)
         self.slider_blackval.blockSignals(False)
