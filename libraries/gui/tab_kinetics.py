@@ -231,6 +231,8 @@ class TabKinetics(QWidget):
 
     def on_roi(self):
         self.ceval.set_roi()
+        self.ceval.process()
+        self.parent.init_ohw()
 
     def plot_Peaks(self):
         ''' clear old peaks and plot all self.hipeaks, self.lopeaks '''

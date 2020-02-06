@@ -198,8 +198,9 @@ def sel_roi(img):
     
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)      
     hpercent = (window_height / float(img.shape[0]))
-    wsize = int((float(img.shape[1]) * float(hpercent)))
-    image_scaled = cv2.resize(img, (wsize, window_height))    
+    wsize = int(round((float(img.shape[1]) * float(hpercent))))
+    hsize = window_height
+    image_scaled = cv2.resize(img, (wsize, hsize))    
     
     roi = list(cv2.selectROI('Press Enter to save the currently selected ROI:', image_scaled, fromCenter=False))
     cv2.destroyAllWindows()
@@ -209,11 +210,11 @@ def sel_roi(img):
     # if selection is draw outside window: crop
     if (roi[0] + roi[2] > wsize):
         roi[2] = wsize - roi [0]
-    if (roi[1] + roi[3] > wsize):
-        roi[3] = wsize - roi [1]    
+    if (roi[1] + roi[3] > hsize):
+        roi[3] = hsize - roi [1]    
     
-    roi_px = [int(coord/hpercent) for coord in roi]
-    
+    roi_px = [int(round(coord/hpercent)) for coord in roi]
+
     return roi_px
     
 import math

@@ -51,6 +51,9 @@ class Postproc():
             #print("analysis roi in 800 px", roi)
             analysis_img = self.cohw.videometa["prev800px"][int(roi[1]):int(roi[1]+roi[3]), int(roi[0]):int(roi[0]+roi[2])]
             self.roi = helpfunctions.sel_roi(analysis_img) #roi has to be rescaled now to analysis_img
+            #print("selected roi", self.roi)
+            #print("shape analysis img", analysis_img.shape)
+            
             self.roi = [int(coord/self.cohw.videometa["prev_scale"]) for coord in self.roi] # scale to orig coord
             
             # works so far...
@@ -60,6 +63,7 @@ class Postproc():
         elif isinstance(roi, list):
             self.roi = roi
     
+        print("selected subroi", self.roi)
         # TODO: check if roi boundaries are allowed...
     
     def reset_roi(self):
@@ -80,14 +84,13 @@ class Postproc():
         else:
             roi = self.roi
             # scale roi to adjusted imagestack resolution used for calculation
-            roi = [int(coord*scalingfactor) for coord in roi] 
+            roi = [int(round(coord*scalingfactor)) for coord in roi] 
             
-            MVslice_x, MVslice_y = get_slice_from_roi(roi,bw)
-            #print("orig shape:",  self.cohw.rawMVs.shape)
-            rawMVs_filt = self.cohw.rawMVs[:,:,MVslice_x, MVslice_y] 
+            MVslice_x, MVslice_y = helpfunctions.get_slice_from_roi(roi,bw)
+            #print("orig shape:",  self.cohw.rawMVs.shape) # MVs are somehow arranged in y, x -> inverse direction
+            #print("selected MV slics:", MVslice_x, MVslice_y)
+            rawMVs_filt = self.cohw.rawMVs[:,:,MVslice_y, MVslice_x]
         
-        #print("selected shape:",rawMVs_filt.shape)
-        #print("slices", MVslice_x, MVslice_y)
 
         #for filter in self.filters:
         if self.filters["filter_singlemov"]["on"] == True:
