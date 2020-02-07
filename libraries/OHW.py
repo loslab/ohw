@@ -157,6 +157,12 @@ class OHW():
         self.init_motion()
         self.set_peaks(Peaks) #call after init_motion as this resets peaks
 
+    def set_method(self, method):
+        self.analysis_meta.update({'Motion_method': method,'motion_calculated':True})
+
+    def get_method(self):
+        return self.analysis_meta["Motion_method"]
+
     def calculate_motion(self, method = 'BM', progressSignal = None, **parameters):
         """
             calculates motion (either motionvectors MVs or absolute motion) of imagestack based 
@@ -424,7 +430,7 @@ class OHW():
             sel_roi = helpfunctions.sel_roi(self.videometa["prev800px"]) # select roi in 800 px preview img
             sel_roi = [int(coord/self.videometa["prev_scale"]) for coord in sel_roi] # rescale to coord in orig inputdata
             self.analysis_meta["roi"] = sel_roi #self.rawImageStack[0])
-            print(sel_roi)
+            print("selected roi:", sel_roi)
             return True
         
         if isinstance(roi, list):

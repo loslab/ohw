@@ -178,13 +178,14 @@ class TabKinetics(QWidget):
         self.ceval = self.cohw.ceval
         
         self.timeindex = self.ceval.timeindex #easier to referene here...
-        self.motion = self.ceval.mean_absMotions
+        #self.motion = self.ceval.mean_absMotions
+        self.motion = self.ceval.PeakDetection.motion
         self.Peaks, self.hipeaks, self.lopeaks = self.ceval.get_peaks()
         
         self.kinplot_options = self.cohw.kinplot_options
-        
-        self.clear_fig()
-        if self.cohw.analysis_meta["has_MVs"]:    # change here to appropriate variable
+
+        self.clear_fig()        
+        if self.cohw.analysis_meta["motion_calculated"]:    # change here to appropriate variable
             self.init_kinetics()
             self.button_detectPeaks.setEnabled(True)
             self.button_saveKinPlot.setEnabled(True)
@@ -201,7 +202,10 @@ class TabKinetics(QWidget):
         self.ax_kinetics.plot(self.timeindex, self.motion, 
                 '-', linewidth = 2)
         self.ax_kinetics.set_xlim(left = 0, right = self.timeindex[-1])
-        self.ax_kinetics.set_ylim(bottom = 0)
+        
+        method = self.cohw.get_method()
+        if method == "Blockmatch":
+            self.ax_kinetics.set_ylim(bottom = 0)
 
         self.plot_Peaks()
         self.updateStatistics()
@@ -233,6 +237,8 @@ class TabKinetics(QWidget):
         self.ceval.set_roi()
         self.ceval.process()
         self.parent.init_ohw()
+        #self.init_ohw() 
+        # TODO: init this tab only here, init other tabs only later when pressed (will be much faster)
 
     def plot_Peaks(self):
         ''' clear old peaks and plot all self.hipeaks, self.lopeaks '''

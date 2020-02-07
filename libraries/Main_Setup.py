@@ -47,9 +47,11 @@ class TableWidget(QWidget):
         self.tab_quiver = tab_quiver.TabQuiver(self)
         self.tab_TA = tab_TA.TabTA(self)
         self.tab_batch = tab_batch.TabBatch(self)
-        self.tabROIs = QWidget()
+        #self.tabROIs = QWidget()
         self.tabs.resize(800,800)
          
+        self.tabs.currentChanged.connect(self.on_tabselection)
+        
         # Add tabs
         self.tabs.addTab(self.tab_input,"Video Input ")
         #self.tabs.addTab(self.tabROIs, "Manage ROIs")
@@ -101,7 +103,17 @@ class TableWidget(QWidget):
         self.tab_kinetics.init_ohw()
         self.tab_TA.init_ohw()
         self.tab_quiver.init_ohw()
-        
+
+    def on_tabselection(self, selection):
+        ''' 
+            calls init_ohw on each tab when clicked
+            TODO: don't hardcode selection, store tabs in list and init in loop
+        '''
+    
+        if selection == 2:
+            print("kinetics tab selected")
+            self.tab_kinetics.init_ohw()
+
     """
 ########### fill the ROI selection tab ###########
         info_ROI = QTextEdit()

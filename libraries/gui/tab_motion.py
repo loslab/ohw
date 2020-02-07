@@ -1,12 +1,11 @@
 import sys
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
-from PyQt5.QtWidgets import (QWidget, QGridLayout,QPushButton, QApplication)
 from PyQt5 import QtCore
 
 from PyQt5.QtWidgets import (QLabel, QLineEdit, QGridLayout, 
-    QTextEdit,QSizePolicy, QPushButton, QProgressBar,QSlider, 
-    QWidget, QSpinBox, QCheckBox, QFileDialog)
+    QTextEdit,QSizePolicy, QPushButton, QProgressBar,QSlider, QFrame, 
+    QWidget, QSpinBox, QCheckBox, QFileDialog, QComboBox)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from libraries import OHW, helpfunctions
@@ -30,6 +29,12 @@ class TabMotion(QWidget):
         self.label_settings.setFont(QFont("Times",weight=QFont.Bold))
         self.label_addOptions = QLabel('Additional options: ')
         self.label_addOptions.setFont(QFont("Times",weight=QFont.Bold))
+        
+        self.combo_method = QComboBox()#self)
+        for method in ['Blockmatch','Fluo-Intensity']:
+            self.combo_method.addItem(method)
+        self.combo_method.setCurrentIndex(0)
+        self.combo_method.currentTextChanged.connect(self.on_combo_method_changed)
         
         #user settings
         #... adjust these according to selected algorithm and available options
@@ -123,21 +128,49 @@ class TabMotion(QWidget):
         self.grid_overall.setAlignment(Qt.AlignTop|Qt.AlignLeft)      
         
         self.grid_overall.addWidget(self.info, 0,0,1,4, Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.label_settings, 1,0, Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.label_blockwidth,2,0, Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.spinbox_blockwidth,2,1, Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.label_delay,3,0, Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.spinbox_delay, 3,1, Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.label_maxShift,4,0, Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.spinbox_maxShift,4,1, Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.label_addOptions, 5,0, Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.check_scaling, 6,0,1,2, Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.check_canny, 7,0,1,2, Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.check_filter, 8,0,1,2, Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addLayout(self.grid_btns, 9,0,1,4,Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.progressbar_MVs, 10,0,1,4)
-        self.grid_overall.addWidget(self.btn_succeed_MVs, 11,0,1,4)
+        self.grid_overall.addWidget(self.combo_method, 1,0,1,2, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.label_settings, 2,0, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.label_blockwidth,3,0, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.spinbox_blockwidth,3,1, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.label_delay,4,0, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.spinbox_delay, 4,1, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.label_maxShift,5,0, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.spinbox_maxShift,5,1, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.label_addOptions, 6,0, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.check_scaling, 7,0,1,2, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.check_canny, 8,0,1,2, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.check_filter, 9,0,1,2, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addLayout(self.grid_btns, 10,0,1,4,Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.progressbar_MVs, 11,0,1,4)
+        self.grid_overall.addWidget(self.btn_succeed_MVs, 12,0,1,4)
+
+    def on_combo_method_changed(self):
+        method = self.combo_method.currentText()
+        if method == "Fluo-Intensity":
+            print("Fluo-Intensity selected")
+            self.btn_getMVs.setEnabled(False)
+            self.btn_load_ohw.setEnabled(False)
+            self.btn_save_MVs.setEnabled(False)
+            
+            # init Fluo Int, move to separate function
+            
+            px_longest = None
+            scaling_status = self.check_scaling.isChecked()
+            if scaling_status == True:
+                px_longest = 1024
         
+            self.cohw.set_analysisImageStack(px_longest = px_longest) # scale + set roi, , roi=[0,0,500,500]
+            self.cohw.set_method("Fluo-Intensity")
+            self.cohw.ceval.process()
+            
+            self.combo_method.setEnabled(False) # disable to prevent unwanted changes TODO: fix
+            
+            self.btn_succeed_MVs.setStyleSheet("background-color: YellowGreen")
+            self.btn_succeed_MVs.setText("No calculation needed for Fluo-Intensity, just proceed to the next tab.")
+            
+        elif method == "Blockmatch":
+            self.init_ohw()            
+
     def init_ohw(self):
         ''' set values from cohw '''
         self.cohw = self.parent.cohw

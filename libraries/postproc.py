@@ -74,43 +74,66 @@ class Postproc():
         # basically same as init_motion previously did
         # ... to be seen to what extent quiver components or similarly should be calculated here
         
-        scalingfactor, delay = self.cohw.analysis_meta["scalingfactor"], self.cohw.analysis_meta["MV_parameters"]["delay"]
-        bw = self.cohw.analysis_meta["MV_parameters"]['blockwidth']
+        method = self.cohw.analysis_meta["Motion_method"]
         
-        # select MVs of calculation (possibly done in a roi of inputvid) by subroi:
+        if method == "Blockmatch":
+            scalingfactor, delay = self.cohw.analysis_meta["scalingfactor"], self.cohw.analysis_meta["MV_parameters"]["delay"]
+            bw = self.cohw.analysis_meta["MV_parameters"]['blockwidth']        
         
-        if self.roi is None:
-            rawMVs_filt = self.cohw.rawMVs[:,:,:,:]
-        else:
-            roi = self.roi
-            # scale roi to adjusted imagestack resolution used for calculation
-            roi = [int(round(coord*scalingfactor)) for coord in roi] 
+            # select MVs of calculation (possibly done in a roi of inputvid) by subroi:
             
-            MVslice_x, MVslice_y = helpfunctions.get_slice_from_roi(roi,bw)
-            #print("orig shape:",  self.cohw.rawMVs.shape) # MVs are somehow arranged in y, x -> inverse direction
-            #print("selected MV slics:", MVslice_x, MVslice_y)
-            rawMVs_filt = self.cohw.rawMVs[:,:,MVslice_y, MVslice_x]
-        
+            if self.roi is None:
+                rawMVs_filt = self.cohw.rawMVs[:,:,:,:]
+            else:
+                roi = self.roi
+                # scale roi to adjusted imagestack resolution used for calculation
+                roi = [int(round(coord*scalingfactor)) for coord in roi] 
+                
+                MVslice_x, MVslice_y = helpfunctions.get_slice_from_roi(roi,bw)
+                #print("orig shape:",  self.cohw.rawMVs.shape) # MVs are somehow arranged in y, x -> inverse direction
+                #print("selected MV slics:", MVslice_x, MVslice_y)
+                rawMVs_filt = self.cohw.rawMVs[:,:,MVslice_y, MVslice_x]
+            
 
-        #for filter in self.filters:
-        if self.filters["filter_singlemov"]["on"] == True:
-            rawMVs_filt = Filters.filter_singlemov(rawMVs_filt)
+            #for filter in self.filters:
+            if self.filters["filter_singlemov"]["on"] == True:
+                rawMVs_filt = Filters.filter_singlemov(rawMVs_filt)
+                
+            self.unitMVs = (rawMVs_filt / scalingfactor) * self.cohw.videometa["microns_per_px"] * (self.cohw.videometa["fps"] / delay)
+            self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame
             
-        self.unitMVs = (rawMVs_filt / scalingfactor) * self.cohw.videometa["microns_per_px"] * (self.cohw.videometa["fps"] / delay)
-        self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame
+            #print("absMotions shape: ", self.absMotions.shape)
+            
+            self.mean_absMotions = OFlowCalc.get_mean_absMotion(self.absMotions)
+            self.timeindex = (np.arange(self.mean_absMotions.shape[0]) / self.cohw.videometa["fps"]).round(2)
+            
+            self.prepare_quiver_components()
+            self.calc_TimeAveragedMotion()
+            self.PeakDetection.set_data(self.timeindex, self.mean_absMotions) #or pass self directly?
+            
+            # when to create results folder?
+            #self.analysis_meta["results_folder"].mkdir(parents = True, exist_ok = True) #create folder for results if it doesn't exist
+            #plotfunctions.plot_Kinetics(timeindex, mean_absMotions, None, None, None, file_name=None)
+
+        elif method == "Fluo-Intensity":
         
-        #print("absMotions shape: ", self.absMotions.shape)
-        
-        self.mean_absMotions = OFlowCalc.get_mean_absMotion(self.absMotions)
-        self.timeindex = (np.arange(self.mean_absMotions.shape[0]) / self.cohw.videometa["fps"]).round(2)
-        
-        self.prepare_quiver_components()
-        self.calc_TimeAveragedMotion()
-        self.PeakDetection.set_data(self.timeindex, self.mean_absMotions) #or pass self directly?
-        
-        # when to create results folder?
-        #self.analysis_meta["results_folder"].mkdir(parents = True, exist_ok = True) #create folder for results if it doesn't exist
-        #plotfunctions.plot_Kinetics(timeindex, mean_absMotions, None, None, None, file_name=None)
+            scalingfactor = self.cohw.analysis_meta["scalingfactor"]
+            print("processing Flu-Intensity data")
+            
+            if self.roi is None:
+                self.meanI = self.cohw.rawImageStack[:,:,:].mean(axis=(1,2))
+
+            else:
+                roi = self.roi
+                # scale roi to adjusted imagestack resolution used for calculation
+                roi = [int(round(coord*scalingfactor)) for coord in roi] 
+                
+                self.meanI = self.cohw.rawImageStack[:,roi[1]:roi[1]+roi[3],roi[0]:roi[0]+roi[2]].mean(axis=(1,2))
+            
+            self.timeindex = (np.arange(self.meanI.shape[0]) / self.cohw.videometa["fps"]).round(2)
+            self.PeakDetection.set_data(self.timeindex, self.meanI)
+        else:
+            print("method not found, can't process")
     
     def set_filter(self, filtername = "", on = True, **filterparameters):
         """ turns specific filter on/ off and sets specified parameters to filter """
