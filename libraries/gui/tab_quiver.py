@@ -177,7 +177,8 @@ class TabQuiver(QWidget):
         self.clear_quivers()        
         
         # init heatmap part
-        if self.cohw.analysis_meta["motion_calculated"]:
+        #if self.cohw.analysis_meta["motion_calculated"]:
+        if self.cohw.analysis_meta["has_MVs"]:
             self.btn_heatmap_vid.setEnabled(True)
             self.btn_heatmap_save.setEnabled(True)
             self.slider_heatmaps.setMaximum(self.ceval.absMotions.shape[0]-1)

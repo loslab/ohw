@@ -42,31 +42,39 @@ class Postproc():
         self.name = name
         
     def set_roi(self, roi = None):
-        """ sets roi of postprocessing region. If a list of roi coordinates is provided use list, otherwise open selection"""
+        """ 
+            sets self.roi of postprocessing region. 
+            If a list of roi coordinates is provided use list, otherwise open selection
+        """
+        
+        # no coordinates provided, select in gui
         if roi is None:
             
-            roi = self.cohw.analysis_meta["roi"] # works only if roi != None
-            #print("analysis roi", roi)
-            roi = [int(coord*self.cohw.videometa["prev_scale"]) for coord in roi] # scale to 800 px coord
-            #print("analysis roi in 800 px", roi)
-            analysis_img = self.cohw.videometa["prev800px"][int(roi[1]):int(roi[1]+roi[3]), int(roi[0]):int(roi[0]+roi[2])]
-            self.roi = helpfunctions.sel_roi(analysis_img) #roi has to be rescaled now to analysis_img
-            #print("selected roi", self.roi)
-            #print("shape analysis img", analysis_img.shape)
+            anaroi = self.cohw.analysis_meta["roi"] #analysisroi
+
+            # if analysis did not have any specific roiselection use full image)
+            if anaroi is None:
+                analysis_img = self.cohw.videometa["prev800px"]
             
+            else:
+                #print("analysis roi", roi)
+                anaroi = [int(coord*self.cohw.videometa["prev_scale"]) for coord in anaroi] # scale to 800 px coord
+                #print("analysis roi in 800 px", roi)
+                analysis_img = self.cohw.videometa["prev800px"][
+                        int(anaroi[1]):int(anaroi[1]+anaroi[3]), 
+                        int(anaroi[0]):int(anaroi[0]+anaroi[2])]
+            
+            self.roi = helpfunctions.sel_roi(analysis_img) #roi has to be rescaled now to analysis_img            
             self.roi = [int(coord/self.cohw.videometa["prev_scale"]) for coord in self.roi] # scale to orig coord
-            
-            # works so far...
-            # roi = roi of analysis
-            # self.roi = selected subroi of analysis crop in orig coord.... quite confusing
 
         elif isinstance(roi, list):
+            # TODO: check if roi boundaries are allowed...
             self.roi = roi
     
         print("selected subroi", self.roi)
-        # TODO: check if roi boundaries are allowed...
     
     def reset_roi(self):
+        ''' reset self.roi to None -> use the whole image '''
         self.roi = None
     
     def process(self):
