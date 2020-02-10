@@ -117,6 +117,7 @@ class Postproc():
             
             self.prepare_quiver_components()
             self.calc_TimeAveragedMotion()
+            self.PeakDetection.set_peakmode("alternating")
             self.PeakDetection.set_data(self.timeindex, self.mean_absMotions) #or pass self directly?
             
             # when to create results folder?
@@ -139,6 +140,7 @@ class Postproc():
                 self.meanI = self.cohw.rawImageStack[:,roi[1]:roi[1]+roi[3],roi[0]:roi[0]+roi[2]].mean(axis=(1,2))
             
             self.timeindex = (np.arange(self.meanI.shape[0]) / self.cohw.videometa["fps"]).round(2)
+            self.PeakDetection.set_peakmode("high")
             self.PeakDetection.set_data(self.timeindex, self.meanI)
         else:
             print("method not found, can't process")
@@ -176,23 +178,22 @@ class Postproc():
     
     def set_peaks(self, Peaks):
         ''' update with manually added/ deleted peaks '''
-
         self.PeakDetection.set_peaks(Peaks)
-        self.order_peaks()  #leave here or move to separate module for better organization?
+        self.PeakDetection.assign_peaks()
 
     def detect_peaks(self, ratio, number_of_neighbours):
         ''' automated peak detection in mean_absMotions'''
 
         self.PeakDetection.detect_peaks(ratio, number_of_neighbours)
-        self.order_peaks()
-    
-    def order_peaks(self):
-        self.PeakDetection.order_peaks()
+        self.PeakDetection.assign_peaks()
     
     def get_peakstatistics(self):
         self.PeakDetection.calc_peakstatistics()
         return self.PeakDetection.get_peakstatistics()
-    
+
+    def export_analysis(self):
+        self.PeakDetection.export_analysis(self.cohw.analysis_meta["results_folder"])
+        
     def prepare_quiver_components(self):
         '''
             sets all 0-motions to nan such that they won't be plotted in quiver plot

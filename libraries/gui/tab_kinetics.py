@@ -316,7 +316,6 @@ class TabKinetics(QWidget):
             self.Peaks.remove(removepeak)
             newidx = self.get_closest(event.xdata)
             self.Peaks.append(newidx)
-            self.Peaks.sort()  
             self.update_Peaks()
             self.plot_Peaks()
             self.move_peak = False
@@ -375,7 +374,6 @@ class TabKinetics(QWidget):
         
         if newidx not in self.Peaks:
             self.Peaks.append(newidx)
-            self.Peaks.sort()
             print("peak added, Peaks:", self.Peaks)
 
         self.update_Peaks()

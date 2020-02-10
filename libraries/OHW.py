@@ -163,13 +163,13 @@ class OHW():
     def get_method(self):
         return self.analysis_meta["Motion_method"]
 
-    def calculate_motion(self, method = 'BM', progressSignal = None, **parameters):
+    def calculate_motion(self, method = 'Blockmatch', progressSignal = None, **parameters):
         """
             calculates motion (either motionvectors MVs or absolute motion) of imagestack based 
             on specified method and parameters
 
             allowed methods:
-            -BM: blockmatch
+            -Blockmatch (BM)
             -GF: gunnar farnbäck
             -LK: lucas-kanade
             -MM: musclemotion
@@ -177,13 +177,21 @@ class OHW():
 
         #store parameters which will be used for the calculation of MVs
         self.analysis_meta.update({'Motion_method': method, 'MV_parameters': parameters})
+        self.set_method(method)
         
-        if method == 'BM':   
+        if method == 'Blockmatch':   
             self.rawMVs = OFlowCalc.BM_stack(self.analysisImageStack, 
                 progressSignal = progressSignal, **parameters)
             self.analysis_meta["has_MVs"], self.analysis_meta["motion_calculated"] = True, True
             #self.set_filter('None') # init to no filter after calculation
 
+        elif method == 'Fluo-Intensity':
+            self.analysis_meta["has_MVs"], self.analysis_meta["motion_calculated"] = False, False
+
+        else:
+            print("method ", method, " currently not supported.")
+        
+        """
         elif method == 'GF':
             pass
         elif method == 'LK':
@@ -191,6 +199,7 @@ class OHW():
         elif method == 'MM':
             # self.absMotions = ...
             pass
+        """
 
     def calculate_motion_thread(self, **parameters):
         self.thread_calculate_motion = helpfunctions.turn_function_into_thread(
@@ -358,12 +367,6 @@ class OHW():
     def detect_peaks(self, ratio, number_of_neighbours):
         ''' automated peak detection in mean_absMotions'''
         self.ceval.detect_peaks(ratio, number_of_neighbours)
-    
-    # moved to postproc
-    """
-    def order_peaks(self):
-        self.PeakDetection.order_peaks()
-    """
        
     def get_peaks(self):
         return self.ceval.get_peaks()
@@ -372,7 +375,7 @@ class OHW():
         return self.ceval.get_peakstatistics()
     
     def export_analysis(self):
-        self.PeakDetection.export_analysis(self.analysis_meta["results_folder"])
+        self.ceval.export_analysis()
     
     def plot_beatingKinetics(self, filename=None):
         if filename == None:
