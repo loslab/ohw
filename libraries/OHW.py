@@ -23,30 +23,22 @@ class OHW():
         self.unitMVs = None             # MVs in correct unit (microns)
         
         # bundle these parameters in dict?
-        #self.absMotions = None          # absolulte motions, either from MVs or from intensity
-        #self.mean_absMotions = None     # for 1D-representation
         self.avg_absMotion = None       # time averaged absolute motion
         self.avg_MotionX = None         # time averaged x-motion
         self.avg_MotionY = None         # time averaged y-motion
         self.max_avgMotion = None       # maximum of time averaged motions
-        #self.timeindex = None           # time index for 1D-representation
 
         self.postprocs = {"post1":postproc.Postproc(cohw=self, name="post1")} # rename to evals?
         self.set_ceval("post1")
         
-        # moved to postproc
-        #self.PeakDetection = PeakDetection.PeakDetection()    # class which detects + saves peaks
         self.video_loaded = False       # tells state if video is connected to ohw-objecet
-       
-        #self.exceptions = None
-        #self.isROI_OHW = False
         self.config = helpfunctions.read_config() # load current config
         
         self.raw_videometa = {"inputpath":""} # raw info after importing  # dict of video metadata: microns_per_px, fps, blackval, whiteval,
         self.set_default_videometa(self.raw_videometa)
         self.videometa = self.raw_videometa.copy()
         self.analysis_meta = {"date": datetime.datetime.now(), "version": self.config['UPDATE']['version'], 
-            "motion_calculated":False, "has_MVs": False, "results_folder":"", "roi":None}
+            "calc_finish":False, "has_MVs": False, "results_folder":"", "roi":None}
         self.init_kinplot_options()
     
     def import_video(self, inputpath, *args, **kwargs):        
@@ -116,12 +108,11 @@ class OHW():
         roi = self.analysis_meta["roi"]
         if roi != None:
             self.analysisImageStack = self.analysisImageStack[:,int(roi[1]):int(roi[1]+roi[3]), int(roi[0]):int(roi[0]+roi[2])]
-        
+
         # rescale input
         # take original resoltuion if no other specified
         if px_longest != None:
             self.analysisImageStack, self.analysis_meta["scalingfactor"] = helpfunctions.scale_ImageStack(self.analysisImageStack, px_longest=px_longest)
-        
         self.analysis_meta.update({'shape': self.analysisImageStack.shape})
 
     def save_ohw(self):
@@ -157,13 +148,13 @@ class OHW():
         self.init_motion()
         self.set_peaks(Peaks) #call after init_motion as this resets peaks
 
-    def set_method(self, method):
-        self.analysis_meta.update({'Motion_method': method,'motion_calculated':True})
+    def set_method(self, method, parameters):
+        self.analysis_meta.update({'Motion_method': method, 'MV_parameters': parameters})
 
     def get_method(self):
         return self.analysis_meta["Motion_method"]
 
-    def calculate_motion(self, method = 'Blockmatch', progressSignal = None, **parameters):
+    def calculate_motion(self, method = 'Blockmatch', progressSignal = None, overwrite = False, **parameters):
         """
             calculates motion (either motionvectors MVs or absolute motion) of imagestack based 
             on specified method and parameters
@@ -175,18 +166,21 @@ class OHW():
             -MM: musclemotion
         """
 
+        if (overwrite == False) and (self.analysis_meta["calc_finish"] == True):
+            print("motion already calculated, don't overwrite")
+            return False
+        
         #store parameters which will be used for the calculation of MVs
-        self.analysis_meta.update({'Motion_method': method, 'MV_parameters': parameters})
-        self.set_method(method)
+        self.set_method(method, parameters)
         
         if method == 'Blockmatch':   
             self.rawMVs = OFlowCalc.BM_stack(self.analysisImageStack, 
                 progressSignal = progressSignal, **parameters)
-            self.analysis_meta["has_MVs"], self.analysis_meta["motion_calculated"] = True, True
-            #self.set_filter('None') # init to no filter after calculation
+            self.analysis_meta["has_MVs"], self.analysis_meta["calc_finish"] = True, True #calc_finish: new variable to track state -> lock to prevent overwriting
 
         elif method == 'Fluo-Intensity':
-            self.analysis_meta["has_MVs"], self.analysis_meta["motion_calculated"] = False, False
+            # as mean intensity can be calculated on the fly, no extra calculation needed here
+            self.analysis_meta["has_MVs"], self.analysis_meta["calc_finish"] = False, True
 
         else:
             print("method ", method, " currently not supported.")
@@ -206,7 +200,7 @@ class OHW():
             self.calculate_motion, emit_progSignal=True, **parameters)
         return self.thread_calculate_motion 
     
-    def set_filter(self, filtername = "", on = False, **filterparameters):
+    def set_filter(self, filtername, on = False, **filterparameters):
         ''' sets specified filtername on/ off + parameters '''
         # TODO: better error handling if filter does not exist (what's the best way?)
         self.ceval.set_filter(filtername, on, **filterparameters)
@@ -214,14 +208,6 @@ class OHW():
     def get_filter(self):
         ''' gets filterdict from current eval/postproc'''
         return self.ceval.get_filter()
-    
-    """
-    def set_filter(self, filter = 'None'):
-        '''
-            sets filter
-        '''
-        self.analysis_meta['filter'] = filter
-    """
     
     def set_ceval(self, eval_name):
         '''
@@ -240,74 +226,8 @@ class OHW():
             1D: motion (calculated from MVs or other attributes...)
         '''
         
-        # transfer to postproc class here:
-        
+        # perform evaluation on currently active postprocess/evaluation
         self.ceval.process()
-        
-        #scalingfactor, delay = self.analysis_meta["scalingfactor"], self.analysis_meta["MV_parameters"]["delay"]
-        #filter = self.analysis_meta["filter"]
-        
-        #if filter == 'filter_singlemov':
-        #    print("filtering single movements")
-        #    rawMVs_filt = Filters.filter_singlemov(self.rawMVs) #don't change rawMVs! repeated loading would vary it each time
-        #else:
-        #    rawMVs_filt = self.rawMVs
-        
-        #self.unitMVs = (rawMVs_filt / scalingfactor) * self.videometa["microns_per_px"] * (self.videometa["fps"] / delay)
-        #self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame        
-
-        #self.get_mean_absMotion()
-        
-        """
-        self.prepare_quiver_components()
-        self.calc_TimeAveragedMotion()
-        self.PeakDetection.set_data(self.timeindex, self.mean_absMotions) #or pass self directly?
-        """
-    
-    # moved to OFlowCalc
-    """
-    def get_mean_absMotion(self):
-        '''
-            calculates movement mask (eliminates all pixels where no movement occurs through all frames)
-            applies mask to absMotions and calculate mean motion per frame
-        '''
-        # move into filter module in future?
-        summed_absMotions = np.sum(self.absMotions, axis = 0)  # select only points in array with nonzero movement
-        movement_mask = (summed_absMotions == 0)
-        
-        filtered_absMotions = np.copy(self.absMotions) #copy needed, don't influence absMotions
-        filtered_absMotions[:,movement_mask] = np.nan
-        self.mean_absMotions = np.nanmean(filtered_absMotions, axis=(1,2))
-        
-        self.analysis_meta["results_folder"].mkdir(parents = True, exist_ok = True) #create folder for results if it doesn't exist
-        self.timeindex = (np.arange(self.mean_absMotions.shape[0]) / self.videometa["fps"]).round(2)
-        #np.save(str(self.analysis_meta["results_folder"] / 'beating_kinetics.npy'), np.array([self.timeindex,self.mean_absMotions]))
-        #save in own function if desired...
-    """
-    
-    # moved to postproc
-    """
-    def prepare_quiver_components(self):
-        '''
-            sets all 0-motions to nan such that they won't be plotted in quiver plot
-            determines scale_max and cuts off all longer vectors
-            creates grid of coordinates
-        '''
-        
-        self.MV_zerofiltered = Filters.zeromotion_to_nan(self.unitMVs, copy=True)
-        scale_max = helpfunctions.get_scale_maxMotion2(self.absMotions)        
-        MV_cutoff = Filters.cutoffMVs(self.MV_zerofiltered, max_length = scale_max) #copy=True
-        
-        self.QuiverMotionX = MV_cutoff[:,0,:,:] # changed name to QuiverMotionX as values are manipulated here
-        self.QuiverMotionY = MV_cutoff[:,1,:,:]
-        
-        bw = self.analysis_meta["MV_parameters"]["blockwidth"]
-        Nx, Ny = MV_cutoff[0,0].shape
-        
-        self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(
-            np.arange(Ny)*bw+bw/2,
-            np.arange(Nx)*bw+bw/2) #Nx, Ny exchanged (np vs. image indexing); possible issues with odd bws?
-    """
     
     def save_MVs(self):
         """
@@ -321,9 +241,6 @@ class OHW():
         np.save(save_file, self.rawMVs)
         save_file_units = str(results_folder / 'unitMVs.npy')
         np.save(save_file_units, self.unitMVs)            
-
-    #def plot_scalebar(self):
-    # moved to module: helpfunctions.insert_scalebar(imageStack, videometa, analysis_meta)
 
     def save_heatmap(self, singleframe):
         savepath = self.analysis_meta["results_folder"]/'heatmap_results'
@@ -348,17 +265,6 @@ class OHW():
     def save_quiver_thread(self, singleframe, skipquivers, t_cut):
         self.thread_save_quiver = helpfunctions.turn_function_into_thread(self.save_quiver, singleframe=False, skipquivers=skipquivers, t_cut=t_cut)
         return self.thread_save_quiver
-            
-    def cut_clip(self, clip_full, t_cut=0):
-        #if user chose to cut the clip after t_cut seconds:
-        t_cut = round(t_cut, 2)
-        
-        if t_cut is not 0:
-            #t_cut is the end of the clip in seconds of the original clip
-            return clip_full.subclip(t_start=0, t_end=t_cut)
-        
-        else:
-            return clip_full
     
     def set_peaks(self, Peaks):
         ''' update with manually added/ deleted peaks '''
@@ -377,11 +283,10 @@ class OHW():
     def export_analysis(self):
         self.ceval.export_analysis()
     
-    def plot_beatingKinetics(self, filename=None):
+    def plot_kinetics(self, filename=None):
         if filename == None:
             filename=self.analysis_meta["results_folder"]/ 'beating_kinetics.png'
-        plotfunctions.plot_Kinetics(self.timeindex, self.mean_absMotions, self.kinplot_options, 
-                self.PeakDetection.hipeaks, self.PeakDetection.lopeaks, filename)
+        self.ceval.plot_kinetics(filename)
 
     def init_kinplot_options(self):
         self.kinplot_options = dict(self.config._sections['KINPLOT OPTIONS'])
@@ -398,23 +303,6 @@ class OHW():
     def set_kinplot_options(self, kinplot_options):
         self.kinplot_options = kinplot_options
         #also change config to new value?
-
-    """ # moved to postproc
-    def calc_TimeAveragedMotion(self):
-        ''' calculates time averaged motion for abs. motion, x- and y-motion '''
-        
-        self.avg_absMotion = np.nanmean(self.absMotions, axis = 0)
-        MotionX = self.unitMVs[:,0,:,:]
-        MotionY = self.unitMVs[:,1,:,:]    #squeeze not necessary anymore, dimension reduced
-        
-        absMotionX = np.abs(MotionX)    #calculate mean of absolute values!
-        self.avg_MotionX = np.nanmean(absMotionX, axis = 0)
-
-        absMotionY = np.abs(MotionY)
-        self.avg_MotionY = np.nanmean(absMotionY, axis = 0)
-
-        self.max_avgMotion = np.max ([self.avg_absMotion, self.avg_MotionX, self.avg_MotionY]) # avg_absMotion should be enough
-    """
     
     def plot_TimeAveragedMotions(self, file_ext='.png'):
         plotfunctions.plot_TimeAveragedMotions(self, file_ext)
@@ -432,7 +320,7 @@ class OHW():
         if roi is None:
             sel_roi = helpfunctions.sel_roi(self.videometa["prev800px"]) # select roi in 800 px preview img
             sel_roi = [int(coord/self.videometa["prev_scale"]) for coord in sel_roi] # rescale to coord in orig inputdata
-            self.analysis_meta["roi"] = sel_roi #self.rawImageStack[0])
+            self.analysis_meta["roi"] = sel_roi
             print("selected roi:", sel_roi)
             return True
         

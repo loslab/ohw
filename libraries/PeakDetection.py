@@ -23,7 +23,7 @@ class PeakDetection():
     
     def set_data(self, timeindex, motion):
         """
-            reads in x,y datapairs (timeindex, mean_absMotions) and resets all output dicts
+            reads in x,y datapairs (timeindex, motion) and resets all output dicts
         """
         self.motion = motion # renamed to motion only, can be every 1D representation
         self.timeindex = timeindex

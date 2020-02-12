@@ -185,7 +185,7 @@ class TabKinetics(QWidget):
         self.kinplot_options = self.cohw.kinplot_options
 
         self.clear_fig()        
-        if self.cohw.analysis_meta["motion_calculated"]:    # change here to appropriate variable
+        if self.cohw.analysis_meta["calc_finish"]:    # if any analysis is done elements can be enabled, as every analysis should have a 1D-representation
             self.init_kinetics()
             self.button_detectPeaks.setEnabled(True)
             self.button_saveKinPlot.setEnabled(True)
@@ -403,7 +403,7 @@ class TabKinetics(QWidget):
         if (filename == ''): # if 'cancel' was pressed:
             return
 
-        self.cohw.plot_beatingKinetics(filename) # move mark_peaks into kinplot_options
+        self.cohw.plot_kinetics(filename) # move mark_peaks into kinplot_options
         helpfunctions.msgbox(self, 'Plot was saved successfully.')
 
     def on_exportAnalysis(self):

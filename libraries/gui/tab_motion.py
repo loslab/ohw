@@ -15,6 +15,7 @@ class TabMotion(QWidget):
     def __init__(self, parent):
         super(TabMotion, self).__init__(parent)
         self.parent=parent
+        self.config = self.parent.config
         self.initUI()
         
     def initUI(self):
@@ -25,10 +26,12 @@ class TabMotion(QWidget):
         self.info.setFixedWidth(700)
         self.info.setStyleSheet("background-color: LightSkyBlue")
         
+        """
         self.label_settings = QLabel('Settings: ')
         self.label_settings.setFont(QFont("Times",weight=QFont.Bold))
         self.label_addOptions = QLabel('Additional options: ')
         self.label_addOptions.setFont(QFont("Times",weight=QFont.Bold))
+        """
         
         self.combo_method = QComboBox()#self)
         for method in ['Blockmatch','Fluo-Intensity']:
@@ -36,8 +39,9 @@ class TabMotion(QWidget):
         self.combo_method.setCurrentIndex(0)
         self.combo_method.currentTextChanged.connect(self.on_combo_method_changed)
         
-        #user settings
-        #... adjust these according to selected algorithm and available options
+        self.BMset = BM_settings(self)
+        
+        """
         self.label_blockwidth =  QLabel('Blockwidth (in pixels):')
         self.label_delay =       QLabel('Delay (in frames): ')
         self.label_maxShift =    QLabel('Maximum shift p (in pixels): ')
@@ -67,6 +71,7 @@ class TabMotion(QWidget):
         #canny edge
         self.check_canny = QCheckBox("Select region for calculation based on Canny filtering")
         self.check_canny.setChecked(True)#connect with config
+        """
         
         self.btn_getMVs = QPushButton('Calculate motion vectors')
         self.btn_getMVs.clicked.connect(self.on_getMVs)
@@ -129,6 +134,7 @@ class TabMotion(QWidget):
         
         self.grid_overall.addWidget(self.info, 0,0,1,4, Qt.AlignTop|Qt.AlignLeft)
         self.grid_overall.addWidget(self.combo_method, 1,0,1,2, Qt.AlignTop|Qt.AlignLeft)
+        """
         self.grid_overall.addWidget(self.label_settings, 2,0, Qt.AlignTop|Qt.AlignLeft)
         self.grid_overall.addWidget(self.label_blockwidth,3,0, Qt.AlignTop|Qt.AlignLeft)
         self.grid_overall.addWidget(self.spinbox_blockwidth,3,1, Qt.AlignTop|Qt.AlignLeft)
@@ -140,14 +146,19 @@ class TabMotion(QWidget):
         self.grid_overall.addWidget(self.check_scaling, 7,0,1,2, Qt.AlignTop|Qt.AlignLeft)
         self.grid_overall.addWidget(self.check_canny, 8,0,1,2, Qt.AlignTop|Qt.AlignLeft)
         self.grid_overall.addWidget(self.check_filter, 9,0,1,2, Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addLayout(self.grid_btns, 10,0,1,4,Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.progressbar_MVs, 11,0,1,4)
-        self.grid_overall.addWidget(self.btn_succeed_MVs, 12,0,1,4)
+        """
+        self.grid_overall.addWidget(self.BMset,2,0)
+        self.grid_overall.addLayout(self.grid_btns, 3,0,1,4,Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.progressbar_MVs, 4,0,1,4)
+        self.grid_overall.addWidget(self.btn_succeed_MVs, 5,0,1,4)
 
     def on_combo_method_changed(self):
         method = self.combo_method.currentText()
         if method == "Fluo-Intensity":
-            print("Fluo-Intensity selected")
+            self.BMset.deleteLater()
+            self.FIset = FI_settings(self)
+            self.grid_overall.addWidget(self.FIset,2,0)
+            """
             self.btn_getMVs.setEnabled(False)
             self.btn_load_ohw.setEnabled(False)
             self.btn_save_MVs.setEnabled(False)
@@ -159,16 +170,22 @@ class TabMotion(QWidget):
             if scaling_status == True:
                 px_longest = 1024
         
-            self.cohw.set_analysisImageStack(px_longest = px_longest) # scale + set roi, , roi=[0,0,500,500]
-            self.cohw.set_method("Fluo-Intensity")
+            self.cohw.set_analysisImageStack(px_longest = px_longest) # scale + set roi, e.g. roi=[0,0,500,500]
+            self.cohw.calculate_motion(method = "Fluo-Intensity")
             self.cohw.ceval.process()
             
             self.combo_method.setEnabled(False) # disable to prevent unwanted changes TODO: fix
             
             self.btn_succeed_MVs.setStyleSheet("background-color: YellowGreen")
             self.btn_succeed_MVs.setText("No calculation needed for Fluo-Intensity, just proceed to the next tab.")
+            """
+            
             
         elif method == "Blockmatch":
+            self.FIset.deleteLater()
+            self.BMset = BM_settings(self)
+            self.grid_overall.addWidget(self.BMset,2,0)
+            
             self.init_ohw()            
 
     def init_ohw(self):
@@ -194,48 +211,27 @@ class TabMotion(QWidget):
         self.btn_getMVs.setEnabled(False)
         
         #get current parameters entered by user
+        # TODO: create function to return these values!
         self.cohw.videometa['fps'] = float(self.parent.tab_input.edit_fps.text())
         self.cohw.videometa['microns_per_px'] = float(self.parent.tab_input.edit_mpp.text())
         
-        blockwidth = self.spinbox_blockwidth.value()
-        maxShift = self.spinbox_maxShift.value()
-        delay = self.spinbox_delay.value()
+        blockwidth, maxShift, delay = self.BMset.get_settings()
+        scaling_stat, canny_stat, filter_stat = self.BMset.get_options()        
         
         px_longest = None
-        scaling_status = self.check_scaling.isChecked()
-        canny_status = self.check_canny.isChecked()
-        filter_status = self.check_filter.isChecked()
 
-        if scaling_status == True:
+        if scaling_stat == True:
             px_longest = 1024
-        '''
-        else:                
-            #if at least one ROI was selected, use ROI ImageStack and also calculate the whole image
-            if len(self.ROI_OHWs) is not 0:
-                for nr_ROI in range(0, len(self.ROI_OHWs)):
-                    #calculate motion vectors for each ROI
-                    self.ROI_OHWs[nr_ROI].scale_ImageStack(self.ROI_OHWs[nr_ROI].ROIImageStack.shape[1], 
-                                                           self.ROI_OHWs[nr_ROI].ROIImageStack.shape[2])
-    
-                    cal_MVs_thread = self.ROI_OHWs[nr_ROI].calculate_MVs_thread(blockwidth = blockwidth, delay = delay, max_shift = maxShift)
-                    cal_MVs_thread.start()
-                    #self.ready = False
-                    cal_MVs_thread.progressSignal.connect(self.updateMVProgressBar)
-                    #initialize_calculatedMVs only for the full image, for the ROIs on-the-fly
-                    #cal_MVs_thread.finished.connect(self.initialize_calculatedMVs)
-    
-#            #always calculate the full image
-            self.cohw.scale_ImageStack(self.cohw.rawImageStack.shape[1], self.cohw.rawImageStack.shape[2])     
-        '''
         
+        print(scaling_stat, px_longest)
         self.cohw.set_analysisImageStack(px_longest = px_longest) # scale + set roi, , roi=[0,0,500,500]
         #self.cohw.analysis_meta["scaling_status"] = scaling_status # do not set directly on instance, implement method!
         #self.cohw.analysis_meta["filter_status"] = filter_status
-        if filter_status == True:
-            self.cohw.set_filter(filter = 'filter_singlemov', on = True)
+        if filter_stat == True:
+            self.cohw.set_filter(filtername = 'filter_singlemov', on = True)
 
         calculate_motion_thread = self.cohw.calculate_motion_thread(
-            blockwidth = blockwidth, delay = delay, max_shift = maxShift, canny = canny_status)
+            blockwidth = blockwidth, delay = delay, max_shift = maxShift, canny = canny_stat)
         calculate_motion_thread.start()
         calculate_motion_thread.progressSignal.connect(self.updateMVProgressBar)
         calculate_motion_thread.finished.connect(self.finish_motion)
@@ -301,3 +297,96 @@ class TabMotion(QWidget):
             set values from config
         """
         pass
+        
+class BM_settings(QWidget):
+    
+    def __init__(self, parent):
+        super().__init__()
+        self.parent = parent
+        self.initUI()
+    
+    def get_settings(self):
+        blockwidth = self.spinbox_blockwidth.value()
+        maxShift = self.spinbox_maxShift.value()
+        delay = self.spinbox_delay.value()
+        
+        return blockwidth, maxShift, delay
+    
+    def get_options(self):
+        scaling_status = self.check_scaling.isChecked()
+        canny_status = self.check_canny.isChecked()
+        filter_status = self.check_filter.isChecked()
+        
+        return scaling_status, canny_status, filter_status
+    
+    def initUI(self):
+        self.layout = QGridLayout()
+        self.layout.setSpacing(10)
+        self.layout.setAlignment(Qt.AlignTop|Qt.AlignLeft)
+        self.setLayout(self.layout)
+        
+        self.label_settings = QLabel('Settings: ')
+        self.label_settings.setFont(QFont("Times",weight=QFont.Bold))
+        self.label_addOptions = QLabel('Additional options: ')
+        self.label_addOptions.setFont(QFont("Times",weight=QFont.Bold))
+        
+        self.label_blockwidth =  QLabel('Blockwidth (in pixels):')
+        self.label_delay =       QLabel('Delay (in frames): ')
+        self.label_maxShift =    QLabel('Maximum shift p (in pixels): ')
+        self.spinbox_blockwidth = QSpinBox()
+        self.spinbox_delay = QSpinBox()
+        self.spinbox_maxShift = QSpinBox()
+        
+        #settings for the spinboxes
+        self.spinbox_blockwidth.setRange(2,128)
+        self.spinbox_blockwidth.setSingleStep(1)
+        self.spinbox_blockwidth.setSuffix(' pixels')
+        self.spinbox_blockwidth.setValue(int(self.parent.config['DEFAULT VALUES']['blockwidth'])) # move to function
+        self.spinbox_delay.setRange(1,10)
+        self.spinbox_delay.setSuffix(' frames')
+        self.spinbox_delay.setSingleStep(1)
+        self.spinbox_delay.setValue(int(self.parent.config['DEFAULT VALUES']['delay']))
+        self.spinbox_maxShift.setSuffix(' pixels')
+        self.spinbox_maxShift.setValue(int(self.parent.config['DEFAULT VALUES']['maxShift']))
+        
+        self.check_scaling = QCheckBox('Scale longest side to 1024 px during calculation')
+        self.check_scaling.setChecked(True) #connect with config here!
+        
+        #enable/disable filtering
+        self.check_filter = QCheckBox("Filter motion vectors after calculation")
+        self.check_filter.setChecked(True)#connect with config here!
+        
+        #canny edge
+        self.check_canny = QCheckBox("Select region for calculation based on Canny filtering")
+        self.check_canny.setChecked(True)#connect with config
+        
+        self.layout.addWidget(self.label_settings, 0,0, Qt.AlignTop|Qt.AlignLeft)
+        self.layout.addWidget(self.label_blockwidth,1,0, Qt.AlignTop|Qt.AlignLeft)
+        self.layout.addWidget(self.spinbox_blockwidth,1,1, Qt.AlignTop|Qt.AlignLeft)
+        self.layout.addWidget(self.label_delay,2,0, Qt.AlignTop|Qt.AlignLeft)
+        self.layout.addWidget(self.spinbox_delay, 2,1, Qt.AlignTop|Qt.AlignLeft)
+        self.layout.addWidget(self.label_maxShift,3,0, Qt.AlignTop|Qt.AlignLeft)
+        self.layout.addWidget(self.spinbox_maxShift,3,1, Qt.AlignTop|Qt.AlignLeft)
+        self.layout.addWidget(self.label_addOptions, 4,0, Qt.AlignTop|Qt.AlignLeft)
+        self.layout.addWidget(self.check_scaling, 5,0,1,2, Qt.AlignTop|Qt.AlignLeft)
+        self.layout.addWidget(self.check_canny, 6,0,1,2, Qt.AlignTop|Qt.AlignLeft)
+        self.layout.addWidget(self.check_filter, 7,0,1,2, Qt.AlignTop|Qt.AlignLeft)        
+        
+class FI_settings(QWidget):
+    
+    def __init__(self, parent):
+        super().__init__()
+        self.parent=parent
+        self.initUI()
+    
+    def initUI(self):
+
+        self.layout = QGridLayout()
+        self.layout.setSpacing(10)
+        self.layout.setAlignment(Qt.AlignTop|Qt.AlignLeft)
+        self.setLayout(self.layout)
+        
+        self.label_settings = QLabel('Settings: ')
+        self.label_settings.setFont(QFont("Times",weight=QFont.Bold))
+        
+        self.layout.addWidget(self.label_settings, 1,0)

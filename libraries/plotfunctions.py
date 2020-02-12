@@ -6,6 +6,7 @@ import numpy as np
 import pathlib
 import moviepy.editor as mpy
 from moviepy.video.io.bindings import mplfig_to_npimage
+from copy import deepcopy
 
 from libraries import helpfunctions, Filters
 
@@ -14,16 +15,18 @@ def plot_Kinetics(timeindex, motion, plotoptions, hipeaks, lopeaks, file_name=No
     """
         plots graph for beating kinetics "EKG"
     """
-    
+    print(plotoptions)
     plotoptions_default = {"tmax":None, "vmax":None, "mark_peaks":False} # default plot parameters, changed if dict is available, implement better checking in future...
     if plotoptions is None:
         plotoptions = plotoptions_default
     else:
-        plotoptions = plotoptions_default.update(plotoptions)
-    
+        updated_options = deepcopy(plotoptions_default)
+        updated_options.update(plotoptions)
+        plotoptions = updated_options
+
     fig_kinetics, ax_kinetics = plt.subplots(1,1,figsize=(11,7))
     ax_kinetics.plot(timeindex, motion, '-', linewidth = 2) #self.fig_kinetics
-    
+
     tmax = plotoptions["tmax"] if plotoptions["tmax"] != None else timeindex[-1]
     ax_kinetics.set_xlim(left = 0, right = tmax)
     

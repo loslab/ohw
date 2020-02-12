@@ -190,7 +190,12 @@ class Postproc():
     def get_peakstatistics(self):
         self.PeakDetection.calc_peakstatistics()
         return self.PeakDetection.get_peakstatistics()
-
+        
+    def plot_kinetics(self, filename):
+        print(self.cohw.kinplot_options)
+        plotfunctions.plot_Kinetics(self.timeindex, self.mean_absMotions, self.cohw.kinplot_options, 
+                self.PeakDetection.hipeaks, self.PeakDetection.lopeaks, filename)
+                
     def export_analysis(self):
         self.PeakDetection.export_analysis(self.cohw.analysis_meta["results_folder"])
         

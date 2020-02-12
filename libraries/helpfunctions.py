@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import QMessageBox
 from PIL import ImageDraw, ImageFont, Image
 import requests
 import configparser
+import math
 
 def get_figure_size(img, initial_val):
     ratio = img.shape[0]/img.shape[1]
@@ -207,18 +208,24 @@ def sel_roi(img):
     # returns: xstart, ystart, xwidth, ywidth, in display coordinates
     # returns old roi if ESC is pressed
     
-    # if selection is draw outside window: crop
+    # if selection is drawn outside window: crop
     if (roi[0] + roi[2] > wsize):
         roi[2] = wsize - roi [0]
     if (roi[1] + roi[3] > hsize):
-        roi[3] = hsize - roi [1]    
+        roi[3] = hsize - roi [1]
+    
+    # negative start
+    if roi[0] < 0:
+        roi[2] = roi[2] + roi[0]
+        roi[0] = 0
+    if roi[1] < 0:
+        roi[3] = roi[3] + roi[1]
+        roi[1] = 0
     
     roi_px = [int(round(coord/hpercent)) for coord in roi]
 
     return roi_px
     
-import math
-
 def get_slice_from_roi(roi, blockwidth):
     """ input roi: [xs, ys, wx, wy]
         so far: includes only MVs which are completely in roi, calculated motionvector (= whole block) has to be completely in roi
