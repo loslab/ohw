@@ -102,6 +102,16 @@ def msgbox(self, message, msg_title = 'Successful'):
     msg = QMessageBox.information(self, msg_title, msg_text, QMessageBox.Ok)
     if msg == QMessageBox.Ok:
         pass  
+
+def questionbox(self, message=""):
+    """
+        ask yes/no QMessageBox
+    """
+    msg = QMessageBox.question(self, "", message, QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+    if msg == QMessageBox.Yes:
+        return True
+    else:
+        return False
         
 def scale_ImageStack(imageStack, px_longest = 1024):
     """

@@ -269,10 +269,12 @@ class TabInput(QWidget):
                 self.slider_blackval.setEnabled(False)
                 self.slider_whiteval.setEnabled(False)
                 self.btn_brightness.setEnabled(False)
-                self.btn_reloadVideo.setEnabled(True)
                 self.btn_selROI.setEnabled(False)
                 self.btn_resetROI.setEnabled(False)
-            
+
+                if self.cohw.analysis_meta["calc_finish"] == True:
+                    self.btn_reloadVideo.setEnabled(True)
+                
             inputpath = str(self.cohw.videometa['inputpath'])
             self.label_input_path.setText(inputpath)
             

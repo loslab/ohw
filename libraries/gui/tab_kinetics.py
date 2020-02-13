@@ -181,7 +181,6 @@ class TabKinetics(QWidget):
             self.ceval = self.cohw.ceval
             
             self.timeindex = self.ceval.timeindex #easier to referene here...
-            #self.motion = self.ceval.mean_absMotions
             self.motion = self.ceval.PeakDetection.motion
             self.Peaks, self.hipeaks, self.lopeaks = self.ceval.get_peaks()
             
@@ -194,11 +193,13 @@ class TabKinetics(QWidget):
                 self.button_saveKinPlot.setEnabled(True)
                 self.btn_plot_settings.setEnabled(True)
                 self.button_export_peaks.setEnabled(True)
+                self.btn_roi.setEnabled(True)
             else:
                 self.button_saveKinPlot.setEnabled(False)
                 self.button_detectPeaks.setEnabled(False)
                 self.btn_plot_settings.setEnabled(False)
                 self.button_export_peaks.setEnabled(False)
+                self.btn_roi.setEnabled(False)
         
             self.update = False
 
@@ -211,6 +212,8 @@ class TabKinetics(QWidget):
         method = self.cohw.get_method()
         if method == "Blockmatch":
             self.ax_kinetics.set_ylim(bottom = 0)
+        else:
+            self.ax_kinetics.autoscale(axis = 'y')
 
         self.plot_Peaks()
         self.updateStatistics()

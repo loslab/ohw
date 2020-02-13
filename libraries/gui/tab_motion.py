@@ -202,10 +202,15 @@ class TabMotion(QWidget):
             else:
                 self.btn_calcmotion.setEnabled(False)    
             
-            if self.cohw.analysis_meta["has_MVs"]:    # change here to appropriate variable
+            if self.cohw.analysis_meta["calc_finish"] == True:    # change here to appropriate variable
                 self.btn_succeed_MVs.setStyleSheet("background-color: YellowGreen")
-                self.btn_succeed_MVs.setText("Motion available")
-                self.btn_save_MVs.setEnabled(True)
+                
+                if self.cohw.analysis_meta["Motion_method"] == "Blockmatch":
+                    self.btn_succeed_MVs.setText("Analysis of blockmatch calculation available")
+                elif self.cohw.analysis_meta["Motion_method"] == "Fluo-Intensity":
+                    self.btn_succeed_MVs.setText("Analysis of Fluorescence Intensity available")
+                    
+                self.btn_save_MVs.setEnabled(True) #TODO: keep button?
             else:
                 self.btn_succeed_MVs.setStyleSheet("background-color: IndianRed")
                 self.btn_succeed_MVs.setText("No motion available yet. Calculate new one or load old")
@@ -214,9 +219,28 @@ class TabMotion(QWidget):
             self.update = False
         
     def on_calcmotion(self):
+        
+        if self.cohw.analysis_meta["calc_finish"] == True: # ask user if a finished calculation is already loaded as it would be overwritten
+            if helpfunctions.questionbox(self, "A calculation already exists. Do you want to start a new one and overwrite?") == False:
+                return
+        
         #disable button to not cause interference between different calculations
         self.btn_calcmotion.setEnabled(False)
+
+        method = self.combo_method.currentText()
+        if method == "Blockmatch":
+            self.calc_BM()
         
+        elif method == "Fluo-Intensity":
+            self.calc_FluoI()
+            self.finish_motion()
+            
+    def calc_FluoI(self):
+       
+        self.cohw.set_analysisImageStack()
+        self.cohw.calculate_motion(method = "Fluo-Intensity", overwrite = True) #TODO: overwrite option still quite sketchy
+
+    def calc_BM(self):
         #get current parameters entered by user
         # TODO: create function to return these values!
         self.cohw.videometa['fps'] = float(self.parent.tab_input.edit_fps.text())
@@ -230,15 +254,12 @@ class TabMotion(QWidget):
         if scaling_stat == True:
             px_longest = 1024
         
-        print(scaling_stat, px_longest)
         self.cohw.set_analysisImageStack(px_longest = px_longest) # scale + set roi, , roi=[0,0,500,500]
-        #self.cohw.analysis_meta["scaling_status"] = scaling_status # do not set directly on instance, implement method!
-        #self.cohw.analysis_meta["filter_status"] = filter_status
         if filter_stat == True:
             self.cohw.set_filter(filtername = 'filter_singlemov', on = True)
 
         calculate_motion_thread = self.cohw.calculate_motion_thread(
-            blockwidth = blockwidth, delay = delay, max_shift = maxShift, canny = canny_stat)
+            blockwidth = blockwidth, delay = delay, max_shift = maxShift, canny = canny_stat, overwrite=True)
         calculate_motion_thread.start()
         calculate_motion_thread.progressSignal.connect(self.updateMVProgressBar)
         calculate_motion_thread.finished.connect(self.finish_motion)
@@ -246,8 +267,7 @@ class TabMotion(QWidget):
     def finish_motion(self):
         # saves ohw_object when calculation is done and other general results
         self.cohw.init_motion()
-        self.parent.update_tabs()
-        
+        self.parent.update_tabs()      
         # self.cohw.save_ohw()
         
     def on_load_ohw(self):
