@@ -14,9 +14,11 @@ class TabMotion(QWidget):
     
     def __init__(self, parent):
         super(TabMotion, self).__init__(parent)
+        self.update = True
         self.parent=parent
         self.config = self.parent.config
         self.initUI()
+
         
     def initUI(self):
         self.info = QTextEdit()
@@ -73,10 +75,10 @@ class TabMotion(QWidget):
         self.check_canny.setChecked(True)#connect with config
         """
         
-        self.btn_getMVs = QPushButton('Calculate motion vectors')
-        self.btn_getMVs.clicked.connect(self.on_getMVs)
-        self.btn_getMVs.setEnabled(False)
-        self.btn_getMVs.setFixedWidth(150)
+        self.btn_calcmotion = QPushButton('Calculate motion')
+        self.btn_calcmotion.clicked.connect(self.on_calcmotion)
+        self.btn_calcmotion.setEnabled(False)
+        self.btn_calcmotion.setFixedWidth(150)
         
         self.btn_save_MVs = QPushButton('Save motion vectors')
         self.btn_save_MVs.clicked.connect(self.on_saveMVs)
@@ -117,12 +119,12 @@ class TabMotion(QWidget):
         self.grid_btns.setSpacing(10)
         self.grid_btns.setAlignment(Qt.AlignTop|Qt.AlignLeft)
         
-        self.grid_btns.addWidget(self.btn_getMVs, 0,0, Qt.AlignTop|Qt.AlignLeft)
+        self.grid_btns.addWidget(self.btn_calcmotion, 0,0, Qt.AlignTop|Qt.AlignLeft)
         self.grid_btns.addWidget(self.btn_save_MVs, 0,1, Qt.AlignTop|Qt.AlignLeft)
         self.grid_btns.addWidget(self.btn_load_ohw, 0,2, Qt.AlignTop|Qt.AlignLeft)
 
         btnwidth = 250 
-        self.btn_getMVs.setFixedWidth(btnwidth)
+        self.btn_calcmotion.setFixedWidth(btnwidth)
         self.btn_load_ohw.setFixedWidth(btnwidth)
         self.btn_save_MVs.setFixedWidth(btnwidth)
 
@@ -159,7 +161,7 @@ class TabMotion(QWidget):
             self.FIset = FI_settings(self)
             self.grid_overall.addWidget(self.FIset,2,0)
             """
-            self.btn_getMVs.setEnabled(False)
+            self.btn_calcmotion.setEnabled(False)
             self.btn_load_ohw.setEnabled(False)
             self.btn_save_MVs.setEnabled(False)
             
@@ -190,25 +192,30 @@ class TabMotion(QWidget):
 
     def init_ohw(self):
         ''' set values from cohw '''
-        self.cohw = self.parent.cohw
         
-        if self.cohw.video_loaded:
-            self.btn_getMVs.setEnabled(True)
-        else:
-            self.btn_getMVs.setEnabled(False)    
+        if self.update == True:
         
-        if self.cohw.analysis_meta["has_MVs"]:    # change here to appropriate variable
-            self.btn_succeed_MVs.setStyleSheet("background-color: YellowGreen")
-            self.btn_succeed_MVs.setText("Motion available")
-            self.btn_save_MVs.setEnabled(True)
-        else:
-            self.btn_succeed_MVs.setStyleSheet("background-color: IndianRed")
-            self.btn_succeed_MVs.setText("No motion available yet. Calculate new one or load old")
-            self.btn_save_MVs.setEnabled(False)
+            self.cohw = self.parent.cohw
+            
+            if self.cohw.video_loaded:
+                self.btn_calcmotion.setEnabled(True)
+            else:
+                self.btn_calcmotion.setEnabled(False)    
+            
+            if self.cohw.analysis_meta["has_MVs"]:    # change here to appropriate variable
+                self.btn_succeed_MVs.setStyleSheet("background-color: YellowGreen")
+                self.btn_succeed_MVs.setText("Motion available")
+                self.btn_save_MVs.setEnabled(True)
+            else:
+                self.btn_succeed_MVs.setStyleSheet("background-color: IndianRed")
+                self.btn_succeed_MVs.setText("No motion available yet. Calculate new one or load old")
+                self.btn_save_MVs.setEnabled(False)
+                
+            self.update = False
         
-    def on_getMVs(self):
+    def on_calcmotion(self):
         #disable button to not cause interference between different calculations
-        self.btn_getMVs.setEnabled(False)
+        self.btn_calcmotion.setEnabled(False)
         
         #get current parameters entered by user
         # TODO: create function to return these values!
@@ -239,7 +246,7 @@ class TabMotion(QWidget):
     def finish_motion(self):
         # saves ohw_object when calculation is done and other general results
         self.cohw.init_motion()
-        self.parent.init_ohw()
+        self.parent.update_tabs()
         
         # self.cohw.save_ohw()
         
@@ -260,7 +267,7 @@ class TabMotion(QWidget):
         self.cohw.load_ohw(pickle_file)
 
         #self.cohw.init_motion() # is already done in load_ohw
-        self.parent.init_ohw()
+        self.parent.update_tabs()
         
         self.set_motion_param() # or move to init_ohw?
 
@@ -270,7 +277,7 @@ class TabMotion(QWidget):
     def on_saveMVs(self):
         ''' saves raw MVs to results folder '''
         self.cohw.save_MVs()
-        helpfunctions.msgbox(self, 'Motion vectors were successfully saved')
+        helpfunctions.msgbox(self, 'Motion vectors saved successfully')
         
     def set_motion_param(self):
         ''' sets values in gui from loaded ohw-file '''

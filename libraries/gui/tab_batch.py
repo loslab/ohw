@@ -19,12 +19,16 @@ class TabBatch(QWidget):
     
     def __init__(self, parent):
         super(TabBatch, self).__init__(parent)
+        self.update = False
         self.parent=parent
         self.initUI()
         
         self.videofiles = []
         self.stopBatch = False
         self.global_resultsfolder = None
+
+    def init_ohw(self):
+        pass
 
     def initUI(self):
 
@@ -318,7 +322,7 @@ class TabBatch(QWidget):
     def on_startBatch(self):
         self.parent.current_ohw.save_ohw() # saves again as marked peaks might have changed
         self.parent.current_ohw = OHW.OHW() # clears loaded analysis such that no crosstalk takes place
-        self.parent.init_ohw()
+        self.parent.update_tabs()
         print('Starting batch analysis...')
         self.btn_addVid.setEnabled(False)
         self.btn_remVid.setEnabled(False)

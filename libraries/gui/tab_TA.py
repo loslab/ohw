@@ -17,6 +17,7 @@ class TabTA(QWidget):
     
     def __init__(self, parent):
         super(TabTA, self).__init__(parent)
+        self.update = True # update flag, set when motion calculation changed
         self.initUI()
         self.parent=parent
         
@@ -31,18 +32,6 @@ class TabTA(QWidget):
         
         self.label_TA = QLabel('Motion averaged over time')
         self.label_TA.setFont(QFont("Times",weight=QFont.Bold))
-        
-        """
-        #create a label for choosing the ROI
-        label_timeavg_chooseROI = QLabel('Choose the ROI to be displayed: ')
-        label_timeavg_chooseROI.setFont(QFont("Times",weight=QFont.Bold))
-        
-        
-        #create a drop-down menu for choosing the ROI to be displayed
-        self.timeavg_combobox = QComboBox()
-        self.timeavg_combobox.addItem('Full image')    
-        self.timeavg_combobox.currentIndexChanged[int].connect(self.on_chooseROI)
-        """
         
         #display the calculated time averaged motion
         self.label_TA_tot = QLabel('Absolute contractility:')
@@ -120,13 +109,21 @@ class TabTA(QWidget):
             set values from cohw
             enable save button if MVs are present
         """
-        self.ceval = self.parent.cohw.ceval
-        if self.parent.cohw.analysis_meta["has_MVs"]:
-            self.btn_save_TA.setEnabled(True)
-            self.init_TAmotion()
-        else:
-            self.btn_save_TA.setEnabled(False)
-            self.clear_figs()
+        
+        # init only if sth changed
+        # changes can happen if roi changed/ new motion loaded/...
+        #if self.parent.tabstates["tab_TA"]["toupdate"] == True:
+        if self.update == True:
+       
+            self.ceval = self.parent.cohw.ceval
+            if self.parent.cohw.analysis_meta["has_MVs"]:
+                self.btn_save_TA.setEnabled(True)
+                self.init_TAmotion()
+            else:
+                self.btn_save_TA.setEnabled(False)
+                self.clear_figs()
+                
+            self.update = False
 
     def init_TAmotion(self): 
         max_motion = self.ceval.max_avgMotion

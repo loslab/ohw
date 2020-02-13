@@ -17,6 +17,7 @@ class TabQuiver(QWidget):
     
     def __init__(self, parent):
         super(TabQuiver, self).__init__(parent)
+        self.update = True # update flag, set when motion calculation changed
         self.initUI()
         self.parent=parent
         
@@ -171,38 +172,43 @@ class TabQuiver(QWidget):
             set values from cohw
             enable sliders/ plot if corresponding data is present
         """
-        self.cohw = self.parent.cohw  #check if this works... looks good
-        self.ceval = self.cohw.ceval
-        self.clear_heatmaps()
-        self.clear_quivers()        
         
-        # init heatmap part
-        if self.cohw.analysis_meta["has_MVs"]:
-            self.btn_heatmap_vid.setEnabled(True)
-            self.btn_heatmap_save.setEnabled(True)
-            self.slider_heatmaps.setMaximum(self.ceval.absMotions.shape[0]-1)
-            self.slider_heatmaps.setValue(0)
-            self.slider_heatmaps.setEnabled(True)
-            self.init_heatmaps()
-        else:
-            self.btn_heatmap_vid.setEnabled(False)
-            self.btn_heatmap_save.setEnabled(False)
-            self.slider_heatmaps.setEnabled(False)
-            self.placeholder_heatmaps()
+        if self.update == True:
         
-        # init quiver part
-        if self.parent.cohw.analysis_meta["has_MVs"] and self.cohw.video_loaded:       
-            self.btn_quiver_save.setEnabled(True)
-            self.btn_quivers_video.setEnabled(True)
-            self.slider_quiver.setMaximum(self.ceval.mean_absMotions.shape[0]-1)# or introduce new variable which counts the amount of motion timepoints
-            self.slider_quiver.setValue(0)
-            self.slider_quiver.setEnabled(True)
-            self.init_quivers()
-        else:
-            self.btn_quiver_save.setEnabled(False)
-            self.btn_quivers_video.setEnabled(False)
-            self.slider_quiver.setEnabled(False)
-            self.placeholder_quivers()
+            self.cohw = self.parent.cohw  #check if this works... looks good
+            self.ceval = self.cohw.ceval
+            self.clear_heatmaps()
+            self.clear_quivers()        
+            
+            # init heatmap part
+            if self.cohw.analysis_meta["has_MVs"]:
+                self.btn_heatmap_vid.setEnabled(True)
+                self.btn_heatmap_save.setEnabled(True)
+                self.slider_heatmaps.setMaximum(self.ceval.absMotions.shape[0]-1)
+                self.slider_heatmaps.setValue(0)
+                self.slider_heatmaps.setEnabled(True)
+                self.init_heatmaps()
+            else:
+                self.btn_heatmap_vid.setEnabled(False)
+                self.btn_heatmap_save.setEnabled(False)
+                self.slider_heatmaps.setEnabled(False)
+                self.placeholder_heatmaps()
+            
+            # init quiver part
+            if self.parent.cohw.analysis_meta["has_MVs"] and self.cohw.video_loaded:       
+                self.btn_quiver_save.setEnabled(True)
+                self.btn_quivers_video.setEnabled(True)
+                self.slider_quiver.setMaximum(self.ceval.mean_absMotions.shape[0]-1)# or introduce new variable which counts the amount of motion timepoints
+                self.slider_quiver.setValue(0)
+                self.slider_quiver.setEnabled(True)
+                self.init_quivers()
+            else:
+                self.btn_quiver_save.setEnabled(False)
+                self.btn_quivers_video.setEnabled(False)
+                self.slider_quiver.setEnabled(False)
+                self.placeholder_quivers()
+            
+            self.update = False
     
     def init_heatmaps(self):
             

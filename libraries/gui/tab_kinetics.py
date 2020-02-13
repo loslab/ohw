@@ -20,6 +20,7 @@ class TabKinetics(QWidget):
     
     def __init__(self, parent):
         super(TabKinetics, self).__init__(parent)
+        self.update = True # update flag, set when motion calculation changed        
         self.parent=parent
         self.initUI()
         
@@ -174,28 +175,32 @@ class TabKinetics(QWidget):
 
     def init_ohw(self):
         ''' set values from cohw '''
-        self.cohw = self.parent.cohw
-        self.ceval = self.cohw.ceval
         
-        self.timeindex = self.ceval.timeindex #easier to referene here...
-        #self.motion = self.ceval.mean_absMotions
-        self.motion = self.ceval.PeakDetection.motion
-        self.Peaks, self.hipeaks, self.lopeaks = self.ceval.get_peaks()
-        
-        self.kinplot_options = self.cohw.kinplot_options
+        if self.update == True:
+            self.cohw = self.parent.cohw
+            self.ceval = self.cohw.ceval
+            
+            self.timeindex = self.ceval.timeindex #easier to referene here...
+            #self.motion = self.ceval.mean_absMotions
+            self.motion = self.ceval.PeakDetection.motion
+            self.Peaks, self.hipeaks, self.lopeaks = self.ceval.get_peaks()
+            
+            self.kinplot_options = self.cohw.kinplot_options
 
-        self.clear_fig()        
-        if self.cohw.analysis_meta["calc_finish"]:    # if any analysis is done elements can be enabled, as every analysis should have a 1D-representation
-            self.init_kinetics()
-            self.button_detectPeaks.setEnabled(True)
-            self.button_saveKinPlot.setEnabled(True)
-            self.btn_plot_settings.setEnabled(True)
-            self.button_export_peaks.setEnabled(True)
-        else:
-            self.button_saveKinPlot.setEnabled(False)
-            self.button_detectPeaks.setEnabled(False)
-            self.btn_plot_settings.setEnabled(False)
-            self.button_export_peaks.setEnabled(False)
+            self.clear_fig()        
+            if self.cohw.analysis_meta["calc_finish"]:    # if any analysis is done elements can be enabled, as every analysis should have a 1D-representation
+                self.init_kinetics()
+                self.button_detectPeaks.setEnabled(True)
+                self.button_saveKinPlot.setEnabled(True)
+                self.btn_plot_settings.setEnabled(True)
+                self.button_export_peaks.setEnabled(True)
+            else:
+                self.button_saveKinPlot.setEnabled(False)
+                self.button_detectPeaks.setEnabled(False)
+                self.btn_plot_settings.setEnabled(False)
+                self.button_export_peaks.setEnabled(False)
+        
+            self.update = False
 
     def init_kinetics(self): 
         ''' initializes kinetics graph and sets statistics'''
@@ -236,9 +241,7 @@ class TabKinetics(QWidget):
     def on_roi(self):
         self.ceval.set_roi()
         self.ceval.process()
-        self.parent.init_ohw()
-        #self.init_ohw() 
-        # TODO: init this tab only here, init other tabs only later when pressed (will be much faster)
+        self.parent.update_tabs()
 
     def plot_Peaks(self):
         ''' clear old peaks and plot all self.hipeaks, self.lopeaks '''

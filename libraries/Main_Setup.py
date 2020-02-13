@@ -47,25 +47,21 @@ class TableWidget(QWidget):
         self.tab_quiver = tab_quiver.TabQuiver(self)
         self.tab_TA = tab_TA.TabTA(self)
         self.tab_batch = tab_batch.TabBatch(self)
-        #self.tabROIs = QWidget()
+        
         self.tabs.resize(800,800)
          
         self.tabs.currentChanged.connect(self.on_tabselection)
         
         # Add tabs
+        
         self.tabs.addTab(self.tab_input,"Video Input ")
-        #self.tabs.addTab(self.tabROIs, "Manage ROIs")
         self.tabs.addTab(self.tab_motion,"Compute motion")
         self.tabs.addTab(self.tab_kinetics,"Beating kinetics")
         self.tabs.addTab(self.tab_quiver,"Heatmaps and Quiverplots")
         self.tabs.addTab(self.tab_TA,"Time averaged motion")
         self.tabs.addTab(self.tab_batch,"Batch analysis")
         
-        self.init_ohw()
-        
-        #self.ROI_coordinates = []
-        #self.ROI_names = []
-        #self.ROI_OHWs = []
+        self.update_tabs()
         
         curr_date = datetime.now().date()   # move updatecheck into function
         last_check = datetime.strptime(self.config['UPDATE']['last_check'],"%Y-%m-%d").date()
@@ -94,7 +90,8 @@ class TableWidget(QWidget):
         '''
         #self.cohw.save_ohw()
         pass
-        
+      
+    """ # replaced with update_tabs
     def init_ohw(self):
         ''' init tabs to changed ohw '''
         
@@ -103,13 +100,20 @@ class TableWidget(QWidget):
         self.tab_kinetics.init_ohw()
         self.tab_TA.init_ohw()
         self.tab_quiver.init_ohw()
+    """
 
+    def update_tabs(self):
+        ''' sets update flags = True on tabs to update when clicked the next time'''
+        for tab in [self.tab_input, self.tab_motion, self.tab_kinetics, self.tab_quiver, self.tab_TA]:
+            tab.update = True
+        
+        #update current tab as user won't click it automatically
+        idx = self.tabs.currentIndex()
+        self.tabs.widget(idx).init_ohw()
+        
     def on_tabselection(self, selection):
         ''' 
             calls init_ohw on each tab when clicked
-            TODO: don't hardcode selection, store tabs in list and init in loop
         '''
-    
-        if selection == 2:
-            print("kinetics tab selected")
-            self.tab_kinetics.init_ohw()
+
+        self.tabs.widget(selection).init_ohw()

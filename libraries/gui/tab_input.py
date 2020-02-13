@@ -17,6 +17,7 @@ class TabInput(QWidget):
     
     def __init__(self, parent):
         super(TabInput, self).__init__(parent)
+        self.update = True
         self.parent=parent
         self.initUI()
         
@@ -206,7 +207,7 @@ class TabInput(QWidget):
     def finish_loadVideo(self):
         self.progressbar_loadVideo.setRange(0,1)
         self.progressbar_loadVideo.setValue(1)
-        self.parent.init_ohw()
+        self.parent.update_tabs()
         #update videoinfos with data from cohw
 
     def on_reloadVideo(self):
@@ -237,44 +238,49 @@ class TabInput(QWidget):
         self.progressbar_loadVideo.setRange(0,1)
         self.progressbar_loadVideo.setValue(1)
         self.cohw.set_analysisImageStack(px_longest = self.cohw.analysis_meta["px_longest"])
-        self.parent.init_ohw()
+        self.parent.update_tabs()
         
     def init_ohw(self): #was update_tab_input
         """
             updates info displayed in inputtab
             -> loading of new video or loading of analysis file
         """
-        self.cohw = self.parent.cohw
-        self.edit_fps.setText(str(self.cohw.videometa['fps']))
-        self.edit_mpp.setText(str(self.cohw.videometa['microns_per_px']))            
-        # disable input field if videoinfos.txt available? if self.cohw.videometa['infofile_exists'] == True: ....
         
-        # check if video is loaded and update controls
-        if self.cohw.video_loaded == True:
-            self.display_firstImage(self.cohw.videometa["prev800px"])
-            self.slider_blackval.setEnabled(True)
-            self.slider_whiteval.setEnabled(True)
-            self.btn_brightness.setEnabled(True)
-            self.btn_reloadVideo.setEnabled(False)
-            self.btn_selROI.setEnabled(True)
-            self.btn_resetROI.setEnabled(True)
-            self.set_start_brightness()
+        if self.update == True:
+        
+            self.cohw = self.parent.cohw
+            self.edit_fps.setText(str(self.cohw.videometa['fps']))
+            self.edit_mpp.setText(str(self.cohw.videometa['microns_per_px']))            
+            # disable input field if videoinfos.txt available? if self.cohw.videometa['infofile_exists'] == True: ....
+            
+            # check if video is loaded and update controls
+            if self.cohw.video_loaded == True:
+                self.display_firstImage(self.cohw.videometa["prev800px"])
+                self.slider_blackval.setEnabled(True)
+                self.slider_whiteval.setEnabled(True)
+                self.btn_brightness.setEnabled(True)
+                self.btn_reloadVideo.setEnabled(False)
+                self.btn_selROI.setEnabled(True)
+                self.btn_resetROI.setEnabled(True)
+                self.set_start_brightness()
 
-        else:
-            self.display_firstImage()
-            self.slider_blackval.setEnabled(False)
-            self.slider_whiteval.setEnabled(False)
-            self.btn_brightness.setEnabled(False)
-            self.btn_reloadVideo.setEnabled(True)
-            self.btn_selROI.setEnabled(False)
-            self.btn_resetROI.setEnabled(False)
-        
-        inputpath = str(self.cohw.videometa['inputpath'])
-        self.label_input_path.setText(inputpath)
-        
-        results_folder = str(self.cohw.analysis_meta['results_folder']) #pathlib.PureWindowsPath(
-        self.label_results_folder.setText(results_folder)
-        self.btn_results_folder.setEnabled(True)
+            else:
+                self.display_firstImage()
+                self.slider_blackval.setEnabled(False)
+                self.slider_whiteval.setEnabled(False)
+                self.btn_brightness.setEnabled(False)
+                self.btn_reloadVideo.setEnabled(True)
+                self.btn_selROI.setEnabled(False)
+                self.btn_resetROI.setEnabled(False)
+            
+            inputpath = str(self.cohw.videometa['inputpath'])
+            self.label_input_path.setText(inputpath)
+            
+            results_folder = str(self.cohw.analysis_meta['results_folder']) #pathlib.PureWindowsPath(
+            self.label_results_folder.setText(results_folder)
+            self.btn_results_folder.setEnabled(True)
+            
+            self.update = False
     
     def display_firstImage(self, image = None):
         self.ax_firstIm.clear()
