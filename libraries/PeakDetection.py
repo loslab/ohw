@@ -19,6 +19,7 @@ class PeakDetection():
         self.hipeaks = []
         self.lopeaks = []
         self.peakmode = "alternating"
+        self.motiondescription = "Fluorescence Intensity [a.u.]" # used to label y-axis
         self.decimals = 2 # accuracy of results
     
     def set_data(self, timeindex, motion):
@@ -59,6 +60,9 @@ class PeakDetection():
             - high
         """
         self.peakmode = mode
+
+    def set_description(self, description):
+        self.motiondescription = description
     
     def assign_peaks(self):
         ''' order high/low peaks, include index of each peak in each specific list '''

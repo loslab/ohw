@@ -78,9 +78,10 @@ class Postproc():
         self.roi = None
     
     def process(self):
-        """ starts postprocessing, i.e. selects subset of MVs and performs filterng """
-        # basically same as init_motion previously did
-        # ... to be seen to what extent quiver components or similarly should be calculated here
+        """ 
+            starts postprocessing, i.e. selects subset of MVs and performs filterng
+            initiates motion + quivercomponents
+        """
         
         method = self.cohw.analysis_meta["Motion_method"]
         
@@ -118,6 +119,7 @@ class Postproc():
             self.prepare_quiver_components()
             self.calc_TimeAveragedMotion()
             self.PeakDetection.set_peakmode("alternating")
+            self.PeakDetection.set_description('Mean Absolute Motion [µm/s]') #u'Mean Absolute Motion [\xb5m/s]'
             self.PeakDetection.set_data(self.timeindex, self.mean_absMotions) #or pass self directly?
             
             # when to create results folder?
@@ -141,6 +143,7 @@ class Postproc():
             
             self.timeindex = (np.arange(self.meanI.shape[0]) / self.cohw.videometa["fps"]).round(2)
             self.PeakDetection.set_peakmode("high")
+            self.PeakDetection.set_description('Fluorescence Intensity [a.u.]')
             self.PeakDetection.set_data(self.timeindex, self.meanI)
         else:
             print("method not found, can't process")
@@ -193,8 +196,8 @@ class Postproc():
         
     def plot_kinetics(self, filename):
         print(self.cohw.kinplot_options)
-        plotfunctions.plot_Kinetics(self.timeindex, self.mean_absMotions, self.cohw.kinplot_options, 
-                self.PeakDetection.hipeaks, self.PeakDetection.lopeaks, filename)
+        plotfunctions.plot_Kinetics(self.timeindex, self.PeakDetection.motion, self.cohw.kinplot_options, 
+                self.PeakDetection.hipeaks, self.PeakDetection.lopeaks, self.PeakDetection.motiondescription, filename)
                 
     def export_analysis(self):
         self.PeakDetection.export_analysis(self.cohw.analysis_meta["results_folder"])

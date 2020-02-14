@@ -177,10 +177,12 @@ class OHW():
             self.rawMVs = OFlowCalc.BM_stack(self.analysisImageStack, 
                 progressSignal = progressSignal, **parameters)
             self.analysis_meta["has_MVs"], self.analysis_meta["calc_finish"] = True, True #calc_finish: new variable to track state -> lock to prevent overwriting
+            self.kinplot_options.update({"vmin":0})
 
         elif method == 'Fluo-Intensity':
             # as mean intensity can be calculated on the fly, no extra calculation needed here
             self.analysis_meta["has_MVs"], self.analysis_meta["calc_finish"] = False, True
+            self.kinplot_options.update({"vmin":None})
 
         else:
             print("method ", method, " currently not supported.")
@@ -299,9 +301,10 @@ class OHW():
                 self.kinplot_options[key] = False
             else:
                 self.kinplot_options[key] = float(value)
+        self.kinplot_options.update({"tmin":0})
         
-    def set_kinplot_options(self, kinplot_options):
-        self.kinplot_options = kinplot_options
+    def update_kinplot_options(self, kinplot_options):
+        self.kinplot_options.update(kinplot_options)
         #also change config to new value?
     
     def plot_TimeAveragedMotions(self, file_ext='.png'):

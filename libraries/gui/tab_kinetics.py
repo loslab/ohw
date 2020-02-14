@@ -41,21 +41,6 @@ class TabKinetics(QWidget):
         self.info.setMaximumWidth(800)
         self.info.setStyleSheet("background-color: LightSkyBlue")
         
-        """
-        #create a label for choosing the ROI
-        label_ekg_choose_ROI = QLabel('Choose the ROI to be displayed: ')
-        label_ekg_choose_ROI.setFont(QFont("Times",weight=QFont.Bold))
-        
-        #create a drop-down menu for choosing the ROI to be displayed
-        self.ekg_combobox = QComboBox()
-        self.ekg_combobox.addItem('Full image')    
-        #self.ekg_combobox.activated[str].connect(self.on_chooseROI)
-        self.ekg_combobox.currentIndexChanged[int].connect(self.on_chooseROI)
-        """
-        
-        #label_results = QLabel('Results: ')
-        #label_results.setFont(QFont("Times",weight=QFont.Bold))
-
         self.fig_kinetics, self.ax_kinetics = plt.subplots(1,1, figsize = (16,12))
         self.canvas_kinetics = FigureCanvas(self.fig_kinetics)
         self.canvas_kinetics.mpl_connect('button_press_event', self.mouse_press_callback)
@@ -89,9 +74,6 @@ class TabKinetics(QWidget):
         self.label_time_contr_relax_result = QLabel('not enough peaks')
         self.label_bpm_result = QLabel('not enough peaks')
         
-        #self.label_furtherAnalysis = QLabel('Further options:')
-        #self.label_furtherAnalysis.setFont(QFont("Times",weight=QFont.Bold))
-        
         self.label_evaluate = QLabel('Start evaluation')
         self.label_evaluate.setFont(QFont("Times",weight=QFont.Bold))
         
@@ -117,9 +99,6 @@ class TabKinetics(QWidget):
                   
         self.grid_overall = QGridLayout()
         self.grid_overall.addWidget(self.info,               0,0,1,4)
-        #self.grid_overall.addWidget(label_ekg_choose_ROI,    1,0)
-        #self.grid_overall.addWidget(self.ekg_combobox,       2,0)
-        #self.grid_overall.addWidget(self.label_results,           3,0)
         self.grid_overall.addWidget(self.label_ratio,             1,0)
         self.grid_overall.addWidget(self.spinbox_ratio,      1,1)
         self.grid_overall.addWidget(self.label_neighbours,        2,0)
@@ -207,14 +186,7 @@ class TabKinetics(QWidget):
         ''' initializes kinetics graph and sets statistics'''
         self.ax_kinetics.plot(self.timeindex, self.motion, 
                 '-', linewidth = 2)
-        self.ax_kinetics.set_xlim(left = 0, right = self.timeindex[-1])
-        
-        method = self.cohw.get_method()
-        if method == "Blockmatch":
-            self.ax_kinetics.set_ylim(bottom = 0)
-        else:
-            self.ax_kinetics.autoscale(axis = 'y')
-
+        self.update_plotview()
         self.plot_Peaks()
         self.updateStatistics()
         self.canvas_kinetics.draw()
@@ -396,8 +368,9 @@ class TabKinetics(QWidget):
     def on_plotSettings(self):
         self.dialog_kinoptions = dialog_kinoptions.DialogKinoptions(plotsettings = self.kinplot_options)
         self.dialog_kinoptions.exec_()
-        self.kinplot_options = self.dialog_kinoptions.get_settings()
-        self.update_plotsettings()
+        #self.kinplot_options.update(self.dialog_kinoptions.get_settings())
+        self.cohw.update_kinplot_options(self.dialog_kinoptions.get_settings())
+        self.update_plotview()
 
     def on_saveKinPlot(self):
         
@@ -416,18 +389,20 @@ class TabKinetics(QWidget):
         self.cohw.export_analysis()
         helpfunctions.msgbox(self, 'analyzed Peaks were saved successfully.')
 
-    def update_plotsettings(self):
+    def update_plotview(self):
         ''' updates plot appearence after plotoptions like axis extent changed '''
-        self.cohw.set_kinplot_options(self.kinplot_options)
+        
         if self.kinplot_options["tmax"] != None:
             self.ax_kinetics.set_xlim(right = self.kinplot_options["tmax"])
         else:
             self.ax_kinetics.set_xlim(right = self.timeindex[-1])
-            
+        if self.kinplot_options["tmin"] != None:
+            self.ax_kinetics.set_xlim(left = self.kinplot_options["tmin"])        
+        
         if self.kinplot_options["vmax"] != None:
             self.ax_kinetics.set_ylim(top = self.kinplot_options["vmax"])
         else:
             self.ax_kinetics.autoscale(axis = 'y')
-        self.ax_kinetics.set_ylim(bottom = 0)
+        if self.kinplot_options["vmin"] != None:
+            self.ax_kinetics.set_ylim(bottom = self.kinplot_options["vmin"])
         self.canvas_kinetics.draw()
-        

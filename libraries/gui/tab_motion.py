@@ -156,32 +156,11 @@ class TabMotion(QWidget):
 
     def on_combo_method_changed(self):
         method = self.combo_method.currentText()
+        
         if method == "Fluo-Intensity":
             self.BMset.deleteLater()
             self.FIset = FI_settings(self)
-            self.grid_overall.addWidget(self.FIset,2,0)
-            """
-            self.btn_calcmotion.setEnabled(False)
-            self.btn_load_ohw.setEnabled(False)
-            self.btn_save_MVs.setEnabled(False)
-            
-            # init Fluo Int, move to separate function
-            
-            px_longest = None
-            scaling_status = self.check_scaling.isChecked()
-            if scaling_status == True:
-                px_longest = 1024
-        
-            self.cohw.set_analysisImageStack(px_longest = px_longest) # scale + set roi, e.g. roi=[0,0,500,500]
-            self.cohw.calculate_motion(method = "Fluo-Intensity")
-            self.cohw.ceval.process()
-            
-            self.combo_method.setEnabled(False) # disable to prevent unwanted changes TODO: fix
-            
-            self.btn_succeed_MVs.setStyleSheet("background-color: YellowGreen")
-            self.btn_succeed_MVs.setText("No calculation needed for Fluo-Intensity, just proceed to the next tab.")
-            """
-            
+            self.grid_overall.addWidget(self.FIset,2,0)            
             
         elif method == "Blockmatch":
             self.FIset.deleteLater()
@@ -207,10 +186,11 @@ class TabMotion(QWidget):
                 
                 if self.cohw.analysis_meta["Motion_method"] == "Blockmatch":
                     self.btn_succeed_MVs.setText("Analysis of blockmatch calculation available")
+                    self.btn_save_MVs.setEnabled(True)
                 elif self.cohw.analysis_meta["Motion_method"] == "Fluo-Intensity":
                     self.btn_succeed_MVs.setText("Analysis of Fluorescence Intensity available")
+                    self.btn_save_MVs.setEnabled(False) #TODO: keep button?
                     
-                self.btn_save_MVs.setEnabled(True) #TODO: keep button?
             else:
                 self.btn_succeed_MVs.setStyleSheet("background-color: IndianRed")
                 self.btn_succeed_MVs.setText("No motion available yet. Calculate new one or load old")

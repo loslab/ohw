@@ -11,12 +11,12 @@ from copy import deepcopy
 from libraries import helpfunctions, Filters
 
 
-def plot_Kinetics(timeindex, motion, plotoptions, hipeaks, lopeaks, file_name=None):
+def plot_Kinetics(timeindex, motion, plotoptions, hipeaks, lopeaks, motiondescription = "motion", file_name=None):
     """
         plots graph for beating kinetics "EKG"
     """
     print(plotoptions)
-    plotoptions_default = {"tmax":None, "vmax":None, "mark_peaks":False} # default plot parameters, changed if dict is available, implement better checking in future...
+    plotoptions_default = {"tmax":None, "vmin":None, "vmax":None, "mark_peaks":False} # default plot parameters, changed if dict is available, implement better checking in future...
     if plotoptions is None:
         plotoptions = plotoptions_default
     else:
@@ -28,15 +28,17 @@ def plot_Kinetics(timeindex, motion, plotoptions, hipeaks, lopeaks, file_name=No
     ax_kinetics.plot(timeindex, motion, '-', linewidth = 2) #self.fig_kinetics
 
     tmax = plotoptions["tmax"] if plotoptions["tmax"] != None else timeindex[-1]
-    ax_kinetics.set_xlim(left = 0, right = tmax)
-    
-    ax_kinetics.set_ylim(bottom = 0)
+    tmin = plotoptions["tmin"] if plotoptions["tmin"] != None else 0
+    ax_kinetics.set_xlim(left = tmin, right = tmax)
+        
     if plotoptions["vmax"] != None:
         ax_kinetics.set_ylim(top = plotoptions["vmax"])
+    if plotoptions["vmin"] != None:
+        ax_kinetics.set_ylim(bottom = plotoptions["vmin"])
     
     #self.ax.set_title('Beating kinetics', fontsize = 26)
     ax_kinetics.set_xlabel('t [s]', fontsize = 22)
-    ax_kinetics.set_ylabel(u'Mean Absolute Motion [\xb5m/s]', fontsize = 22)
+    ax_kinetics.set_ylabel(motiondescription, fontsize = 22)
     ax_kinetics.tick_params(labelsize = 20)
     
     for side in ['top','right','bottom','left']:
