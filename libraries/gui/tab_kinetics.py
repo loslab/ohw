@@ -159,7 +159,7 @@ class TabKinetics(QWidget):
             self.cohw = self.parent.cohw
             self.ceval = self.cohw.ceval
             
-            self.timeindex = self.ceval.timeindex #easier to referene here...
+            self.timeindex = self.ceval.PeakDetection.timeindex #easier to referene here...
             self.motion = self.ceval.PeakDetection.motion
             self.Peaks, self.hipeaks, self.lopeaks = self.ceval.get_peaks()
             

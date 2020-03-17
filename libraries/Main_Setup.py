@@ -88,8 +88,8 @@ class TableWidget(QWidget):
             save analysis on exit (MVs should be already automatically saved,
             peaks might have changed)
         '''
-        #self.cohw.save_ohw()
-        pass
+        self.cohw.save_ohw()
+        #pass
       
     """ # replaced with update_tabs
     def init_ohw(self):

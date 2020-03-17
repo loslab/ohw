@@ -35,6 +35,19 @@ class PeakDetection():
     def set_peaks(self,Peaks):
         ''' assings list of Peakindices, sorts '''
         self.Peaks = sorted(Peaks)
+
+    def get_savedata(self):
+        savedict = {"motion": self.motion, "timeindex":self.timeindex, "Peaks":self.Peaks, "peakmode":self.peakmode, "motiondescription":self.motiondescription} # or init from postproc?
+        return savedict
+
+    def load_data(self, savedict):
+        self.motion = savedict["motion"]
+        self.timeindex = savedict["timeindex"]
+        self.Peaks = savedict["Peaks"]
+        self.peakmode = savedict["peakmode"]
+        self.motiondescription = savedict["motiondescription"]
+        
+        self.assign_peaks()
         
     def detect_peaks(self, ratio, number_of_neighbours):
         

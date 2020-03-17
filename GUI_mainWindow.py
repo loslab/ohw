@@ -24,14 +24,14 @@ class App(QMainWindow):
         self.show()
     
     def center(self):
-        #method for centering the app on the screen
+        # method for centering the app on the screen
         qr = self.frameGeometry()
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
     
     def keyPressEvent(self, e):
-        #if escape is pressed, App is supposed to close
+        ''' close window when escape pressed '''
         if e.key() == Core.Qt.Key_Escape:
             self.close()
             sys.exit(app.exec_())

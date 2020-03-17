@@ -17,6 +17,7 @@ class Postproc():
         self.timeindex = None           # time index for 1D-representation
         self.mean_absMotions = None     # for 1D-representation
     
+        self.method = None # method used for calculation, adopted from cohw, is set on process and on load_data
         self.filters = {"filter_singlemov":{"on":False, "par": "parval"}}
         self.roi = None
         self.PeakDetection = PeakDetection.PeakDetection()    # class which detects + saves peaks
@@ -79,18 +80,18 @@ class Postproc():
     
     def process(self):
         """ 
-            starts postprocessing, i.e. selects subset of MVs and performs filterng
+            starts postprocessing, depending on specified motion-method
+            i.e. selects subset of MVs and performs filterng
             initiates motion + quivercomponents
         """
         
-        method = self.cohw.analysis_meta["Motion_method"]
+        self.method = self.cohw.analysis_meta["Motion_method"]
         
-        if method == "Blockmatch":
+        if self.method == "Blockmatch":
             scalingfactor, delay = self.cohw.analysis_meta["scalingfactor"], self.cohw.analysis_meta["MV_parameters"]["delay"]
             bw = self.cohw.analysis_meta["MV_parameters"]['blockwidth']        
         
             # select MVs of calculation (possibly done in a roi of inputvid) by subroi:
-            
             if self.roi is None:
                 rawMVs_filt = self.cohw.rawMVs[:,:,:,:]
             else:
@@ -111,28 +112,30 @@ class Postproc():
             self.unitMVs = (rawMVs_filt / scalingfactor) * self.cohw.videometa["microns_per_px"] * (self.cohw.videometa["fps"] / delay)
             self.absMotions = np.sqrt(self.unitMVs[:,0]*self.unitMVs[:,0] + self.unitMVs[:,1]*self.unitMVs[:,1])# get absolute motions per frame
             
-            #print("absMotions shape: ", self.absMotions.shape)
-            
             self.mean_absMotions = OFlowCalc.get_mean_absMotion(self.absMotions)
             self.timeindex = (np.arange(self.mean_absMotions.shape[0]) / self.cohw.videometa["fps"]).round(2)
             
             self.prepare_quiver_components()
             self.calc_TimeAveragedMotion()
             self.PeakDetection.set_peakmode("alternating")
-            self.PeakDetection.set_description('Mean Absolute Motion [µm/s]') #u'Mean Absolute Motion [\xb5m/s]'
+            self.PeakDetection.set_description('Mean Absolute Motion [µm/s]')
             self.PeakDetection.set_data(self.timeindex, self.mean_absMotions) #or pass self directly?
             
             # when to create results folder?
             #self.analysis_meta["results_folder"].mkdir(parents = True, exist_ok = True) #create folder for results if it doesn't exist
             #plotfunctions.plot_Kinetics(timeindex, mean_absMotions, None, None, None, file_name=None)
 
-        elif method == "Fluo-Intensity":
+        elif self.method == "Fluo-Intensity":
+
+            if self.cohw.video_loaded == False:
+                print("videofile not loaded, can't perform analysis") # TODO: also lock roi selection if no file loaded
+                return 0
         
             scalingfactor = self.cohw.analysis_meta["scalingfactor"]
-            print("processing Flu-Intensity data")
+            print("processing Fluo-Intensity data")
             
             if self.roi is None:
-                self.meanI = self.cohw.rawImageStack[:,:,:].mean(axis=(1,2))
+                self.meanI = self.cohw.rawImageStack[:,:,:].mean(axis=(1,2)) #TODO: wrong stack, should be analysisimagestack
 
             else:
                 roi = self.roi
@@ -169,12 +172,40 @@ class Postproc():
         
         print("set filter options:")
         for filtername, filterdict in self.filters.items():
-            print("filter \"" + filtername + " with parameters: ")
+            print("filter \"" + filtername + "\" with parameters: ")
             print (filterdict)
     
     
     # add flag to track if processing already took place
     # allow export, save + reimport of parameters + rois (also detected peaks)
+
+    def get_savedata(self):
+        ''' returns essential data for saving, out of wich reconstruction of analysis is possible '''
+
+        peakdata = self.PeakDetection.get_savedata()
+        
+        savedict = {"filters": self.filters, "roi":self.roi, "peakdata":peakdata}
+        
+        if self.method == "Blockmatch":
+            savedict.update()#{"rawMVs":self.rawMVs})
+            
+        elif self.method == "Fluo-Intensity":
+            pass #savedict.update({})
+        
+        return savedict
+
+    def load_data(self, savedict):
+        ''' reads saved data to initialize postprocess evaluation'''
+        
+        # read parameters & process
+        self.method = self.cohw.analysis_meta["Motion_method"]        
+        self.filters = savedict["filters"]
+        self.roi = savedict["roi"]
+        self.process()
+        
+        # set peakdata from saved file, would be overwritten otherwise
+        peakdata = savedict["peakdata"]
+        self.PeakDetection.load_data(peakdata)
     
     def get_peaks(self):
         return self.PeakDetection.Peaks, self.PeakDetection.hipeaks, self.PeakDetection.lopeaks
@@ -196,7 +227,7 @@ class Postproc():
         
     def plot_kinetics(self, filename):
         print(self.cohw.kinplot_options)
-        plotfunctions.plot_Kinetics(self.timeindex, self.PeakDetection.motion, self.cohw.kinplot_options, 
+        plotfunctions.plot_Kinetics(self.PeakDetection.timeindex, self.PeakDetection.motion, self.cohw.kinplot_options, 
                 self.PeakDetection.hipeaks, self.PeakDetection.lopeaks, self.PeakDetection.motiondescription, filename)
                 
     def export_analysis(self):

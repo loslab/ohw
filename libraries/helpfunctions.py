@@ -238,6 +238,7 @@ def sel_roi(img):
     
 def get_slice_from_roi(roi, blockwidth):
     """ input roi: [xs, ys, wx, wy]
+        returns slice-coordinates of MVs depending on chosen roi
         so far: includes only MVs which are completely in roi, calculated motionvector (= whole block) has to be completely in roi
         e.g. bw = 8, roi from 4 - 400 -> start with 2nd MV (index = 1), up to 50th MV: 1:50
         e.g. bw = 8, roi from 1 (=px 2) with width = 15 (= px 16) -> 2nd MV only selected (index = 1): 1:2

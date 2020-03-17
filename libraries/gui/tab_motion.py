@@ -248,7 +248,7 @@ class TabMotion(QWidget):
         # saves ohw_object when calculation is done and other general results
         self.cohw.init_motion()
         self.parent.update_tabs()      
-        # self.cohw.save_ohw()
+        self.cohw.save_ohw()
         
     def on_load_ohw(self):
         """
@@ -281,6 +281,24 @@ class TabMotion(QWidget):
         
     def set_motion_param(self):
         ''' sets values in gui from loaded ohw-file '''
+        
+        if self.cohw.analysis_meta["calc_finish"] != True: # pickle does not contain any calculation
+            return
+        
+        method = self.cohw.analysis_meta["Motion_method"]
+        
+        if method == "Blockmatch":
+            self.combo_method.setCurrentIndex(0) # TODO: remove hardcode      
+            MV_param = self.cohw.analysis_meta["MV_parameters"]
+            #bw, delay, max_shift = MV_param["blockwidth"], MV_param["delay"], MV_param["max_shift"]
+            BMsettings = {param:MV_param[param] for param in ["blockwidth", "delay", "max_shift"]} # more elegant
+            self.BMset.set_settings(**BMsettings)
+            # fill with loaded values
+        
+        elif method == "Fluo-Intensity":
+            self.combo_method.setCurrentIndex(1)
+        
+        """
         self.spinbox_blockwidth.setValue(self.cohw.analysis_meta["MV_parameters"]["blockwidth"])
         self.spinbox_delay.setValue(self.cohw.analysis_meta["MV_parameters"]["delay"])
         self.spinbox_maxShift.setValue(self.cohw.analysis_meta["MV_parameters"]["max_shift"])
@@ -298,6 +316,7 @@ class TabMotion(QWidget):
             self.check_scaling.setChecked(True)
         else: 
             self.check_scaling.setChecked(False)
+        """
             
     def init_values(self, config):
         """
@@ -314,10 +333,15 @@ class BM_settings(QWidget):
     
     def get_settings(self):
         blockwidth = self.spinbox_blockwidth.value()
-        maxShift = self.spinbox_maxShift.value()
+        max_shift = self.spinbox_maxShift.value()
         delay = self.spinbox_delay.value()
         
-        return blockwidth, maxShift, delay
+        return blockwidth, max_shift, delay
+    
+    def set_settings(self, blockwidth, max_shift, delay):
+        self.spinbox_blockwidth.setValue(blockwidth)
+        self.spinbox_maxShift.setValue(max_shift)
+        self.spinbox_delay.setValue(delay)
     
     def get_options(self):
         scaling_status = self.check_scaling.isChecked()
@@ -337,9 +361,9 @@ class BM_settings(QWidget):
         self.label_addOptions = QLabel('Additional options: ')
         self.label_addOptions.setFont(QFont("Times",weight=QFont.Bold))
         
-        self.label_blockwidth =  QLabel('Blockwidth (in pixels):')
-        self.label_delay =       QLabel('Delay (in frames): ')
-        self.label_maxShift =    QLabel('Maximum shift p (in pixels): ')
+        self.label_blockwidth =  QLabel('Blockwidth:')
+        self.label_delay =       QLabel('Delay:')
+        self.label_maxShift =    QLabel('Maximum shift:')
         self.spinbox_blockwidth = QSpinBox()
         self.spinbox_delay = QSpinBox()
         self.spinbox_maxShift = QSpinBox()
@@ -347,13 +371,13 @@ class BM_settings(QWidget):
         #settings for the spinboxes
         self.spinbox_blockwidth.setRange(2,128)
         self.spinbox_blockwidth.setSingleStep(1)
-        self.spinbox_blockwidth.setSuffix(' pixels')
+        self.spinbox_blockwidth.setSuffix(' px')
         self.spinbox_blockwidth.setValue(int(self.parent.config['DEFAULT VALUES']['blockwidth'])) # move to function
         self.spinbox_delay.setRange(1,10)
-        self.spinbox_delay.setSuffix(' frames')
+        self.spinbox_delay.setSuffix(' frame(s)')
         self.spinbox_delay.setSingleStep(1)
         self.spinbox_delay.setValue(int(self.parent.config['DEFAULT VALUES']['delay']))
-        self.spinbox_maxShift.setSuffix(' pixels')
+        self.spinbox_maxShift.setSuffix(' px')
         self.spinbox_maxShift.setValue(int(self.parent.config['DEFAULT VALUES']['maxShift']))
         
         self.check_scaling = QCheckBox('Scale longest side to 1024 px during calculation')

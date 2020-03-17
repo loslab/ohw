@@ -31,6 +31,7 @@ class TabQuiver(QWidget):
         self.info.setStyleSheet("background-color: LightSkyBlue")
  
         """
+        #... reuse and allow selection of postprocessing evaluation?
         #create a label for choosing the ROI
         label_advanced_choose_ROI = QLabel('Choose the ROI to be displayed: ')
         label_advanced_choose_ROI.setFont(QFont("Times",weight=QFont.Bold))
@@ -102,14 +103,6 @@ class TabQuiver(QWidget):
 
         self.canvas_heatmaps.setFixedSize(500,500)
         self.canvas_quivers.setFixedSize(500,500)
-        
-        """
-        #succed-button
-        self.button_succeed_heatmaps = QPushButton('Heatmap-video creation was successful')
-        self.button_succeed_heatmaps.setStyleSheet("background-color: IndianRed")
-        self.button_succeed_quivers = QPushButton('Quiver-video creation was successful')
-        self.button_succeed_quivers.setStyleSheet("background-color: IndianRed")
-        """
 
         #progressbar for heatmaps
         self.progressbar_heatmaps = QProgressBar(self)
@@ -249,11 +242,15 @@ class TabQuiver(QWidget):
         
         #self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(np.arange(blockwidth/2, self.cohw.scaledImageStack.shape[2]-blockwidth/2, blockwidth)+1, np.arange(blockwidth/2, self.cohw.scaledImageStack.shape[1]-blockwidth/2+1, blockwidth))  #changed arange range, double check!
         
-        self.qslice=(slice(None,None,skipquivers),slice(None,None,skipquivers))
+        self.qslice=(slice(None,None,skipquivers),slice(None,None,skipquivers)) #slice determining which MVs are shown as quivers
         qslice = self.qslice
 
+        subroi = self.cohw.ceval.roi
+        self.subroi_slicex = slice(subroi[0],subroi[0]+subroi[2])
+        self.subroi_slicey = slice(subroi[1],subroi[1]+subroi[3])
+        
         self.imshow_quivers = self.ax_quivers.imshow(
-                self.cohw.analysisImageStack[0], cmap = "gray", 
+                self.cohw.analysisImageStack[0,self.subroi_slicey,self.subroi_slicex], cmap = "gray", # self.cohw.analysisImageStack[0] adjust to subroi
                 vmin = self.cohw.videometa["Blackval"], vmax = self.cohw.videometa["Whiteval"])
         self.quiver_quivers = self.ax_quivers.quiver(
                 self.ceval.MotionCoordinatesX[qslice], 
@@ -289,7 +286,7 @@ class TabQuiver(QWidget):
 
     def updateQuiver(self, frame):
         #callback when slider is moved
-        self.imshow_quivers.set_data(self.cohw.analysisImageStack[frame])    #introduce a displayImageStack here?
+        self.imshow_quivers.set_data(self.cohw.analysisImageStack[frame,self.subroi_slicey, self.subroi_slicex])    #introduce a displayImageStack here?
         self.quiver_quivers.set_UVC(self.ceval.QuiverMotionX[frame][self.qslice], self.ceval.QuiverMotionY[frame][self.qslice])
         self.canvas_quivers.draw()
         
@@ -306,9 +303,6 @@ class TabQuiver(QWidget):
         """
             saves the quivervideo
         """
-        #reset the color of success-button
-        #self.button_succeed_quivers.setStyleSheet("background-color: IndianRed")
-        #self.progressbar_quivers.setValue(0)
         
         """
         if self.quiver_settings['one_view']:
@@ -336,7 +330,6 @@ class TabQuiver(QWidget):
         self.progressbar_quivers.setValue(1)
         
         helpfunctions.msgbox(self, 'Quiver was saved successfully')
-        #self.button_succeed_quivers.setStyleSheet("background-color: YellowGreen")
         
     def on_saveQuiver(self):   
         singleframe = int(self.slider_quiver.value())

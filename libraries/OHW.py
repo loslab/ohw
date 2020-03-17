@@ -40,6 +40,10 @@ class OHW():
         self.analysis_meta = {"date": datetime.datetime.now(), "version": self.config['UPDATE']['version'], 
             "calc_finish":False, "has_MVs": False, "results_folder":"", "roi":None}
         self.init_kinplot_options()
+
+    def reset(self):
+        """ resets instance to default values """
+        pass
     
     def import_video(self, inputpath, *args, **kwargs):        
         self.rawImageStack, self.raw_videometa = videoreader.import_video(inputpath)
@@ -55,8 +59,13 @@ class OHW():
         return self.thread_import_video       
         
     def reload_video(self, *args, **kwargs):
+        """
+            reloads video, analysis file is norally opened without loading the video to save time
+            -> reload if video display or videoexport desired
+        """
         inputpath = self.videometa["inputpath"]
         self.rawImageStack, self.raw_videometa = videoreader.import_video(inputpath)
+        self.set_analysisImageStack(px_longest = self.analysis_meta["px_longest"]) #roi automatically considered      
         self.video_loaded = True
 
     def reload_video_thread(self):
@@ -124,7 +133,16 @@ class OHW():
         if self.analysis_meta["results_folder"] == "": # don't save when no file loaded
             return
         filename = str(self.analysis_meta["results_folder"]/'ohw_analysis.pickle')
-        savedata = [self.analysis_meta, self.videometa, self.rawMVs, self.PeakDetection.Peaks] 
+        
+        # get savedata for all current postprocs:
+        postproc_savedict = {name: eval.get_savedata() for name, eval in self.postprocs.items()}
+        
+        savedata = {"analysis_meta":self.analysis_meta, "videometa":self.videometa,
+                    "postproc_savedict":postproc_savedict, "kinplot_options":self.kinplot_options,
+                    "rawMVs":self.rawMVs} #leave kinplot_options here?
+        #savedata = [self.analysis_meta, self.videometa, self.rawMVs, self.PeakDetection.Peaks] 
+        #savedata = [self.analysis_meta, self.videometa, postproc_savedict, self.kinplot_options] #leave kinplot_options here?
+        
         # keep saving minimal, everything should be reconstructed from these parameters...
 
         self.analysis_meta["results_folder"].mkdir(parents = True, exist_ok = True)
@@ -139,14 +157,42 @@ class OHW():
         # take care if sth will be overwritten?
         # best way to insert rawImageStack?
         
+        # implement reset method to reset instance
+        self.reset()
+        
         with open(filename, 'rb') as loadfile:
             data = pickle.load(loadfile)
-        self.analysis_meta, self.videometa, self.rawMVs, Peaks = data
+        
+        #return data
+        print(data)
+
+        self.analysis_meta = data["analysis_meta"]
+        self.videometa = data["videometa"]
+        loaded_postprocs = data["postproc_savedict"]
+        self.kinplot_options = data["kinplot_options"]
+        
+        if "rawMVs" in data.keys():
+            self.rawMVs = data["rawMVs"]
+        
+        #, self.videometa, loaded_postprocs, self.kinplot_options = data
+        
+        self.postprocs = {}
+        for name, loaded_postproc in loaded_postprocs.items():
+            eval = postproc.Postproc(cohw=self, name=name)
+            eval.load_data(loaded_postproc)
+            
+            self.postprocs.update({name:eval})
+
+        self.ceval = self.postprocs[list(self.postprocs.keys())[0]] #set one as active
+        
+        """
         #print(self.analysis_meta)
         
         self.video_loaded = False
         self.init_motion()
         self.set_peaks(Peaks) #call after init_motion as this resets peaks
+        """
+
 
     def set_method(self, method, parameters):
         self.analysis_meta.update({'Motion_method': method, 'MV_parameters': parameters})
