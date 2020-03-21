@@ -115,7 +115,7 @@ def BM_getMV(patternToFind, searchRegion, max_shift, methodnr = 4):
     
     return xMotion, yMotion
     
-def BM_stack(imageStack, blockwidth, delay, max_shift, canny = True, progressSignal = None, *args, **kwargs):
+def BM_stack(imageStack, blockwidth, delay, max_shift, searchblocks = False, progressSignal = None, *args, **kwargs):
     """
         gets optical flow of a complete imagestack, based on blockmatching
         unit is px/frame as no scale is given here yet
@@ -123,6 +123,8 @@ def BM_stack(imageStack, blockwidth, delay, max_shift, canny = True, progressSig
         max_shift is maximum allowed movement
         delay in frames between images to analyze
         when the qt signal progressSignal is provided, it is used to track the progress
+        searchblocks: mask which specifies if motion should be calculated for specific block or 
+        omitted (-> speeds up calculation by allowing arbitary rois, like created from canny)
     """
     print("Calculating Optical Flow of imagestack by means of Blockmatching")
     starttime = time.time() #for benchmarking...
@@ -130,11 +132,14 @@ def BM_stack(imageStack, blockwidth, delay, max_shift, canny = True, progressSig
     MotionVectorsAll = []
     total_frames = imageStack.shape[0] - delay
     
+    """
     if canny:
         print("performing Canny edge detection on first frame to select region")
         searchblocks = find_searchblocks(imageStack[0],blockwidth)
     else:
         searchblocks = None # replace with np.ones here from function BM_single...
+    """
+    # searchblock calculation moved to preprocessing, BM can take now an arbitrary mask
     
     for frame, (prev_img, curr_img) in enumerate(zip(imageStack, imageStack[delay:])):
         # iterate pairwise over frames, total pairs: number_frames - delay
@@ -174,6 +179,7 @@ def find_searchblocks(inputimage, blockwidth):
         to define searchblocks, i.e. blocks in which to perform blockmatching
     '''
 
+    print("performing Canny edge detection on first frame to select region... ", end=" ")
     size_ver, size_hor = inputimage.shape[:2]   # is calculated twice... optimize
     MVs_ver = math.floor(size_ver/blockwidth)   # number of MVs in horizontal direction
     MVs_hor = math.floor(size_hor/blockwidth)
@@ -192,6 +198,7 @@ def find_searchblocks(inputimage, blockwidth):
     # if one component of edge(=cleaned) in searchRegion -> dont't find MV
     #edges = np.ones((MVs_ver, MVs_hor), dtype=bool)
     searchblocks = block_reduce(cleaned, block_size=(blockwidth,blockwidth), func=np.any) #downsample detected edge -> if any value in block = True -> calculate optical flow
+    print("finished")
     return searchblocks[:MVs_ver,:MVs_hor] #cut off overlapping values
     
 def get_mean_absMotion(absMotions):

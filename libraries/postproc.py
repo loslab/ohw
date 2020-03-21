@@ -89,11 +89,11 @@ class Postproc():
         """
         
         print("postprocessing evaluation: ", self.name)
-        self.method = self.cohw.analysis_meta["Motion_method"]
+        self.method = self.cohw.analysis_meta["motion_method"]
         
         if self.method == "Blockmatch":
-            scalingfactor, delay = self.cohw.analysis_meta["scalingfactor"], self.cohw.analysis_meta["MV_parameters"]["delay"]
-            bw = self.cohw.analysis_meta["MV_parameters"]['blockwidth']        
+            scalingfactor, delay = self.cohw.analysis_meta["scalingfactor"], self.cohw.analysis_meta["motion_parameters"]["delay"]
+            bw = self.cohw.analysis_meta["motion_parameters"]['blockwidth']        
         
             # select MVs of calculation (possibly done in a roi of inputvid) by subroi:
             if self.roi is None:
@@ -202,7 +202,7 @@ class Postproc():
         ''' reads saved data to initialize postprocess evaluation'''
         
         # read parameters & process
-        self.method = self.cohw.analysis_meta["Motion_method"]        
+        self.method = self.cohw.analysis_meta["motion_method"]        
         self.filters = savedict["filters"]
         self.roi = savedict["roi"]
         self.process()
@@ -251,7 +251,7 @@ class Postproc():
         self.QuiverMotionX = MV_cutoff[:,0,:,:] # changed name to QuiverMotionX as values are manipulated here
         self.QuiverMotionY = MV_cutoff[:,1,:,:]
         
-        bw = self.cohw.analysis_meta["MV_parameters"]["blockwidth"]
+        bw = self.cohw.analysis_meta["motion_parameters"]["blockwidth"]
         Nx, Ny = MV_cutoff[0,0].shape
         
         self.MotionCoordinatesX, self.MotionCoordinatesY = np.meshgrid(

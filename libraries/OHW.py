@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib import gridspec
 from libraries import OFlowCalc, Filters, plotfunctions, helpfunctions, PeakDetection, videoreader, postproc
 from functools import wraps
+import copy
 
 def create_analysis():
     """ creates instance of OHW class (= analysis)
@@ -80,10 +81,10 @@ class OHW():
         self.set_ceval("post1")
         self.video_loaded = False       # tells state if video is connected to ohw-objecet        
 
-        prefilters = {"Canny":{"on":False}} # add options/ parameters here
+        default_prefilters = {"Canny":{"on":False}} # add options/ parameters here
         self.analysis_meta = {"date": datetime.datetime.now(), "version": self.config['UPDATE']['version'], 
             "calc_finish":False, "has_MVs": False, "results_folder":"", "roi":None, "scalingfactor":1.,
-            "px_longest":None, "prefilters":prefilters}
+            "px_longest":None, "prefilters":default_prefilters}
             
         self.raw_videometa = {"inputpath":""} # raw info after importing  # dict of video metadata: microns_per_px, fps, blackval, whiteval,
         self.set_default_videometa(self.raw_videometa)
@@ -288,7 +289,7 @@ class OHW():
     def _set_method(self, method, parameters):
         """ set analysis method + parameters, used before starting analysis
         """
-        self.analysis_meta.update({'motion_method': method, 'motion_parameters': parameters})
+        self.analysis_meta.update({'motion_method': method, 'motion_parameters': copy.deepcopy(parameters)})
 
     def get_method(self):
         """ returns method which was used for analysis
@@ -321,7 +322,13 @@ class OHW():
         #store parameters which will be used for the calculation of MVs
         self._set_method(method, parameters)
         
-        if method == 'Blockmatch':   
+        if method == 'Blockmatch':
+            
+            # active canny prefilter -> get searchblocks from first frame
+            if self.analysis_meta['prefilters']['Canny']['on'] == True: # quite ugly? TODO: refactor
+                searchblocks  = OFlowCalc.find_searchblocks(self.analysisImageStack[0], parameters["blockwidth"])
+                parameters['searchblocks'] = searchblocks #pass to BM_stack as argument
+        
             self.rawMVs = OFlowCalc.BM_stack(self.analysisImageStack, 
                 progressSignal = progressSignal, **parameters)
             self.analysis_meta["has_MVs"], self.analysis_meta["calc_finish"] = True, True #calc_finish: new variable to track state -> lock to prevent overwriting
