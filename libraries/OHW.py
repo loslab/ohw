@@ -6,46 +6,106 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 from libraries import OFlowCalc, Filters, plotfunctions, helpfunctions, PeakDetection, videoreader, postproc
+from functools import wraps
 
-import moviepy.editor as mpy
-from moviepy.video.io.bindings import mplfig_to_npimage
+def create_analysis():
+    """ creates instance of OHW class (= analysis)
+    """
+    cohw = OHW()
+    
+    return cohw
+
+def load_analysis(picklefile):
+    """ returns saved analysis (.pickle) as OHW instance
+    """
+    cohw = OHW()
+    cohw.load_ohw(picklefile)
+
+    return cohw
+
+def check_finish(function, *args, **kwargs):
+    """ decorator checks if calculation already finished before analysis parameters can be set/ changed
+    """
+    @wraps(function) #needed to keep original docstring
+    def check_function(self, *args, **kwargs): #TODO: possibly introduce overwrite arg here to prevent checking?
+        if self.analysis_meta["calc_finish"] == False:
+            function(self, *args, **kwargs)
+        else:
+            print("Calculation already finished, operation not allowed. Reset analysis first.")
+            return False
+            
+    return check_function
+
+'''
+class CheckDecorators():
+    """ class for decorators
+    """
+
+    @classmethod
+    def check_finish(function, *args, **kwargs):
+        """ decorator checks if calculation already finished before analysis parameters can be set/ changed
+        """
+        def check_function(self, *args, **kwargs):
+            if self.analysis_meta["calc_finish"] == False:
+                function(self, *args, **kwargs)
+            else:
+                print("Calculation already finished, operation not allowed. Reset analysis first.")
+                return False
+                
+        return check_function
+'''    
 
 class OHW():
     """
-        main class of OpenHeartWare
-        bundles analysis (algorithm + parameters + ROI + MVs)
-        --> in future: can be saved to reuse
+        main class of OpenHeartWare  
+        bundles analysis (algorithm + parameters + ROI + MVs)  
+        analysis can be saved to reuse  
     """
+    
+    # docstring: add two trailing spaces to each line to keep whitespace in pdoc documentation
+    # https://stackoverflow.com/questions/32704176/how-do-i-make-pdoc-preserve-whitespace
+    
     def __init__(self):
         
+        self.config = helpfunctions.read_config() # load current ohw config        
+        self._init_analysis()
+
+    def _init_analysis(self):
+        """ called on instantiation to init ohw """
+    
         self.rawImageStack = None       # array for raw imported imagestack
         self.rawMVs = None              # array for raw motion vectors (MVs)
-        self.unitMVs = None             # MVs in correct unit (microns)
-        
-        # bundle these parameters in dict?
-        self.avg_absMotion = None       # time averaged absolute motion
-        self.avg_MotionX = None         # time averaged x-motion
-        self.avg_MotionY = None         # time averaged y-motion
-        self.max_avgMotion = None       # maximum of time averaged motions
 
         self.postprocs = {"post1":postproc.Postproc(cohw=self, name="post1")} # rename to evals?
         self.set_ceval("post1")
-        
-        self.video_loaded = False       # tells state if video is connected to ohw-objecet
-        self.config = helpfunctions.read_config() # load current config
-        
+        self.video_loaded = False       # tells state if video is connected to ohw-objecet        
+
+        prefilters = {"Canny":{"on":False}} # add options/ parameters here
+        self.analysis_meta = {"date": datetime.datetime.now(), "version": self.config['UPDATE']['version'], 
+            "calc_finish":False, "has_MVs": False, "results_folder":"", "roi":None, "scalingfactor":1.,
+            "px_longest":None, "prefilters":prefilters}
+            
         self.raw_videometa = {"inputpath":""} # raw info after importing  # dict of video metadata: microns_per_px, fps, blackval, whiteval,
         self.set_default_videometa(self.raw_videometa)
-        self.videometa = self.raw_videometa.copy()
-        self.analysis_meta = {"date": datetime.datetime.now(), "version": self.config['UPDATE']['version'], 
-            "calc_finish":False, "has_MVs": False, "results_folder":"", "roi":None}
-        self.init_kinplot_options()
-
+        self.videometa = self.raw_videometa.copy() #TODO: sketchy, refactor            
+            
+        self._init_kinplot_options()
+        
     def reset(self):
-        """ resets instance to default values """
-        pass
+        """ resets calculation, keeps videofile loaded -> changing of parameters allowed again """
+
+        self.analysis_meta.update({"date": datetime.datetime.now(), "has_MVs": False, "calc_finish": False,
+            "motion_method":None, "motion_parameters":None})
+        #TODO: what about shape? currently not saved anymore
+        self.rawMVs = None              # array for raw motion vectors (MVs), TODO: change for generic results?
+        self.postprocs = {"post1":postproc.Postproc(cohw=self, name="post1")} # rename to evals?
+        self.set_ceval("post1")        
     
-    def import_video(self, inputpath, *args, **kwargs):        
+    @check_finish
+    def import_video(self, inputpath, *args, **kwargs):
+        """ reads in video to current analysis  
+            sets rawImageStack, videometa, prev800px and the resultsfolder
+        """
         self.rawImageStack, self.raw_videometa = videoreader.import_video(inputpath)
         self.set_default_videometa(self.raw_videometa)
         self.videometa = self.raw_videometa.copy()
@@ -55,6 +115,8 @@ class OHW():
         self.videometa["prev_scale"] = 800/self.videometa["frameHeight"]
         
     def import_video_thread(self, inputpath):
+        """ returns QThread where import_video runs, prevents blocking
+        """
         self.thread_import_video = helpfunctions.turn_function_into_thread(self.import_video, emit_progSignal = True, inputpath = inputpath)
         return self.thread_import_video       
         
@@ -65,10 +127,13 @@ class OHW():
         """
         inputpath = self.videometa["inputpath"]
         self.rawImageStack, self.raw_videometa = videoreader.import_video(inputpath)
-        self.set_analysisImageStack(px_longest = self.analysis_meta["px_longest"]) #roi automatically considered      
+        #self.set_analysisImageStack(px_longest = self.analysis_meta["px_longest"]) #roi automatically considered      
+        self._calc_analysisStack()
         self.video_loaded = True
 
     def reload_video_thread(self):
+        """ returns QThread where reload_video runs, prevents blocking
+        """
         self.thread_reload_video = helpfunctions.turn_function_into_thread(self.reload_video, emit_progSignal = True)
         return self.thread_reload_video  
     
@@ -93,6 +158,11 @@ class OHW():
         self.video_loaded = True
     
     def set_auto_results_folder(self):
+        """ 
+            sets results folder depending on videoinput:  
+            - video -> output in videopath, foldername: results_videoname  
+            - folder -> output in folder, foldername: results
+        """
         # set results folder
         inputpath = self.videometa["inputpath"]        
         if self.videometa["input_type"] == 'videofile':
@@ -100,29 +170,58 @@ class OHW():
         else:
             self.analysis_meta["results_folder"] = inputpath.parent / "results"
         self.analysis_meta["inputpath"] = inputpath
-         
-    def set_analysisImageStack(self, px_longest = None):
-        '''
-            specifies resolution + roi of video to be analyzed
-            px_longest: resolution of longest side
-            if px_longest = None: original resolution is used
-            roi: specify region of interest, coordinates of rectangular that was selected as ROI in unmodified coordinates
-            if no special roi is given, the roi saved in analysis_meta is used
-        '''
+
+    @check_finish
+    def set_scale(self, mpp):
+        """ 
+            specify resolution of input videofile in microns per px  
+            e.g. 2 microns per px -> 1 px equals 2 microns
+        """
+        self.videometa["microns_per_px"] = float(mpp)
+    
+    @check_finish
+    def set_fps(self, fps):
+        """
+            specify framerate of input video file
+        """
+        self.videometa["fps"] = float(fps)
         
-        self.analysis_meta.update({'px_longest': px_longest, "scalingfactor":1})
+    @check_finish
+    def set_px_longest(self, px_longest):
+        """ 
+            sets longest side of analysis image stack (used for scaling down + speeding up)  
+            if px_longest = None: original resolution is used
+        """
+        self.analysis_meta["px_longest"] = px_longest
+        self._calc_scalingfactor()
+        
+    def _calc_scalingfactor(self):
+        """ calculate scalingfactor which is based on roi and px_longest
+        """
+        
+        if self.analysis_meta["px_longest"] != None:
+            roi = self.analysis_meta["roi"] #TODO: make sure roi dimensions are constrained <= image dimensions
+            longest_side = max(roi[2],roi[3])
+            self.analysis_meta["scalingfactor"] = float(self.analysis_meta["px_longest"])/longest_side
+    
+    def _calc_analysisStack(self):
+
+        ''' selects roi + scales down input video for analysis to specified roi/ scaling
+        '''
         
         self.analysisImageStack = self.rawImageStack
-        # select roi
+        
+        # select roi of input ImageStack
         roi = self.analysis_meta["roi"]
         if roi != None:
             self.analysisImageStack = self.analysisImageStack[:,int(roi[1]):int(roi[1]+roi[3]), int(roi[0]):int(roi[0]+roi[2])]
 
         # rescale input
         # take original resoltuion if no other specified
-        if px_longest != None:
-            self.analysisImageStack, self.analysis_meta["scalingfactor"] = helpfunctions.scale_ImageStack(self.analysisImageStack, px_longest=px_longest)
-        self.analysis_meta.update({'shape': self.analysisImageStack.shape})
+        scalingfactor = self.analysis_meta["scalingfactor"]
+        if scalingfactor != 1:
+            self.analysisImageStack = helpfunctions.scale_ImageStack(self.analysisImageStack, scalingfactor)
+        #self.analysis_meta.update({'shape': self.analysisImageStack.shape})
 
     def save_ohw(self):
         '''
@@ -151,14 +250,15 @@ class OHW():
 
     def load_ohw(self, filename):
         """
-            loads ohw analysis object saved previously and sets corresponding variables
-            initializes motion to get to the same state before saving
+            loads ohw analysis object saved previously and sets corresponding variables  
+            initializes motion to get to the same state before saving  
+            correct initialization not assured yet, should be called on a new ohw instance
         """
         # take care if sth will be overwritten?
+        # so far called only by top-level function on new ohw object 
+        #TODO: check possible improvements
         # best way to insert rawImageStack?
         
-        # implement reset method to reset instance
-        self.reset()
         
         with open(filename, 'rb') as loadfile:
             data = pickle.load(loadfile)
@@ -184,40 +284,42 @@ class OHW():
             self.postprocs.update({name:eval})
 
         self.ceval = self.postprocs[list(self.postprocs.keys())[0]] #set one as active
-        
-        """
-        #print(self.analysis_meta)
-        
-        self.video_loaded = False
-        self.init_motion()
-        self.set_peaks(Peaks) #call after init_motion as this resets peaks
-        """
 
-
-    def set_method(self, method, parameters):
-        self.analysis_meta.update({'Motion_method': method, 'MV_parameters': parameters})
+    def _set_method(self, method, parameters):
+        """ set analysis method + parameters, used before starting analysis
+        """
+        self.analysis_meta.update({'motion_method': method, 'motion_parameters': parameters})
 
     def get_method(self):
-        return self.analysis_meta["Motion_method"]
+        """ returns method which was used for analysis
+        """
+        return self.analysis_meta["motion_method"]
 
+    @check_finish #overwrite option will not work anymore
     def calculate_motion(self, method = 'Blockmatch', progressSignal = None, overwrite = False, **parameters):
         """
             calculates motion (either motionvectors MVs or absolute motion) of imagestack based 
             on specified method and parameters
 
-            allowed methods:
-            -Blockmatch (BM)
-            -GF: gunnar farnbäck
-            -LK: lucas-kanade
-            -MM: musclemotion
+            allowed methods:  
+            - Blockmatch  
+            - Fluo-Intensity  
+            (in future:)  
+            - GF: gunnar farnbäck  
+            - LK: lucas-kanade  
         """
 
         if (overwrite == False) and (self.analysis_meta["calc_finish"] == True):
             print("motion already calculated, don't overwrite")
             return False
+            
+        if method not in ['Blockmatch', 'Fluo-Intensity']:
+            print("method ", method, " currently not supported.")
+            return False
         
+        self._calc_analysisStack()
         #store parameters which will be used for the calculation of MVs
-        self.set_method(method, parameters)
+        self._set_method(method, parameters)
         
         if method == 'Blockmatch':   
             self.rawMVs = OFlowCalc.BM_stack(self.analysisImageStack, 
@@ -229,33 +331,54 @@ class OHW():
             # as mean intensity can be calculated on the fly, no extra calculation needed here
             self.analysis_meta["has_MVs"], self.analysis_meta["calc_finish"] = False, True
             self.kinplot_options.update({"vmin":None})
-
-        else:
-            print("method ", method, " currently not supported.")
+            
+        # perform evaluation on currently active postprocess/evaluation
+        # on initial calculation 1 postprocess is automatically created
+        self.ceval.process()
+            
         
         """
         elif method == 'GF':
             pass
         elif method == 'LK':
             pass
-        elif method == 'MM':
-            # self.absMotions = ...
-            pass
         """
 
     def calculate_motion_thread(self, **parameters):
+        """ runs calculate_motion as a QThread to prevent blocking
+        passes progresssignal to track calculation progress
+        """
+    
         self.thread_calculate_motion = helpfunctions.turn_function_into_thread(
             self.calculate_motion, emit_progSignal=True, **parameters)
         return self.thread_calculate_motion 
     
+    def set_prefilter(self, filtername, on = False, **filterparameters):
+        """ 
+            for filtering before analysis:  
+            sets specified filtername on/ off + specifies parameters
+        """
+        prefilters = self.analysis_meta["prefilters"]
+        if filtername in prefilters:
+            prefilters[filtername]["on"] = on
+            prefilters[filtername].update(filterparameters)
+        else:
+            print("filter {} is not a valid filteroption for prefiltering".format(filtername))
+    
+    
     def set_filter(self, filtername, on = False, **filterparameters):
-        ''' sets specified filtername on/ off + parameters '''
+        ''' sets specified filtername on/ off + parameters for current eval'''
         # TODO: better error handling if filter does not exist (what's the best way?)
         self.ceval.set_filter(filtername, on, **filterparameters)
     
     def get_filter(self):
         ''' gets filterdict from current eval/postproc'''
         return self.ceval.get_filter()
+    
+    def list_evals(self):
+        """ display all postprocesses/ evaluations """
+
+        print(list(self.postprocs.keys()))
     
     def set_ceval(self, eval_name):
         '''
@@ -266,22 +389,15 @@ class OHW():
         
         self.ceval_name = eval_name # rename ceval_name to sth shorter!
         self.ceval = self.postprocs[self.ceval_name]
-    
-    def init_motion(self):
-        '''
-            calculate 2D & 1D data representations after motion determination
-            2D: motionvectors (MVs)
-            1D: motion (calculated from MVs or other attributes...)
-        '''
-        
-        # perform evaluation on currently active postprocess/evaluation
-        self.ceval.process()
+
     
     def save_MVs(self):
         """
             saves raw MVs as npy file
             ... replace with functions which pickles all data in class?
         """
+        
+        #TODO: adjust to new postprocessing interface
         results_folder = self.analysis_meta["results_folder"]
         results_folder.mkdir(parents = True, exist_ok = True) #create folder for results if it doesn't exist
         
@@ -291,6 +407,11 @@ class OHW():
         np.save(save_file_units, self.unitMVs)            
 
     def save_heatmap(self, singleframe):
+        """
+            saves heatmap of current evaluation  
+            - of specific frame if singleframe=framenumber specified  
+            - of whole video otherwise
+        """
         savepath = self.analysis_meta["results_folder"]/'heatmap_results'
         plotfunctions.save_heatmap(ohw_dataset = self, savepath = savepath, singleframe=singleframe)
     
@@ -323,20 +444,27 @@ class OHW():
         self.ceval.detect_peaks(ratio, number_of_neighbours)
        
     def get_peaks(self):
+        """ returns peaks from active evaluation """
         return self.ceval.get_peaks()
         
     def get_peakstatistics(self):
+        """ returns peakstatistics from active evaluation
+        """
         return self.ceval.get_peakstatistics()
     
     def export_analysis(self):
+        """ exports analysis of peakstatistics of active evaluation
+        """
         self.ceval.export_analysis()
     
     def plot_kinetics(self, filename=None):
+        """ plots 1d motion representation of active evaluation """
         if filename == None:
             filename=self.analysis_meta["results_folder"]/ 'beating_kinetics.png'
         self.ceval.plot_kinetics(filename)
 
-    def init_kinplot_options(self):
+    def _init_kinplot_options(self):
+        """ set kinplot_options to default parameters """
         self.kinplot_options = dict(self.config._sections['KINPLOT OPTIONS'])
         for key, value in self.kinplot_options.items(): # can be definitely improved...
             if value == "None":
@@ -353,37 +481,47 @@ class OHW():
         self.kinplot_options.update(kinplot_options)
         #also change config to new value?
     
-    def plot_TimeAveragedMotions(self, file_ext='.png'):
-        plotfunctions.plot_TimeAveragedMotions(self, file_ext)
-
-    def selROI(self, roi = None):
+    def plot_TimeAveragedMotion(self, file_ext='.png'):
+        """ plots time averaged motion for active eval 
         """
-            if no roi is specified:
-            opens a cv2 window which allows the selection of a roi of the currently loaded video
-            roi is always specified in coordinates of original video resolution
+        #TODO: check if analysis method can be plotted this way
+        self.ceval.plot_TimeAveragedMotion(file_ext='.png')
+
+    @check_finish
+    def set_roi(self, roi = None):
+        """
+            specify roi for analysis  
+            either specify coordinates in orig video resolution  
+            roi = [xstart, ystart, xwidth, ywidth]  
+            or, if no roi is specified:  
+            opens a cv2 window which allows a roi selection
         """
         if self.video_loaded == False:
             print("no video loaded, can't select a ROI")
             return False
         
         if roi is None:
-            sel_roi = helpfunctions.sel_roi(self.videometa["prev800px"]) # select roi in 800 px preview img
-            sel_roi = [int(coord/self.videometa["prev_scale"]) for coord in sel_roi] # rescale to coord in orig inputdata
-            self.analysis_meta["roi"] = sel_roi
-            print("selected roi:", sel_roi)
-            return True
+            roi = helpfunctions.sel_roi(self.videometa["prev800px"]) # select roi in 800 px preview img
+            roi = [int(coord/self.videometa["prev_scale"]) for coord in sel_roi] # rescale to coord in orig inputdata
+            self.analysis_meta["roi"] = roi
+            print("selected roi:", roi)
         
-        if isinstance(roi, list):
+        elif isinstance(roi, list):
             self.analysis_meta["roi"] = roi
             print("manually setting roi to", roi)
             # use these coordinates as roi
-            return True
+        
+        self._calc_scalingfactor()
 
-    def resetROI(self):
+    def reset_roi(self):
+        """ set roi back to whole frame 
+        """
+        
         if self.video_loaded == False:
             print("no video loaded, can't reset ROI")
             return False
         self.analysis_meta["roi"] = None
+        self._calc_scalingfactor()
             
 if __name__ == "__main__":
     OHW = OHW()

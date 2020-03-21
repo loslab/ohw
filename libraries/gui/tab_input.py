@@ -237,7 +237,6 @@ class TabInput(QWidget):
     def finish_reloadVideo(self):
         self.progressbar_loadVideo.setRange(0,1)
         self.progressbar_loadVideo.setValue(1)
-        self.cohw.set_analysisImageStack(px_longest = self.cohw.analysis_meta["px_longest"])
         self.parent.update_tabs()
         
     def init_ohw(self): #was update_tab_input

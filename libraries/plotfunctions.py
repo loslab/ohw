@@ -52,11 +52,11 @@ def plot_Kinetics(timeindex, motion, plotoptions, hipeaks, lopeaks, motiondescri
     if file_name != None:
         fig_kinetics.savefig(str(file_name), dpi = 300, bbox_inches = 'tight') #, bbox_inches = 'tight', pad_inches = 0.4)
 
-def plot_TimeAveragedMotions(ohw_dataset, file_ext='.png'):
-    avg_absMotion = ohw_dataset.avg_absMotion
-    avg_MotionX, avg_MotionY = ohw_dataset.avg_MotionX, ohw_dataset.avg_MotionY
-    max_avgMotion = ohw_dataset.max_avgMotion
-    savefolder = ohw_dataset.analysis_meta["results_folder"]
+def plot_TimeAveragedMotions(ceval, file_ext='.png'):
+    avg_absMotion = ceval.avg_absMotion
+    avg_MotionX, avg_MotionY = ceval.avg_MotionX, ceval.avg_MotionY
+    max_avgMotion = ceval.max_avgMotion
+    savefolder = ceval.cohw.analysis_meta["results_folder"] #ceval.cohw ugly, links back to parent
     
     cmap_all = "jet"    #"inferno"
     

@@ -113,17 +113,16 @@ def questionbox(self, message=""):
     else:
         return False
         
-def scale_ImageStack(imageStack, px_longest = 1024):
+def scale_ImageStack(imageStack, scalingfactor):#px_longest = 1024):
     """
         rescales imageStack such that longest side equals px_longest
         upscaling of smaller stack is prevented
     """
-    w, h = imageStack.shape[1], imageStack.shape[2]
-    longest_side = max(w,h)
-    scalingfactor = px_longest/longest_side
+
+    print("scaling down imageStack to scalingfactor", scalingfactor)
     
     if scalingfactor >= 1: #prevent upscaling
-        return imageStack, 1
+        return imageStack
     
     scaledImages = []
     for image in imageStack:
@@ -133,7 +132,7 @@ def scale_ImageStack(imageStack, px_longest = 1024):
     print("shape of scaled down image stack: ", scaledImageStack.shape)
     print("scalingfactor: ", scalingfactor)
     
-    return scaledImageStack, scalingfactor
+    return scaledImageStack
     
 def get_scale_maxMotion(absMotions, mean_absMotions):
     """

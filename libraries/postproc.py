@@ -80,11 +80,15 @@ class Postproc():
     
     def process(self):
         """ 
-            starts postprocessing, depending on specified motion-method
-            i.e. selects subset of MVs and performs filterng
+            starts postprocessing, depending on specified motion-method  
+            calculate 2D & 1D data representations after motion determination  
+            2D: motionvectors (MVs)  
+            1D: motion (calculated from MVs or other attributes...)  
+            i.e. selects subset of MVs and performs filterng  
             initiates motion + quivercomponents
         """
         
+        print("postprocessing evaluation: ", self.name)
         self.method = self.cohw.analysis_meta["Motion_method"]
         
         if self.method == "Blockmatch":
@@ -268,3 +272,6 @@ class Postproc():
         self.avg_MotionY = np.nanmean(absMotionY, axis = 0)
 
         self.max_avgMotion = np.max ([self.avg_absMotion, self.avg_MotionX, self.avg_MotionY]) # avg_absMotion should be enough
+        
+    def plot_TimeAveragedMotion(self, file_ext='.png'):
+        plotfunctions.plot_TimeAveragedMotions(self, file_ext)
