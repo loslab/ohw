@@ -265,7 +265,7 @@ class OHW():
             data = pickle.load(loadfile)
         
         #return data
-        print(data)
+        #print(data)
 
         self.analysis_meta = data["analysis_meta"]
         self.videometa = data["videometa"]
@@ -508,7 +508,7 @@ class OHW():
             return False
         
         if roi is None:
-            roi = helpfunctions.sel_roi(self.videometa["prev800px"]) # select roi in 800 px preview img
+            sel_roi = helpfunctions.sel_roi(self.videometa["prev800px"]) # select roi in 800 px preview img
             roi = [int(coord/self.videometa["prev_scale"]) for coord in sel_roi] # rescale to coord in orig inputdata
             self.analysis_meta["roi"] = roi
             print("selected roi:", roi)
@@ -529,6 +529,7 @@ class OHW():
             return False
         self.analysis_meta["roi"] = None
         self._calc_scalingfactor()
+        print("resetting roi to whole video")
             
 if __name__ == "__main__":
     OHW = OHW()

@@ -328,12 +328,6 @@ class TabInput(QWidget):
         self.set_start_brightness()
         self.update_brightness()
 
-    #def on_change_fps(self):
-    #    self.cohw.videometa['fps'] = float(self.edit_fps.text())
-    
-    #def on_change_mpp(self):
-    #    self.cohw.videometa['microns_per_px'] = float(self.edit_mpp.text())
-
     def on_selROI(self):
         """
             opens cv2 window where roi can be selected
