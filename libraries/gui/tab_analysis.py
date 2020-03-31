@@ -94,7 +94,7 @@ class TabAnalysis(QWidget):
             self.roi_rect = plt.Rectangle((roi[0],roi[1]), roi[2], roi[3], facecolor='None', edgecolor='red', linewidth = 5)
         else:
             wx, wy = self.cohw.videometa["prev800px"].shape
-            self.roi_rect = plt.Rectangle((0,0), wx, wy, facecolor='None', edgecolor='red', linewidth = 5) #TODO:hardcoded width, change!
+            self.roi_rect = plt.Rectangle((0,0), wx-1, wy-1, facecolor='None', edgecolor='red', linewidth = 5) #TODO:hardcoded width, change!
         self.ax_firstIm.add_patch(self.roi_rect)
         self.canvas_firstImage.draw()
         
@@ -145,7 +145,6 @@ class BoxVideoInput(QGroupBox):
         - buttons to load/ reload video + set results folder
     """
     def __init__(self, parent, ctrl, boxtitle = "Video input"):
-        print(boxtitle)
         super(BoxVideoInput, self).__init__(boxtitle, parent = parent) # take care of correct superclass init, order of args
         #or self.setTitle(boxtitle)
         self.parent=parent

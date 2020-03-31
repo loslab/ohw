@@ -5,7 +5,8 @@ from PyQt5.QtWidgets import (QWidget, QGridLayout,QPushButton, QApplication)
 from PyQt5 import QtCore
 
 from PyQt5.QtWidgets import (QLabel, QLineEdit, QGridLayout, QComboBox, QFileDialog,
-    QTextEdit,QSizePolicy, QPushButton, QProgressBar,QSlider, QWidget, QSpinBox, QCheckBox, QDoubleSpinBox)
+    QTextEdit,QSizePolicy, QPushButton, QProgressBar,QSlider, QWidget, QSpinBox, QCheckBox, 
+    QGroupBox, QVBoxLayout, QHBoxLayout, QDoubleSpinBox)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from libraries import helpfunctions
@@ -14,22 +15,28 @@ from libraries.gui import dialog_kinoptions
 import pathlib
 
 class TabKinetics(QWidget):
-    """
-        for time averaged motion
-    """
     
-    def __init__(self, parent):
+    def __init__(self, parent, ctrl):
         super(TabKinetics, self).__init__(parent)
         self.update = True # update flag, set when motion calculation changed        
         self.parent=parent
+        self.ctrl = ctrl
         self.initUI()
         
+        self.init_ohw() # for prototyping, TODO: remove
+        
+    @property
+    def cohw(self):
+        return self.ctrl.cohw #simplify calls to cohw
+    
     def initUI(self):
+        # variables for peak manupulation
         self.move_peak = False #state if peak is selected and moved
         self.Peaks = []
-        self.peakidx = None #don't select any peaks
+        self.peakidx = None #idx of sel peak, don't select any peaks at start
         self.plotted_peaks = False
         
+        """
         self.info = QTextEdit()
         self.info.setText("In this tab, beating kinetics are shown and statistics calculated " \
                 "based on found peaks. By 'Detect Peaks', an automatic peak detection based on " \
@@ -40,145 +47,61 @@ class TabKinetics(QWidget):
         self.info.setMaximumHeight(50)
         self.info.setMaximumWidth(800)
         self.info.setStyleSheet("background-color: LightSkyBlue")
+        """
         
         self.fig_kinetics, self.ax_kinetics = plt.subplots(1,1, figsize = (16,12))
         self.canvas_kinetics = FigureCanvas(self.fig_kinetics)
         self.canvas_kinetics.mpl_connect('button_press_event', self.mouse_press_callback)
         self.canvas_kinetics.mpl_connect('motion_notify_event', self.mouse_move_callback)
         self.canvas_kinetics.mpl_connect('button_release_event', self.mouse_release_callback)
-        
-        #spinboxes to choose for manual detection
-        self.label_ratio = QLabel('Ratio of peaks: ')           
-        self.spinbox_ratio = QDoubleSpinBox()
-        self.spinbox_ratio.setRange(0.01, 0.90)
-        self.spinbox_ratio.setSingleStep(0.01)
-        self.spinbox_ratio.setValue(0.3) #move to config           
-        
-        self.label_neighbours = QLabel('Number of neighbouring values for evaluation:') 
-        self.spinbox_neighbours = QSpinBox()    
-        self.spinbox_neighbours.setRange(2,10)
-        self.spinbox_neighbours.setSingleStep(2)
-        self.spinbox_neighbours.setValue(4)
-        
-        self.label_max_contraction = QLabel('Detected maximum contraction: ')
-        self.label_max_relaxation = QLabel('Detected maximum relaxation: ')
-        self.label_time_contraction = QLabel('Mean contraction interval: ')
-        self.label_time_relaxation = QLabel('Mean relaxation interval: ')
-        self.label_time_contr_relax = QLabel('Mean interval between contraction and relaxation: ')
-        self.label_bpm = QLabel('Beating rate: ')
-        
-        self.label_max_contraction_result = QLabel('not enough peaks')            
-        self.label_max_relaxation_result = QLabel('not enough peaks')
-        self.label_time_contraction_result = QLabel('not enough peaks')
-        self.label_time_relaxation_result = QLabel('not enough peaks')
-        self.label_time_contr_relax_result = QLabel('not enough peaks')
-        self.label_bpm_result = QLabel('not enough peaks')
-        
-        self.label_evaluate = QLabel('Start evaluation')
-        self.label_evaluate.setFont(QFont("Times",weight=QFont.Bold))
-        
-        self.button_detectPeaks = QPushButton('Detect Peaks')
-        self.button_detectPeaks.setMaximumWidth(300)
-        self.button_saveKinPlot = QPushButton('Save graph as...')
-        self.button_export_peaks = QPushButton('Save peak analysis')
-        self.btn_roi = QPushButton('Select subroi')
-        
-        self.btn_plot_settings = QPushButton('Change graph settings')
-        self.button_detectPeaks.resize(self.button_detectPeaks.sizeHint())
-        self.button_saveKinPlot.resize(self.button_saveKinPlot.sizeHint())
-        self.button_export_peaks.resize(self.button_export_peaks.sizeHint())
-
-        self.button_saveKinPlot.setEnabled(False)
-        self.button_export_peaks.setEnabled(False)
-        
-        self.button_detectPeaks.clicked.connect(self.on_detectPeaks)
-        self.btn_roi.clicked.connect(self.on_roi)
-        self.button_saveKinPlot.clicked.connect(self.on_saveKinPlot)
-        self.button_export_peaks.clicked.connect(self.on_exportAnalysis)
-        self.btn_plot_settings.clicked.connect(self.on_plotSettings)
-                  
+        self.roi_rect = None
+       
         self.grid_overall = QGridLayout()
-        self.grid_overall.addWidget(self.info,               0,0,1,4)
-        self.grid_overall.addWidget(self.label_ratio,             1,0)
-        self.grid_overall.addWidget(self.spinbox_ratio,      1,1)
-        self.grid_overall.addWidget(self.label_neighbours,        2,0)
-        self.grid_overall.addWidget(self.spinbox_neighbours, 2,1)
-        self.grid_overall.addWidget(self.button_detectPeaks, 2,2)
-        self.grid_overall.addWidget(self.btn_roi, 2,3)
-        self.grid_overall.addWidget(self.canvas_kinetics,    3,0,1,6)
         
-        self.grid_overall.addWidget(self.label_max_contraction,   4,0)
-        self.grid_overall.addWidget(self.label_max_contraction_result, 4,1)
-        self.grid_overall.addWidget(self.label_max_relaxation,    5,0)
-        self.grid_overall.addWidget(self.label_max_relaxation_result, 5,1)
-        self.grid_overall.addWidget(self.label_bpm,              6,0)
-        self.grid_overall.addWidget(self.label_bpm_result,   6,1)        
+        self.box_postprocess = BoxPostprocess(self, self.ctrl)
+        self.box_peakdetection = BoxPeakdetection(self, self.ctrl)
+        self.box_metrics = BoxMetrics(self, self.ctrl)
+        self.box_controls = BoxControls(self, self.ctrl)
+        self.grid_overall.addWidget(self.box_postprocess,               0,0,2,1)
+        self.grid_overall.addWidget(self.box_peakdetection,               0,1,1,1)
+        self.grid_overall.addWidget(self.box_metrics,               1,1,1,3)
+        self.grid_overall.addWidget(self.box_controls,               0,2,1,1)
         
-        self.grid_overall.addWidget(self.label_time_contraction,  4,3)
-        self.grid_overall.addWidget(self.label_time_contraction_result, 4,4)
-        self.grid_overall.addWidget(self.label_time_relaxation,  5,3)            
-        self.grid_overall.addWidget(self.label_time_relaxation_result, 5,4)
-        self.grid_overall.addWidget(self.label_time_contr_relax,  6,3)
-        self.grid_overall.addWidget(self.label_time_contr_relax_result, 6,4)
+        #self.grid_overall.addWidget(self.info,               0,0,1,4)
+        self.grid_overall.addWidget(self.canvas_kinetics,    2,0,1,4)
 
-        self.grid_btns = QGridLayout()
-        self.grid_btns.setSpacing(10)
-        self.grid_btns.setAlignment(Qt.AlignTop|Qt.AlignLeft)
-        
-        self.grid_btns.addWidget(self.btn_plot_settings, 0,0)
-        self.grid_btns.addWidget(self.button_saveKinPlot, 0,1)
-        self.grid_btns.addWidget(self.button_export_peaks, 0,2)
-
-        btnwidth = 300 
-        self.button_saveKinPlot.setFixedWidth(btnwidth)
-        self.button_export_peaks.setFixedWidth(btnwidth)
-        self.btn_plot_settings.setFixedWidth(btnwidth)
-
-        self.grid_overall.addLayout(self.grid_btns,7,0,1,6,Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.setSpacing(15)        
+        self.grid_overall.setSpacing(10)        
         self.grid_overall.setAlignment(Qt.AlignTop|Qt.AlignLeft)      
         self.setLayout(self.grid_overall)
-
-        for label in self.findChildren(QLabel):
-            label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        for LineEdit in self.findChildren(QLineEdit):
-            LineEdit.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        for Slider in self.findChildren(QSlider):
-            Slider.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        for SpinBox in self.findChildren(QSpinBox):
-            SpinBox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        for CheckBox in self.findChildren(QCheckBox):
-            CheckBox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        #for btn in self.findChildren(QPushButton):
-        #    btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
     def init_ohw(self):
         ''' set values from cohw '''
         
         if self.update == True:
-            self.cohw = self.parent.cohw
-            self.ceval = self.cohw.ceval
             
-            self.timeindex = self.ceval.PeakDetection.timeindex #easier to referene here...
-            self.motion = self.ceval.PeakDetection.motion
-            self.Peaks, self.hipeaks, self.lopeaks = self.ceval.get_peaks()
+            self.timeindex = self.cohw.ceval.PeakDetection.timeindex #easier to referene here...
+            self.motion = self.cohw.ceval.PeakDetection.motion
+            self.Peaks, self.hipeaks, self.lopeaks = self.cohw.ceval.get_peaks()
             
-            self.kinplot_options = self.cohw.kinplot_options
-
-            self.clear_fig()        
+            #self.kinplot_options = self.cohw.kinplot_options
+            
+            self.plot_analysis_img()
+            self.update_roi()
+            
+            self.clear_fig()
             if self.cohw.analysis_meta["calc_finish"]:    # if any analysis is done elements can be enabled, as every analysis should have a 1D-representation
                 self.init_kinetics()
-                self.button_detectPeaks.setEnabled(True)
-                self.button_saveKinPlot.setEnabled(True)
-                self.btn_plot_settings.setEnabled(True)
-                self.button_export_peaks.setEnabled(True)
-                self.btn_roi.setEnabled(True)
+                self.box_peakdetection.btn_detect_peaks.setEnabled(True)
+                self.box_controls.btn_save_kinplot.setEnabled(True)
+                self.box_controls.btn_plotsettings.setEnabled(True)
+                self.box_controls.btn_export_analysis.setEnabled(True)
+                self.box_postprocess.btn_roi.setEnabled(True)
             else:
-                self.button_saveKinPlot.setEnabled(False)
-                self.button_detectPeaks.setEnabled(False)
-                self.btn_plot_settings.setEnabled(False)
-                self.button_export_peaks.setEnabled(False)
-                self.btn_roi.setEnabled(False)
+                self.box_peakdetection.btn_detect_peaks.setEnabled(False)
+                self.box_controls.btn_save_kinplot.setEnabled(False)
+                self.box_controls.btn_plotsettings.setEnabled(False)
+                self.box_controls.btn_export_analysis.setEnabled(False)
+                self.box_postprocess.btn_roi.setEnabled(False)
         
             self.update = False
 
@@ -188,8 +111,42 @@ class TabKinetics(QWidget):
                 '-', linewidth = 2)
         self.update_plotview()
         self.plot_Peaks()
-        self.updateStatistics()
+        self.box_metrics.update()
+
         self.canvas_kinetics.draw()
+
+    def set_cohw_peaks(self):
+        ''' sets peaks from cohw.ceval to current peaks + plots'''
+        self.Peaks, self.hipeaks, self.lopeaks = self.cohw.get_peaks()
+        self.plot_Peaks()
+        self.box_metrics.update()        
+
+    def plot_analysis_img(self):
+        analysis_roi = self.cohw.analysis_meta["roi"]
+        if analysis_roi != None:
+            scaled_roi = [int(coord*self.cohw.videometa["prev_scale"]) for coord in analysis_roi]
+            self.analysis_img = self.cohw.videometa["prev800px"][scaled_roi[1]:scaled_roi[1]+scaled_roi[3],
+                                                            scaled_roi[0]:scaled_roi[0]+scaled_roi[2]]
+        else:
+            self.analysis_img = self.cohw.videometa["prev800px"]
+        self.box_postprocess.ax.imshow(self.analysis_img, cmap = 'gray')
+            
+
+    def update_roi(self):
+        #draw roi on preview img
+        if self.roi_rect is not None:
+            self.roi_rect.remove()
+        
+        roi_raw = self.cohw.ceval.roi
+        
+        if roi_raw is not None:
+            roi = [int(coord*self.cohw.videometa["prev_scale"]) for coord in roi_raw]
+            self.roi_rect = plt.Rectangle((roi[0],roi[1]), roi[2], roi[3], facecolor='None', edgecolor='red', linewidth = 5)
+        else:
+            wy, wx = self.analysis_img.shape
+            self.roi_rect = plt.Rectangle((0,0), wx-1, wy-1, facecolor='None', edgecolor='red', linewidth = 5) #TODO:hardcoded width, change!
+        self.box_postprocess.ax.add_patch(self.roi_rect)
+        self.box_postprocess.canvas.draw()
 
     def clear_fig(self):
         self.ax_kinetics.clear()
@@ -203,20 +160,6 @@ class TabKinetics(QWidget):
             self.ax_kinetics.spines[side].set_linewidth(2)
         
         self.canvas_kinetics.draw()
-
-    def on_detectPeaks(self):
-        '''detect peaks and draw them as 'EKG' '''
-        ratio = self.spinbox_ratio.value()
-        number_of_neighbours = self.spinbox_neighbours.value()
-        self.cohw.detect_peaks(ratio, number_of_neighbours)
-        self.Peaks, self.hipeaks, self.lopeaks = self.cohw.get_peaks()
-        self.plot_Peaks()
-        self.updateStatistics()
-
-    def on_roi(self):
-        self.ceval.set_roi()
-        self.ceval.process()
-        self.parent.update_tabs()
 
     def plot_Peaks(self):
         ''' clear old peaks and plot all self.hipeaks, self.lopeaks '''
@@ -245,23 +188,7 @@ class TabKinetics(QWidget):
     def update_Peaks(self):
         ''' update manually changed Peaks with cohw '''
         self.cohw.set_peaks(self.Peaks)
-        self.updateStatistics()
-    
-    def updateStatistics(self):
-        peakstatistics = self.cohw.get_peakstatistics()
-        text_contraction = str(peakstatistics["max_contraction"]) + ' +- ' + str(peakstatistics["max_contraction_std"]) +  u' \xb5m/s'
-        text_relaxation = str(peakstatistics["max_relaxation"]) + ' +- ' + str(peakstatistics["max_relaxation_std"]) +  u' \xb5m/s'
-        text_time_contraction = str(peakstatistics["contraction_interval_mean"]) + ' +- ' + str(peakstatistics["contraction_interval_std"]) + ' s'
-        text_time_relaxation = str(peakstatistics["relaxation_interval_mean"]) + ' +- ' + str(peakstatistics["relaxation_interval_std"]) + ' s'
-        text_bpm = str(peakstatistics["bpm_mean"]) + ' +- ' + str(peakstatistics["bpm_std"]) + ' beats/min'
-        text_time_contr_relax = str(peakstatistics["contr_relax_interval_mean"]) + ' +- ' + str(peakstatistics["contr_relax_interval_std"]) + ' s'
-        
-        self.label_max_contraction_result.setText(text_contraction)
-        self.label_max_relaxation_result.setText(text_relaxation)
-        self.label_time_contraction_result.setText(text_time_contraction)
-        self.label_time_relaxation_result.setText(text_time_relaxation)
-        self.label_bpm_result.setText(text_bpm)
-        self.label_time_contr_relax_result.setText(text_time_contr_relax)
+        self.box_metrics.update()
         
     def mouse_press_callback(self, event):
         '''mouse button is pressed'''
@@ -365,14 +292,247 @@ class TabKinetics(QWidget):
         self.update_Peaks()
         self.plot_Peaks()
     
-    def on_plotSettings(self):
-        self.dialog_kinoptions = dialog_kinoptions.DialogKinoptions(plotsettings = self.kinplot_options)
+    def update_plotview(self):
+        ''' updates plot appearence after plotoptions like axis extent changed '''
+        
+        if self.cohw.kinplot_options["tmax"] != None:
+            self.ax_kinetics.set_xlim(right = self.cohw.kinplot_options["tmax"])
+        else:
+            self.ax_kinetics.set_xlim(right = self.timeindex[-1])
+        if self.cohw.kinplot_options["tmin"] != None:
+            self.ax_kinetics.set_xlim(left = self.cohw.kinplot_options["tmin"])        
+        
+        if self.cohw.kinplot_options["vmax"] != None:
+            self.ax_kinetics.set_ylim(top = self.cohw.kinplot_options["vmax"])
+        else:
+            self.ax_kinetics.autoscale(axis = 'y')
+        if self.cohw.kinplot_options["vmin"] != None:
+            self.ax_kinetics.set_ylim(bottom = self.cohw.kinplot_options["vmin"])
+        self.canvas_kinetics.draw()
+        
+        
+class BoxPostprocess(QGroupBox):
+    def __init__(self, parent, ctrl, boxtitle = "Postprocessing"):
+        super(BoxPostprocess, self).__init__(boxtitle, parent = parent)
+        self.parent=parent
+        self.ctrl = ctrl
+        self.init_ui()
+
+    @property
+    def cohw(self):
+        return self.ctrl.cohw #simplify calls to cohw
+        
+    def init_ui(self):
+        self.btn_roi = QPushButton("Select rubroi")
+        self.btn_roi.clicked.connect(self.on_roi)
+        self.btn_reset_roi = QPushButton("Reset subroi")
+        self.btn_reset_roi.clicked.connect(self.on_reset)
+        self.check_filter = QCheckBox('Filter MVs')
+        self.check_filter.setCheckState(False)
+        self.check_filter.stateChanged.connect(self.on_check_filter)
+        
+        # create canvas to display prev image
+        self.fig, self.ax = plt.subplots(1,1)#, figsize = (5,5))
+        self.fig.patch.set_facecolor('#ffffff')##cd0e49')
+        self.fig.subplots_adjust(bottom=0, top=1, left=0, right=1)
+        self.ax.axis('off')
+        self.canvas = FigureCanvas(self.fig)
+        self.canvas.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.canvas.setFixedSize(250,250)      
+        self.roi_rect = None        
+        
+        
+        self.grid = QGridLayout()
+        self.grid.addWidget(self.btn_roi,0,1)
+        self.grid.addWidget(self.btn_reset_roi,1,1)
+        self.grid.addWidget(self.check_filter,2,1)
+        self.grid.addWidget(self.canvas,0,0,4,1)
+        
+        self.setLayout(self.grid)
+
+    def on_roi(self):
+        self.cohw.ceval.set_roi()
+        #self.parent.update_roi()
+        self.cohw.ceval.process() #TODO:reimplement
+        self.parent.update = True
+        self.parent.init_ohw()
+        
+        #self.parent.update_tabs()
+
+    def on_reset(self):
+        self.cohw.ceval.reset_roi()
+        self.cohw.ceval.process()
+        self.parent.update = True
+        self.parent.init_ohw()
+        #self.parent.update_roi()
+        
+    def on_check_filter(self):
+        filterstate = self.check_filter.isChecked()
+        self.cohw.set_filter('filter_singlemov', filterstate)
+        self.cohw.ceval.process()
+        self.parent.update = True
+        self.parent.init_ohw()        
+        
+        
+class BoxPeakdetection(QGroupBox):
+    def __init__(self, parent, ctrl, boxtitle = "Peakdetection"):
+        super(BoxPeakdetection, self).__init__(boxtitle, parent = parent)
+        self.parent=parent
+        self.ctrl = ctrl
+        self.init_ui()
+
+    @property
+    def cohw(self):
+        return self.ctrl.cohw #simplify calls to cohw    
+
+    def init_ui(self):
+        
+        #spinboxes to choose for manual detection
+        self.label_ratio = QLabel('Ratio of peaks: ')           
+        self.spinbox_ratio = QDoubleSpinBox()
+        self.spinbox_ratio.setRange(0.01, 0.90)
+        self.spinbox_ratio.setSingleStep(0.01)
+        self.spinbox_ratio.setValue(0.3) #init from config           
+        
+        self.label_neighbours = QLabel('Number of neighbours:') 
+        self.spinbox_neighbours = QSpinBox()    
+        self.spinbox_neighbours.setRange(2,99)
+        self.spinbox_neighbours.setSingleStep(2)
+        self.spinbox_neighbours.setValue(4)        
+        
+        self.btn_detect_peaks = QPushButton('Detect Peaks')
+        self.btn_detect_peaks.clicked.connect(self.on_detect_peaks)
+        self.btn_remove_peaks = QPushButton('Remove Peaks')
+        self.btn_remove_peaks.clicked.connect(self.on_remove_peaks)
+
+        self.grid = QGridLayout()
+        self.grid.setAlignment(Qt.AlignTop|Qt.AlignLeft)
+        self.grid.addWidget(self.label_ratio,0,0)
+        self.grid.addWidget(self.label_neighbours,1,0)
+        self.grid.addWidget(self.spinbox_ratio,0,1)
+        self.grid.addWidget(self.spinbox_neighbours,1,1)
+        self.grid.addWidget(self.btn_detect_peaks,2,1)
+        self.grid.addWidget(self.btn_remove_peaks,3,1)
+        
+        self.setLayout(self.grid)        
+        
+    def on_detect_peaks(self):
+        '''detect peaks and draw them as 'EKG' '''
+        ratio = self.spinbox_ratio.value()
+        neighbours = self.spinbox_neighbours.value()
+        self.cohw.detect_peaks(ratio, neighbours)
+        self.parent.set_cohw_peaks()
+
+    def on_remove_peaks(self):
+        self.cohw.set_peaks([])
+        self.parent.set_cohw_peaks()
+
+class BoxMetrics(QGroupBox):
+    def __init__(self, parent, ctrl, boxtitle = "Peak metrics"):
+        super(BoxMetrics, self).__init__(boxtitle, parent = parent)
+        self.parent=parent
+        self.ctrl = ctrl
+        self.init_ui()
+
+    @property
+    def cohw(self):
+        return self.ctrl.cohw #simplify calls to cohw    
+
+    def init_ui(self):
+        
+        self.lbl = QLabel('value: ')           
+        
+        self.grid = QGridLayout()
+        self.grid.setSpacing(10)
+        self.grid.setAlignment(Qt.AlignTop|Qt.AlignLeft)
+        self.grid.addWidget(QLabel('Max contraction:'),0,0)
+        self.grid.addWidget(QLabel('Max relaxation:'),1,0)
+        self.grid.addWidget(QLabel('Beating rate:'),2,0)
+        self.grid.addWidget(QLabel('Mean contraction interval:'),0,2)
+        self.grid.addWidget(QLabel('Mean relaxation interval:'),1,2)
+        self.grid.addWidget(QLabel('Mean contraction-relaxation interval:'),2,2)
+        
+        self.label_max_contraction = QLabel("NA")
+        self.label_max_relaxation = QLabel("NA")
+        self.label_bpm = QLabel("NA")
+        self.label_time_contraction = QLabel("NA")
+        self.label_time_relaxation = QLabel("NA")
+        self.label_time_contr_relax = QLabel("NA")
+        
+        #self.label_max_contraction.setFixedWidth(100) # TODO: improve handling/ display, constrain digits
+        #self.label_time_contr_relax.setFixedWidth(100)
+
+        self.grid.addWidget(self.label_max_contraction,0,1)
+        self.grid.addWidget(self.label_max_relaxation,1,1)
+        self.grid.addWidget(self.label_bpm,2,1)
+        self.grid.addWidget(self.label_time_contraction,0,3)
+        self.grid.addWidget(self.label_time_relaxation,1,3)
+        self.grid.addWidget(self.label_time_contr_relax,2,3)
+        
+        self.grid.setColumnMinimumWidth(1,150)
+        self.grid.setColumnMinimumWidth(3,150)
+        self.grid.setColumnStretch(1,1)
+        self.grid.setColumnStretch(3,1)
+        
+        self.setLayout(self.grid)
+
+    def update(self):
+        peakstat = self.cohw.get_peakstatistics()
+        text_contraction = str(peakstat["max_contraction"]) + ' +- ' + str(peakstat["max_contraction_std"]) +  u' µm/s'
+        text_relaxation = str(peakstat["max_relaxation"]) + ' +- ' + str(peakstat["max_relaxation_std"]) +  u' µm/s'
+        text_time_contraction = str(peakstat["contraction_interval_mean"]) + ' +- ' + str(peakstat["contraction_interval_std"]) + ' s'
+        text_time_relaxation = str(peakstat["relaxation_interval_mean"]) + ' +- ' + str(peakstat["relaxation_interval_std"]) + ' s'
+        text_bpm = str(peakstat["bpm_mean"]) + ' +- ' + str(peakstat["bpm_std"]) + ' bpm'
+        text_time_contr_relax = str(peakstat["contr_relax_interval_mean"]) + ' +- ' + str(peakstat["contr_relax_interval_std"]) + ' s'
+
+        self.label_max_contraction.setText(text_contraction)
+        self.label_max_relaxation.setText(text_relaxation)
+        self.label_time_contraction.setText(text_time_contraction)
+        self.label_time_relaxation.setText(text_time_relaxation)
+        self.label_bpm.setText(text_bpm)
+        self.label_time_contr_relax.setText(text_time_contr_relax)
+
+class BoxControls(QGroupBox):
+    def __init__(self, parent, ctrl, boxtitle = "Controls"):
+        super(BoxControls, self).__init__(boxtitle, parent = parent)
+        self.parent=parent
+        self.ctrl = ctrl
+        self.init_ui()
+
+    @property
+    def cohw(self):
+        return self.ctrl.cohw #simplify calls to cohw    
+
+    def init_ui(self):
+
+        self.btn_save_kinplot = QPushButton('Save graph as...')
+        self.btn_export_analysis = QPushButton('Save peak analysis')
+        self.btn_plotsettings = QPushButton('Change graph settings')
+        
+        self.btn_save_kinplot.clicked.connect(self.on_save_kinplot)
+        self.btn_export_analysis.clicked.connect(self.on_export_analysis)
+        self.btn_plotsettings.clicked.connect(self.on_plotsettings)
+
+        
+        self.grid_btns = QGridLayout()
+        self.grid_btns.setSpacing(10)
+        #self.grid_btns.setAlignment(Qt.AlignTop|Qt.AlignLeft)
+        #self.grid_btns.setColumnStretch(1,1)
+        
+        self.grid_btns.addWidget(self.btn_export_analysis, 0,0)
+        self.grid_btns.addWidget(self.btn_plotsettings, 1,0)
+        self.grid_btns.addWidget(self.btn_save_kinplot, 2,0)       
+
+        self.setLayout(self.grid_btns)            
+        
+    def on_plotsettings(self):
+        self.dialog_kinoptions = dialog_kinoptions.DialogKinoptions(plotsettings = self.cohw.kinplot_options)
         self.dialog_kinoptions.exec_()
         #self.kinplot_options.update(self.dialog_kinoptions.get_settings())
         self.cohw.update_kinplot_options(self.dialog_kinoptions.get_settings())
-        self.update_plotview()
+        self.parent.update_plotview()
 
-    def on_saveKinPlot(self):
+    def on_save_kinplot(self):
         
         file_types = "PNG (*.png);;JPEG (*.jpeg);;TIFF (*.tiff);;BMP(*.bmp);; Scalable Vector Graphics (*.svg)"
         #let the user choose a folder from the starting path
@@ -385,24 +545,6 @@ class TabKinetics(QWidget):
         self.cohw.plot_kinetics(filename) # move mark_peaks into kinplot_options
         helpfunctions.msgbox(self, 'Plot was saved successfully.')
 
-    def on_exportAnalysis(self):
+    def on_export_analysis(self):
         self.cohw.export_analysis()
-        helpfunctions.msgbox(self, 'analyzed Peaks were saved successfully.')
-
-    def update_plotview(self):
-        ''' updates plot appearence after plotoptions like axis extent changed '''
-        
-        if self.kinplot_options["tmax"] != None:
-            self.ax_kinetics.set_xlim(right = self.kinplot_options["tmax"])
-        else:
-            self.ax_kinetics.set_xlim(right = self.timeindex[-1])
-        if self.kinplot_options["tmin"] != None:
-            self.ax_kinetics.set_xlim(left = self.kinplot_options["tmin"])        
-        
-        if self.kinplot_options["vmax"] != None:
-            self.ax_kinetics.set_ylim(top = self.kinplot_options["vmax"])
-        else:
-            self.ax_kinetics.autoscale(axis = 'y')
-        if self.kinplot_options["vmin"] != None:
-            self.ax_kinetics.set_ylim(bottom = self.kinplot_options["vmin"])
-        self.canvas_kinetics.draw()
+        helpfunctions.msgbox(self, 'analyzed Peaks were saved successfully.')        
