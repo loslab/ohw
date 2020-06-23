@@ -1,90 +1,15 @@
 name: ohw
 channels:
-  - menpo
   - conda-forge
   - defaults
 dependencies:
-  - ffmpeg=4.1
-  - moviepy=0.2.3.5
-  - tifffile=0.15.1
-  - anaconda-client=1.7.2
-  - asn1crypto=0.24.0
-  - blas=1.0
-  - ca-certificates=2019.8.28
-  - certifi=2018.8.24
-  - cffi=1.11.5
-  - chardet=3.0.4
-  - cloudpickle=1.2.2
-  - clyent=1.2.2
-  - cryptography=2.3.1
-  - cycler=0.10.0
-  - cython=0.28.5
-  - dask-core=2.4.0
-  - decorator=4.4.0
-  - et_xmlfile=1.0.1
-  - freetype=2.9.1
-  - icc_rt=2019.0.0
-  - icu=58.2
-  - idna=2.7
-  - imageio=2.4.1
-  - intel-openmp=2019.4
-  - ipython_genutils=0.2.0
-  - jdcal=1.4.1
-  - jpeg=9b
-  - jsonschema=2.6.0
-  - jupyter_core=4.5.0
-  - kiwisolver=1.0.1
-  - libpng=1.6.37
-  - libtiff=4.0.10
-  - matplotlib=3.0.0
-  - mkl=2018.0.3
-  - mkl_fft=1.0.6
-  - mkl_random=1.0.1
-  - nbformat=4.4.0
-  - networkx=2.3
-  - numpy=1.15.2
-  - numpy-base=1.15.2
-  - olefile=0.46
-  - openpyxl=2.6.3
-  - openssl=1.0.2t
-  - pillow=5.2.0
-  - pip=10.0.1
-  - pyasn1=0.4.7
-  - pycparser=2.19
-  - pyopenssl=18.0.0
-  - pyparsing=2.4.2
-  - pyqt=5.9.2
-  - pysocks=1.6.8
   - python=3.5.6
-  - python-dateutil=2.7.3
-  - pytz=2019.2
-  - pywavelets=1.0.0
-  - pyyaml=3.13
-  - qt=5.9.6
+  - opencv=3.4.2
+  - matplotlib=3.0.0
+  - pillow=5.2.0
   - requests=2.19.1
+  - moviepy=1.0.1
+  - tifffile=0.15.1
   - scikit-image=0.14.0
-  - scipy=1.1.0
-  - setuptools=40.2.0
-  - sip=4.19.8
-  - six=1.11.0
-  - sqlite=3.29.0
-  - tk=8.6.8
-  - toolz=0.10.0
-  - tornado=5.1.1
-  - tqdm=4.36.1
-  - traitlets=4.3.2
-  - urllib3=1.23
-  - vc=14.1
-  - vs2015_runtime=14.16.27012
-  - wheel=0.31.1
-  - win_inet_pton=1.0.1
-  - wincertstore=0.2
-  - xz=5.2.4
-  - yaml=0.1.7
-  - zlib=1.2.11
-  - zstd=1.3.7
-  - opencv3=3.1.0
-  - pip:
-    - dask==2.4.0
+  - openpyxl=2.6.3
 prefix: C:\Anaconda3\envs\ohw
-
