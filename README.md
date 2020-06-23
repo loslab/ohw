@@ -40,6 +40,16 @@ Briefly, you have to:
 * create new env from .yml or install the packages in the Python environment of your choice
 * `python GUI_mainWindow.py`
 
+##### Linux installation:
+* tested on Debian (MX-19.2)
+* install Anaconda following https://docs.anaconda.com/anaconda/install/linux/
+  * (no separate installation of GUI packages needed)
+  * download installer from https://www.anaconda.com/products/individual#linux
+  * execute `bash ~/Downloads/Anaconda3-2020.02-Linux-x86_64.sh`
+* create env by `conda env create -f OHW.yml`
+* activate env by `conda activate OHW`
+* run `python GUI_mainWindow.py`
+
 #### Analyzing videos with OpenHeartWare:
 OHW offers two modi for analyzing your videos:
 * single mode: you can load one individual video and analyze it/ detect peaks/ export the graphs you want step by step.
