@@ -1,27 +1,26 @@
 # -*- coding: utf-8 -*-
 
 import sys
-from libraries.Main_Setup import TableWidget
-#from classes.MyHorizontalTabWidget import HorizontalTabWidget
+from libraries.gui import tabwidget_main
 from PyQt5.QtWidgets import QMainWindow, QApplication, QDesktopWidget 
 from PyQt5.QtGui import QIcon
 import PyQt5.QtCore as Core
 
-class App(QMainWindow):
-    def __init__(self):
-        super().__init__()
+class OHWGUI(QMainWindow):
+    """ QMainWindow incorporating TabWidgetMain with different tabs for ohw control"""
+
+    def __init__(self, parent):
+        super(OHWGUI, self).__init__(parent)
         
-        #initial settings
         self.title = 'OpenHeartWare (OHW) - Software for optical determination of Cardiomyocyte contractility'
-        self.resize(1150,800)
-        self.center()
         self.setWindowTitle(self.title)
         self.setWindowIcon(QIcon('icons/ohw-icon.PNG'))
         
-        #create a TableWidget to use different tabs in the GUI       
-        self.table_widget = TableWidget(self)
+        self.table_widget = tabwidget_main.TabWidgetMain(self)
         self.setCentralWidget(self.table_widget)
         self.show()
+        self.resize(1150,800) # TODO: check if this makes sense
+        self.center()        
     
     def center(self):
         # method for centering the app on the screen
@@ -35,10 +34,6 @@ class App(QMainWindow):
         if e.key() == Core.Qt.Key_Escape:
             self.close()
             sys.exit(app.exec_())
-            
-    def adjustSize(self):
-        #used for resizing the whole GUI after saving of the plot 
-        self.resize(self.width()+1, self.height()+1)
         
     def closeEvent(self, event):
         self.table_widget.close_Window()    
@@ -54,9 +49,8 @@ if __name__ == '__main__':
        # warnings.simplefilter("default") # Change the filter in this process
         #os.environ["PYTHONWARNINGS"] = "default" # Also affect subprocesses
    
-    #start the application
     app = QApplication(sys.argv)
     app.setAttribute(Core.Qt.AA_DisableHighDpiScaling)
     app.aboutToQuit.connect(app.deleteLater)
-    heartware_gui = App()    
+    ohw_gui = OHWGUI(parent = None)    
     app.exec_()

@@ -7,5 +7,5 @@ windir%\System32\cmd.exe "/K"
 @echo on
 call "%anaconda_folder%"
 call activate OHW
-call python GUI_mainWindow.py
+call python ohw_gui.py
 pause

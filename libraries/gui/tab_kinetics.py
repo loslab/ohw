@@ -19,11 +19,11 @@ class TabKinetics(QWidget):
     def __init__(self, parent, ctrl):
         super(TabKinetics, self).__init__(parent)
         self.update = True # update flag, set when motion calculation changed        
-        self.parent=parent
+        self.parent = parent
         self.ctrl = ctrl
         self.initUI()
         
-        self.init_ohw() # for prototyping, TODO: remove
+        #self.init_ohw() # for prototyping, TODO: remove
         
     @property
     def cohw(self):
@@ -85,8 +85,12 @@ class TabKinetics(QWidget):
             
             #self.kinplot_options = self.cohw.kinplot_options
             
-            self.plot_analysis_img()
-            self.update_roi()
+            loaded = self.cohw.video_loaded
+            finish = self.cohw.analysis_meta["calc_finish"]            
+            
+            if finish or loaded:
+                self.plot_analysis_img()
+                self.update_roi()
             
             self.clear_fig()
             if self.cohw.analysis_meta["calc_finish"]:    # if any analysis is done elements can be enabled, as every analysis should have a 1D-representation

@@ -695,9 +695,9 @@ class BoxMotion(QGroupBox):
         #self.cohw.init_motion()
         #self.parent.update_tabs() # TODO:re-enable, transit to self.ctrl.update_tabs()
         self.parent.enable_controls(True)
-        self.parent.update = True
-        self.parent.init_ohw()
-        self.cohw.save_ohw()            
+        #self.ctrl.update = True
+        self.cohw.save_ohw()
+        self.ctrl.update_tabs()
 
     def updateMVProgressBar(self, value):
         self.parent.progbar.setValue(value*100)   

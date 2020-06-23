@@ -23,15 +23,15 @@ from PyQt5.QtCore import Qt, pyqtSignal
 #from PyQt5 import QtGui
  
 from libraries import MultipleFoldersByUser, UserDialogs, Filters, helpfunctions, QuiverExportOptions, plotfunctions, OHW
-from libraries.gui import tab_input, tab_motion, tab_TA, tab_quiver, tab_batch, tab_kinetics
+from libraries.gui import tab_analysis, tab_TA, tab_quiver, tab_batch, tab_kinetics
 
-class TableWidget(QWidget):
+class TabWidgetMain(QWidget):
     def __init__(self, parent):   
-        super(QWidget, self).__init__(parent)
+        super(TabWidgetMain, self).__init__(parent)
 
         #read config file
         self.config = helpfunctions.read_config()
-        self.cohw = OHW.OHW()
+        self.cohw = OHW.create_analysis()
         
         self.layout = QGridLayout(self)
  
@@ -39,23 +39,23 @@ class TableWidget(QWidget):
         self.layout.addWidget(self.tabs)
         self.setLayout(self.layout)
 
-        self.plotted_peaks = False
-        
-        self.tab_input = tab_input.TabInput(self)
-        self.tab_motion = tab_motion.TabMotion(self)
-        self.tab_kinetics = tab_kinetics.TabKinetics(self)
+        #self.plotted_peaks = False
+        #self.tab_input = tab_input.TabInput(self)
+        #self.tab_motion = tab_motion.TabMotion(self)
+        self.tab_analysis = tab_analysis.TabAnalysis(self, self)
+        self.tab_kinetics = tab_kinetics.TabKinetics(self, self) # TODO: rework, first self is parent, 2nd is controller
         self.tab_quiver = tab_quiver.TabQuiver(self)
         self.tab_TA = tab_TA.TabTA(self)
         self.tab_batch = tab_batch.TabBatch(self)
         
-        self.tabs.resize(800,800)
+        #self.tabs.resize(800,800)
          
         self.tabs.currentChanged.connect(self.on_tabselection)
         
         # Add tabs
-        
-        self.tabs.addTab(self.tab_input,"Video Input ")
-        self.tabs.addTab(self.tab_motion,"Compute motion")
+        #self.tabs.addTab(self.tab_input,"Video Input ")
+        #self.tabs.addTab(self.tab_motion,"Compute motion")
+        self.tabs.addTab(self.tab_analysis,"Video analysis")
         self.tabs.addTab(self.tab_kinetics,"Beating kinetics")
         self.tabs.addTab(self.tab_quiver,"Heatmaps and Quiverplots")
         self.tabs.addTab(self.tab_TA,"Time averaged motion")
@@ -89,22 +89,10 @@ class TableWidget(QWidget):
             peaks might have changed)
         '''
         self.cohw.save_ohw()
-        #pass
-      
-    """ # replaced with update_tabs
-    def init_ohw(self):
-        ''' init tabs to changed ohw '''
-        
-        self.tab_input.init_ohw()
-        self.tab_motion.init_ohw()
-        self.tab_kinetics.init_ohw()
-        self.tab_TA.init_ohw()
-        self.tab_quiver.init_ohw()
-    """
 
     def update_tabs(self):
         ''' sets update flags = True on tabs to update when clicked the next time'''
-        for tab in [self.tab_input, self.tab_motion, self.tab_kinetics, self.tab_quiver, self.tab_TA]:
+        for tab in [self.tab_analysis, self.tab_kinetics, self.tab_quiver, self.tab_TA]:
             tab.update = True
         
         #update current tab as user won't click it automatically
@@ -112,8 +100,5 @@ class TableWidget(QWidget):
         self.tabs.widget(idx).init_ohw()
         
     def on_tabselection(self, selection):
-        ''' 
-            calls init_ohw on each tab when clicked
-        '''
-
+        ''' calls init_ohw on clicked tab -> inits depending on update flag '''
         self.tabs.widget(selection).init_ohw()
