@@ -5,10 +5,13 @@ channels:
 dependencies:
   - python=3.5.6
   - opencv=3.4.2
+  - pip:
+    - pip==20.1.1
+    - moviepy==1.0.1
+    - imageio-ffmpeg==0.4.2
   - matplotlib=3.0.0
   - pillow=5.2.0
   - requests=2.19.1
-  - moviepy=1.0.1
   - tifffile=0.15.1
   - scikit-image=0.14.0
   - openpyxl=2.6.3
