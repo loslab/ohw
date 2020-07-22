@@ -358,25 +358,18 @@ class BoxPostprocess(QGroupBox):
         self.cohw.ceval.set_roi()
         #self.parent.update_roi()
         self.cohw.ceval.process() #TODO:reimplement
-        self.parent.update = True
-        self.parent.init_ohw()
+        self.ctrl.update_tabs()
         
-        #self.parent.update_tabs()
-
     def on_reset(self):
         self.cohw.ceval.reset_roi()
         self.cohw.ceval.process()
-        self.parent.update = True
-        self.parent.init_ohw()
-        #self.parent.update_roi()
+        self.ctrl.update_tabs()
         
     def on_check_filter(self):
         filterstate = self.check_filter.isChecked()
         self.cohw.set_filter('filter_singlemov', filterstate)
         self.cohw.ceval.process()
-        self.parent.update = True
-        self.parent.init_ohw()        
-        
+        self.ctrl.update_tabs()
         
 class BoxPeakdetection(QGroupBox):
     def __init__(self, parent, ctrl, boxtitle = "Peakdetection"):

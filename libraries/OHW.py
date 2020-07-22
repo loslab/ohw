@@ -420,22 +420,22 @@ class OHW():
             - of whole video otherwise
         """
         savepath = self.analysis_meta["results_folder"]/'heatmap_results'
-        plotfunctions.save_heatmap(ohw_dataset = self, savepath = savepath, singleframe=singleframe)
+        plotfunctions.save_heatmap(cohw = self, savepath = savepath, singleframe=singleframe)
     
     def save_heatmap_thread(self, singleframe):
         savepath = self.analysis_meta["results_folder"]/'heatmap_results'
         self.thread_save_heatmap = helpfunctions.turn_function_into_thread(
-            plotfunctions.save_heatmap, ohw_dataset = self, savepath = savepath, singleframe=False)
+            plotfunctions.save_heatmap, cohw = self, savepath = savepath, singleframe=False)
         return self.thread_save_heatmap
 
     def save_quiver3(self, singleframe, skipquivers = 1):
         savepath = self.analysis_meta["results_folder"]/'quiver_results'
-        plotfunctions.save_quiver3(ohw_dataset = self, savepath = savepath, singleframe=singleframe, skipquivers=skipquivers)
+        plotfunctions.save_quiver3(cohw = self, savepath = savepath, singleframe=singleframe, skipquivers=skipquivers)
     
     def save_quiver3_thread(self, singleframe, skipquivers):#t_cut
         savepath = self.analysis_meta["results_folder"]/'quiver_results'
         self.thread_save_quiver3 = helpfunctions.turn_function_into_thread(
-            plotfunctions.save_quiver3, ohw_dataset = self, savepath = savepath, singleframe = singleframe, skipquivers=skipquivers)#t_cut=t_cut
+            plotfunctions.save_quiver3, cohw = self, savepath = savepath, singleframe = singleframe, skipquivers=skipquivers)#t_cut=t_cut
         return self.thread_save_quiver3
 
     def save_quiver_thread(self, singleframe, skipquivers, t_cut):

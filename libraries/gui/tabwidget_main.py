@@ -44,7 +44,7 @@ class TabWidgetMain(QWidget):
         #self.tab_motion = tab_motion.TabMotion(self)
         self.tab_analysis = tab_analysis.TabAnalysis(self, self)
         self.tab_kinetics = tab_kinetics.TabKinetics(self, self) # TODO: rework, first self is parent, 2nd is controller
-        self.tab_quiver = tab_quiver.TabQuiver(self)
+        self.tab_quiver = tab_quiver.TabQuiver(self, self)
         self.tab_TA = tab_TA.TabTA(self)
         self.tab_batch = tab_batch.TabBatch(self)
         

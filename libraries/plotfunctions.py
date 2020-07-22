@@ -56,7 +56,7 @@ def plot_TimeAveragedMotions(ceval, file_ext='.png'):
     avg_absMotion = ceval.avg_absMotion
     avg_MotionX, avg_MotionY = ceval.avg_MotionX, ceval.avg_MotionY
     max_avgMotion = ceval.max_avgMotion
-    savefolder = ceval.cohw.analysis_meta["results_folder"] #ceval.cohw ugly, links back to parent
+    savefolder = ceval.cohw.analysis_meta["results_folder"] #ceval.cohw ugly, links back to parent, todo:fix
     
     cmap_all = "jet"    #"inferno"
     
@@ -109,11 +109,17 @@ def plot_TimeAveragedMotions(ceval, file_ext='.png'):
     outputpath = str(savefolder / ('TimeAveraged_yMotion' + file_ext))
     fig_avgMotionY.savefig(outputpath, dpi = 100, bbox_inches = 'tight', pad_inches = 0.4)
     
-def save_heatmap(ohw_dataset, savepath, singleframe = False, *args, **kwargs):
+def save_heatmap(cohw, savepath, singleframe = False, *args, **kwargs):
     """
         saves either the selected frame (singleframe = framenumber) or the whole heatmap video (=False)
     """
-    absMotions = ohw_dataset.absMotions
+
+    if singleframe is False:
+        print("saving heatmapvideo")
+    else:
+        print("saving heatmap of frame ", singleframe)
+    
+    absMotions = cohw.ceval.absMotions
     
     savefig_heatmaps, saveax_heatmaps = plt.subplots(1,1)
     savefig_heatmaps.set_size_inches(16,12) 
@@ -136,7 +142,7 @@ def save_heatmap(ohw_dataset, savepath, singleframe = False, *args, **kwargs):
     '''
     savepath.mkdir(parents = True, exist_ok = True) #create folder for results if it doesn't exist
     
-    if singleframe != False:
+    if singleframe is not False:
     # save only specified frame
         imshow_heatmaps.set_data(absMotions[singleframe])
         
@@ -145,7 +151,7 @@ def save_heatmap(ohw_dataset, savepath, singleframe = False, *args, **kwargs):
     
     else:
     # save video
-        fps = ohw_dataset.videometa["fps"]
+        fps = cohw.videometa["fps"]
         
         def make_frame_mpl(t):
 
@@ -160,7 +166,7 @@ def save_heatmap(ohw_dataset, savepath, singleframe = False, *args, **kwargs):
         # animation.resize((1500,800))
         animation.write_videofile(heatmap_filename, fps=fps)
 
-def save_quiver(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_cut = 0, *args, **kwargs):
+def save_quiver(cohw, savepath, singleframe = False, skipquivers = 1, t_cut = 0, *args, **kwargs):
     """
         saves either the selected frame (singleframe = framenumber) or the whole heatmap video (= False)
         # adjust density of arrows by skipquivers
@@ -168,11 +174,11 @@ def save_quiver(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_c
         # todo: maybe move to helpfunctions?
     """
     
-    absMotions, unitMVs = ohw_dataset.absMotions, ohw_dataset.unitMVs   
-    timeindex = ohw_dataset.timeindex
-    analysisImageStack = ohw_dataset.analysisImageStack
-    mean_absMotions = ohw_dataset.mean_absMotions
-    videometa = ohw_dataset.videometa
+    absMotions, unitMVs = cohw.absMotions, cohw.unitMVs   
+    timeindex = cohw.timeindex
+    analysisImageStack = cohw.analysisImageStack
+    mean_absMotions = cohw.mean_absMotions
+    videometa = cohw.videometa
 
     scale_max = helpfunctions.get_scale_maxMotion2(absMotions)   
     MV_zerofiltered = Filters.zeromotion_to_nan(unitMVs, copy=True)
@@ -182,7 +188,7 @@ def save_quiver(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_c
     MotionX = MV_cutoff[:,0,:,:]
     MotionY = MV_cutoff[:,1,:,:]
 
-    blockwidth = ohw_dataset.analysis_meta["MV_parameters"]["blockwidth"]
+    blockwidth = cohw.analysis_meta["motion_parameters"]["blockwidth"]
     MotionCoordinatesX, MotionCoordinatesY = np.meshgrid(
             np.arange(blockwidth/2, analysisImageStack.shape[2], blockwidth), 
             np.arange(blockwidth/2, analysisImageStack.shape[1], blockwidth))        
@@ -236,30 +242,51 @@ def save_quiver(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_c
         #animation_to_save.write_videofile(quivers_filename, fps=self.videometa["fps"])
         animation.write_videofile(quivers_filename, fps=videometa["fps"])
         
-def save_quiver3(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_cut = 0, *args, **kwargs):
+def save_quiver3(cohw, savepath, singleframe = False, skipquivers = 1, t_cut = 0, *args, **kwargs):
     """
         saves a video with the normal beating, beating + quivers and velocity trace
         or a single frame with the same three views
     """
+
+    if singleframe is False:
+        print("saving quivervideo")
+    else:
+        print("saving quiver of frame ", singleframe)
     
-    absMotions, unitMVs = ohw_dataset.absMotions, ohw_dataset.unitMVs   
-    timeindex = ohw_dataset.timeindex
-    analysisImageStack = ohw_dataset.analysisImageStack
-    mean_absMotions = ohw_dataset.mean_absMotions
-    videometa = ohw_dataset.videometa
+    # absMotions, unitMVs = cohw.absMotions, cohw.unitMVs
+    ceval = cohw.ceval
+    absMotions = ceval.absMotions
     
-    scale_max = helpfunctions.get_scale_maxMotion2(absMotions)   
+    timeindex = ceval.PeakDetection.timeindex
+    analysisImageStack = cohw.analysisImageStack
+    mean_absMotions = ceval.mean_absMotions
+    videometa = cohw.videometa
+    
+    scale_max = helpfunctions.get_scale_maxMotion2(absMotions)
+    blockwidth = cohw.analysis_meta["motion_parameters"]["blockwidth"]
+    
+    """ # already happens in ceval.process()
     MV_zerofiltered = Filters.zeromotion_to_nan(unitMVs, copy=True)
     MV_cutoff = Filters.cutoffMVs(MV_zerofiltered, max_length = scale_max, copy=True)
     
     MotionX = MV_cutoff[:,0,:,:]
     MotionY = MV_cutoff[:,1,:,:]
 
-    blockwidth = ohw_dataset.analysis_meta["MV_parameters"]["blockwidth"]
     MotionCoordinatesX, MotionCoordinatesY = np.meshgrid(
             np.arange(blockwidth/2, analysisImageStack.shape[2], blockwidth), 
             np.arange(blockwidth/2, analysisImageStack.shape[1], blockwidth))        
-       
+    """
+    
+    subroi = ceval.roi
+    
+    # todo: this part is repeated somewhere else -> do subroi slicing somewhere else
+    if subroi is None:
+        subroi_slicex = slice(0,-1) # select all if no roi selected
+        subroi_slicey = slice(0,-1)
+    else:
+        subroi_slicex = slice(subroi[0],subroi[0]+subroi[2])
+        subroi_slicey = slice(subroi[1],subroi[1]+subroi[3])    
+
     #prepare figure
     outputfigure = plt.figure(figsize=(14,10), dpi = 150)#figsize=(6.5,12)
 
@@ -288,19 +315,33 @@ def save_quiver3(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_
 
     ###### prepare video axis
     imshow_video = saveax_video.imshow(
-            analysisImageStack[0], vmin = videometa["Blackval"], vmax = videometa["Whiteval"], cmap = "gray")
+            analysisImageStack[0, subroi_slicey,subroi_slicex], 
+            vmin = videometa["Blackval"], vmax = videometa["Whiteval"], cmap = "gray")
+    # todo: easier to specify displayImageStack = analysisImageStack[:,self.subroi_slicey,self.subroi_slicex]
+    # instead of doing slice every time....
+    
     
     qslice=(slice(None,None,skipquivers),slice(None,None,skipquivers))
     distance_between_arrows = blockwidth * skipquivers
     arrowscale = 1 / (distance_between_arrows / scale_max)
            
-    imshow_quivers = saveax_quivers.imshow(analysisImageStack[0], vmin = videometa["Blackval"], vmax = videometa["Whiteval"], cmap = "gray")
+    imshow_quivers = saveax_quivers.imshow(analysisImageStack[0, subroi_slicey,subroi_slicex], 
+        vmin = videometa["Blackval"], vmax = videometa["Whiteval"], cmap = "gray")
     # adjust desired quiver plotstyles here!
+    """
     quiver_quivers = saveax_quivers.quiver(
             MotionCoordinatesX[qslice], MotionCoordinatesY[qslice], MotionX[0][qslice], MotionY[0][qslice], 
             pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", scale = arrowscale,  
             width = 4, headwidth = 3, headlength = 5, headaxislength = 5, minshaft =1.5) #width = 4, headwidth = 2, headlength = 3
-            
+    """
+    quiver_quivers = saveax_quivers.quiver(
+                ceval.MotionCoordinatesX[qslice], 
+                ceval.MotionCoordinatesY[qslice], 
+                ceval.QuiverMotionX[0][qslice], 
+                ceval.QuiverMotionY[0][qslice], 
+                pivot='mid', color='r', units ="xy", scale_units = "xy", angles = "xy", 
+                scale = arrowscale, width = 4, headwidth = 3, headlength = 5, headaxislength = 5, minshaft =1.5) #width = 4, headwidth = 2, headlength = 3    
+    
     #saveax_quivers.set_title('Motion [µm/s]', fontsize = 16, fontweight = 'bold')
 
     savepath.mkdir(parents = True, exist_ok = True) #create folder for results
@@ -320,11 +361,10 @@ def save_quiver3(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_
 
     # save only specified frame       
     #if not isinstance(singleframe, bool):
-    if singleframe != False:
-        print("export single frame")
-        imshow_quivers.set_data(analysisImageStack[singleframe])
-        imshow_video.set_data(analysisImageStack[singleframe])
-        quiver_quivers.set_UVC(MotionX[singleframe][qslice], MotionY[singleframe][qslice])
+    if singleframe is not False:
+        imshow_quivers.set_data(analysisImageStack[singleframe, subroi_slicey,subroi_slicex])
+        imshow_video.set_data(analysisImageStack[singleframe, subroi_slicey,subroi_slicex])
+        quiver_quivers.set_UVC(ceval.QuiverMotionX[singleframe][qslice], ceval.QuiverMotionY[singleframe][qslice])
         
         marker.remove()
         marker, = saveax_trace.plot(timeindex[singleframe],mean_absMotions[singleframe],'ro')
@@ -338,10 +378,12 @@ def save_quiver3(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_
             #calculate the current frame number:
             frame = int(round(t*videometa["fps"]))
             
-            imshow_quivers.set_data(analysisImageStack[frame])
-            imshow_video.set_data(analysisImageStack[frame])
+            imshow_quivers.set_data(analysisImageStack[frame, subroi_slicey,subroi_slicex])
+            imshow_video.set_data(analysisImageStack[frame, subroi_slicey,subroi_slicex])
             
-            quiver_quivers.set_UVC(MotionX[frame][qslice], MotionY[frame][qslice])
+            quiver_quivers.set_UVC(
+                ceval.QuiverMotionX[frame][qslice], 
+                ceval.QuiverMotionY[frame][qslice])
 
             #marker.remove() # does not work, only if used as global variable...
             saveax_trace.lines[1].remove()
@@ -359,7 +401,7 @@ def save_quiver3(ohw_dataset, savepath, singleframe = False, skipquivers = 1, t_
             # call adjust_bbox to save only the given area
         
         quivers_filename = str(savepath / 'quivervideo3.mp4')
-        duration = 1/videometa["fps"] * (MotionX.shape[0] - 1)
+        duration = 1/videometa["fps"] * (ceval.QuiverMotionX.shape[0] - 1)
         animation = mpy.VideoClip(make_frame_mpl, duration=duration)
         
         animation.write_videofile(quivers_filename, fps=videometa["fps"])
