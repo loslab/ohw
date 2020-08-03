@@ -57,7 +57,7 @@ def create_scalebar(dimX_px, microns_per_pixel):
     scale_values = [1,2,5,10,15,20,30,40,50,70,100,150,200,300,400,500,700,1000]
     initial_scale_length = dimX_px * 0.2 * microns_per_pixel
     
-    text_height_px = int(round(dimX_px * 0.05))
+    text_height_px = round(dimX_px * 0.05)
     drawfont = ImageFont.truetype("arial.ttf", text_height_px)
     
     scale_length_microns = min(scale_values, key=lambda x:abs(x-initial_scale_length))    # pick nearest value
@@ -67,8 +67,8 @@ def create_scalebar(dimX_px, microns_per_pixel):
     
     bg_square_spacer_px = scale_length_px * 0.07
     
-    bg_square_length_px = int(round(scale_length_px + 2 * bg_square_spacer_px))
-    bg_square_height_px = int(round(text_height_px + scale_height_px + 2 * bg_square_spacer_px))
+    bg_square_length_px = round(scale_length_px + 2 * bg_square_spacer_px)
+    bg_square_height_px = round(text_height_px + scale_height_px + 2 * bg_square_spacer_px)
     
     scalebar = Image.new("L", (bg_square_length_px, bg_square_height_px), "white") #L corresponds to black & white image
     draw = ImageDraw.Draw(scalebar)
@@ -208,7 +208,7 @@ def sel_roi(img):
     
     img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)      
     hpercent = (window_height / float(img.shape[0]))
-    wsize = int(round((float(img.shape[1]) * float(hpercent))))
+    wsize = round((float(img.shape[1]) * float(hpercent)))
     hsize = window_height
     image_scaled = cv2.resize(img, (wsize, hsize))    
     
@@ -231,7 +231,7 @@ def sel_roi(img):
         roi[3] = roi[3] + roi[1]
         roi[1] = 0
     
-    roi_px = [int(round(coord/hpercent)) for coord in roi]
+    roi_px = [round(coord/hpercent) for coord in roi]
 
     return roi_px
     

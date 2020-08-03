@@ -209,7 +209,7 @@ class BoxQuiver(QGroupBox):
         - display of Quivers controlled by slider
         - buttons to save video or individual frame
     """
-    def __init__(self, parent, ctrl, boxtitle = "Heatmaps"):
+    def __init__(self, parent, ctrl, boxtitle = "Quivers"):
         super(BoxQuiver, self).__init__(boxtitle, parent = parent) # take care of correct superclass init, order of args
         self.parent=parent
         self.ctrl = ctrl #introduce controller object
@@ -242,7 +242,7 @@ class BoxQuiver(QGroupBox):
         #progressbar for quivers
         self.progressbar_quivers = QProgressBar(self)
         self.progressbar_quivers.setValue(0)
-        self.progressbar_quivers.setFixedWidth(300)
+        #self.progressbar_quivers.setFixedWidth(300)
         
         self.slider_quiver = QSlider(Qt.Horizontal)
         self.slider_quiver.setMinimum(0)

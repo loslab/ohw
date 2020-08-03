@@ -59,14 +59,14 @@ class Postproc():
             
             else:
                 #print("analysis roi", roi)
-                anaroi = [int(coord*self.cohw.videometa["prev_scale"]) for coord in anaroi] # scale to 800 px coord
+                anaroi = [round(coord*self.cohw.videometa["prev_scale"]) for coord in anaroi] # scale to 800 px coord
                 #print("analysis roi in 800 px", roi)
                 analysis_img = self.cohw.videometa["prev800px"][
                         int(anaroi[1]):int(anaroi[1]+anaroi[3]), 
                         int(anaroi[0]):int(anaroi[0]+anaroi[2])]
             
             self.roi = helpfunctions.sel_roi(analysis_img) #roi has to be rescaled now to analysis_img            
-            self.roi = [int(coord/self.cohw.videometa["prev_scale"]) for coord in self.roi] # scale to orig coord
+            self.roi = [round(coord/self.cohw.videometa["prev_scale"]) for coord in self.roi] # scale to orig coord
 
         elif isinstance(roi, list):
             # TODO: check if roi boundaries are allowed...
@@ -101,7 +101,7 @@ class Postproc():
             else:
                 roi = self.roi
                 # scale roi to adjusted imagestack resolution used for calculation
-                roi = [int(round(coord*scalingfactor)) for coord in roi] 
+                roi = [round(coord*scalingfactor) for coord in roi] 
                 
                 MVslice_x, MVslice_y = helpfunctions.get_slice_from_roi(roi,bw)
                 #print("orig shape:",  self.cohw.rawMVs.shape) # MVs are somehow arranged in y, x -> inverse direction
@@ -144,7 +144,7 @@ class Postproc():
             else:
                 roi = self.roi
                 # scale roi to adjusted imagestack resolution used for calculation
-                roi = [int(round(coord*scalingfactor)) for coord in roi] 
+                roi = [round(coord*scalingfactor) for coord in roi] 
                 
                 self.meanI = self.cohw.rawImageStack[:,roi[1]:roi[1]+roi[3],roi[0]:roi[0]+roi[2]].mean(axis=(1,2))
             

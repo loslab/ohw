@@ -37,6 +37,55 @@ def check_finish(function, *args, **kwargs):
             
     return check_function
 
+def batch(videofiles, param={}):
+    
+    defaultparam = {"scaling":True, "global_resultsfolder":None, "canny":True,
+                   "autoPeak":True, "heatmaps":False, "quivers":False}
+    defaultparam.update(param)
+    param = defaultparam
+    
+    for filenr, file in enumerate(videofiles):    
+        print("analyzing file", file)
+        filepath = pathlib.Path(file)
+        curr_analysis = OHW.create_analysis()
+        curr_analysis.import_video(filepath)
+        curr_analysis.set_scale(2) # 1 px = microns 
+        # todo: connect to param dict
+        
+        if param["scaling"]:
+            curr_analysis.set_px_longest(px_longest=512) # raises error if roi = None, todo: fix
+            
+        # adjust each results folder if option selected
+        if param["global_resultsfolder"] != None:
+            #print("change resultsfolder to...",self.param["global_resultsfolder"])
+            inputpath = curr_analysis.videometa["inputpath"]
+            results_folder = param["global_resultsfolder"]/("results_" + str(inputpath.stem) )
+            #curr_analysis.analysis_meta["results_folder"] = self.param["global_resultsfolder"]/("results_" + str(inputpath.stem) )
+            curr_analysis.set_results_folder(results_folder)
+            print("resultsfolder:", curr_analysis.analysis_meta["results_folder"])
+        
+        if param["canny"] == True:
+            curr_analysis.set_prefilter("Canny",on = True)
+        
+        curr_analysis.calculate_motion(method = 'Blockmatch', blockwidth = 16, delay = 2, max_shift = 7, overwrite=True)
+        # init motion not needed anymore?
+        
+        if param["autoPeak"]:
+            curr_analysis.detect_peaks(0.3, 4)  #take care, values hardcoded here so far!
+            curr_analysis.plot_kinetics() # chooses default path
+            curr_analysis.get_peakstatistics()
+            curr_analysis.export_analysis()
+
+        if param["heatmaps"]:
+            #self.set_state(filenr,'heatmapvideo')
+            curr_analysis.save_heatmap(singleframe = False)
+
+        if param["quivers"]:
+            #self.set_state(filenr,'quivervideo')
+            curr_analysis.save_quiver3(singleframe = False, skipquivers = 4) #allow to choose between quiver and quiver3 in future
+
+        #curr_analysis.save_ohw()        
+
 '''
 class CheckDecorators():
     """ class for decorators
@@ -114,6 +163,7 @@ class OHW():
         self.video_loaded = True
         self.videometa["prev800px"] = helpfunctions.create_prev(self.rawImageStack[0], 800)
         self.videometa["prev_scale"] = 800/self.videometa["frameHeight"]
+        self.reset_roi() # sets roi to video extent
         
     def import_video_thread(self, inputpath):
         """ returns QThread where import_video runs, prevents blocking
@@ -171,6 +221,10 @@ class OHW():
         else:
             self.analysis_meta["results_folder"] = inputpath.parent / "results"
         self.analysis_meta["inputpath"] = inputpath
+
+    def set_results_folder(self, results_folder):
+        """ sets results folder, should be pathlib.Path """
+        self.analysis_meta["results_folder"] = results_folder
 
     @check_finish
     def set_scale(self, mpp):
@@ -468,6 +522,7 @@ class OHW():
         """ plots 1d motion representation of active evaluation """
         if filename == None:
             filename=self.analysis_meta["results_folder"]/ 'beating_kinetics.png'
+        filename.parent.mkdir(parents = True, exist_ok = True)
         self.ceval.plot_kinetics(filename)
 
     def _init_kinplot_options(self):
@@ -509,7 +564,7 @@ class OHW():
         
         if roi is None:
             sel_roi = helpfunctions.sel_roi(self.videometa["prev800px"]) # select roi in 800 px preview img
-            roi = [int(coord/self.videometa["prev_scale"]) for coord in sel_roi] # rescale to coord in orig inputdata
+            roi = [round(coord/self.videometa["prev_scale"]) for coord in sel_roi] # rescale to coord in orig inputdata
             self.analysis_meta["roi"] = roi
             print("selected roi:", roi)
         
@@ -527,9 +582,8 @@ class OHW():
         if self.video_loaded == False:
             print("no video loaded, can't reset ROI")
             return False
-        self.analysis_meta["roi"] = None
+        self.analysis_meta["roi"] = [0,0,self.videometa['frameWidth'],self.videometa['frameHeight']]
         self._calc_scalingfactor()
-        print("resetting roi to whole video")
-            
+        
 if __name__ == "__main__":
     OHW = OHW()

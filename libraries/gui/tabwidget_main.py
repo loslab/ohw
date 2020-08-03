@@ -45,16 +45,14 @@ class TabWidgetMain(QWidget):
         self.tab_analysis = tab_analysis.TabAnalysis(self, self)
         self.tab_kinetics = tab_kinetics.TabKinetics(self, self) # TODO: rework, first self is parent, 2nd is controller
         self.tab_quiver = tab_quiver.TabQuiver(self, self)
-        self.tab_TA = tab_TA.TabTA(self)
-        self.tab_batch = tab_batch.TabBatch(self)
+        self.tab_TA = tab_TA.TabTA(self, self)
+        self.tab_batch = tab_batch.TabBatch(self, self)
         
         #self.tabs.resize(800,800)
          
         self.tabs.currentChanged.connect(self.on_tabselection)
         
         # Add tabs
-        #self.tabs.addTab(self.tab_input,"Video Input ")
-        #self.tabs.addTab(self.tab_motion,"Compute motion")
         self.tabs.addTab(self.tab_analysis,"Video analysis")
         self.tabs.addTab(self.tab_kinetics,"Beating kinetics")
         self.tabs.addTab(self.tab_quiver,"Heatmaps and Quiverplots")
@@ -101,4 +99,5 @@ class TabWidgetMain(QWidget):
         
     def on_tabselection(self, selection):
         ''' calls init_ohw on clicked tab -> inits depending on update flag '''
-        self.tabs.widget(selection).init_ohw()
+        self.tabs.widget(selection).init_ohw() 
+        # todo: perhaps rename to update() as it does not have to be related to changes in cohw...

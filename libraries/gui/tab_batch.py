@@ -6,240 +6,64 @@ from PyQt5 import QtCore
 
 from PyQt5.QtWidgets import (QLabel, QLineEdit, QGridLayout, QComboBox,
     QTextEdit,QSizePolicy, QPushButton, QProgressBar,QSlider, QWidget, 
-    QSpinBox, QCheckBox, QListWidget, QAbstractItemView)
+    QSpinBox, QCheckBox, QListWidget, QAbstractItemView, QGroupBox)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QFont
 from libraries import helpfunctions, UserDialogs, OHW
+from libraries.gui import tab_analysis
 import pathlib
 
 class TabBatch(QWidget):
     """
-        for time averaged motion
+        tab for selecting various videos and performing batch analysis
     """
     
-    def __init__(self, parent):
+    def __init__(self, parent, ctrl):
         super(TabBatch, self).__init__(parent)
-        self.update = False
-        self.parent=parent
+        self.update = False # analogous to other tabs, however not used here
+        self.ctrl = ctrl
         self.initUI()
         
         self.videofiles = []
         self.stopBatch = False
         self.global_resultsfolder = None
+        
+    @property
+    def cohw(self):
+        return self.ctrl.cohw #simplify calls to cohw        
 
     def init_ohw(self):
         pass
 
     def initUI(self):
-
-        self.info = QTextEdit()
-        self.info.setText('In this tab you can automate the analysis of multiple folders without further interaction during processing.')
-        self.info.setReadOnly(True)
-        self.info.setMaximumHeight(50)
-        self.info.setMaximumWidth(800)
-        self.info.setStyleSheet("background-color: LightSkyBlue")
         
-        #select the folders
-        self.info_batchfolders = QLabel('Currently selected videos for automated analysis:')
-        self.info_batchfolders.setFont(QFont("Times",weight=QFont.Bold))
-        self.qlist_batchvideos = QListWidget()
-        self.qlist_batchvideos.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        #self.qlist_batchvideos.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        self.qlist_batchvideos.setMinimumWidth(600)
-        
-        #button for adding folders
-        self.btn_addVid = QPushButton('Add Videos...')
-        self.btn_addVid.resize(self.btn_addVid.sizeHint())
-        self.btn_addVid.clicked.connect(self.on_addBatchVideo)
-        
-        #button for removing folders
-        self.btn_remVid = QPushButton('Remove selected Videos')
-        self.btn_remVid.resize(self.btn_remVid.sizeHint())
-        self.btn_remVid.clicked.connect(self.on_removeBatchVideo)
+        self.box_input = BoxInput(self, self.ctrl) 
+        self.box_anasettings = BoxAnasettings(self, self.ctrl)
+        self.box_batchsettings = BoxBatchsettings(self, self.ctrl)
+        self.box_controls = BoxControls(self, self.ctrl)
         
         #batch param
-        self.label_parameters = QLabel('Settings during calculation of motion vectors:')
-        self.label_parameters.setFont(QFont("Times",weight=QFont.Bold))
-        self.label_blockwidth = QLabel('Blockwidth (in pixels)')
-        self.label_delay = QLabel('Delay (in frames)')
-        self.label_maxShift = QLabel('Maximum shift p (in pixels)')
-        
-        #use own grid for spinboxes...
-        
-        #spinboxes incl settings
-        self.spinbox_blockwidth  = QSpinBox()
-        self.spinbox_delay = QSpinBox()
-        self.spinbox_maxShift = QSpinBox()
-        
-        self.spinbox_blockwidth.setRange(2,128)
-        self.spinbox_blockwidth.setSingleStep(2)
-        self.spinbox_blockwidth.setSuffix(' pixels')
-        self.spinbox_delay.setRange(1,20)
-        self.spinbox_delay.setSuffix(' frames')
-        self.spinbox_delay.setSingleStep(1)
-        self.spinbox_maxShift.setSuffix(' pixels')
-        
-        blockwidth = int(self.parent.config['DEFAULT VALUES']['blockwidth'])
-        delay = int(self.parent.config['DEFAULT VALUES']['delay'])
-        max_shift = int(self.parent.config['DEFAULT VALUES']['maxshift'])
-
-        self.spinbox_blockwidth.setValue(blockwidth)
-        self.spinbox_delay.setValue(delay)
-        self.spinbox_maxShift.setValue(max_shift)
-        
-        #options for automated analysis
-        label_batchOptions = QLabel('Choose options for automated analysis of chosen files')
-        label_batchOptions.setFont(QFont("Times",weight=QFont.Bold))
-        
-        self.checkFilter = QCheckBox("Filter motion vectors during calculation")
-        self.checkCanny = QCheckBox("Select region for calculation based on Canny filtering")
-        self.checkHeatmaps = QCheckBox("Create heatmap video")
-        self.checkQuivers = QCheckBox("Create quiver plot video")
-        #self.checkTimeAveraged = QCheckBox("Create plots for time averaged motion")
-        self.checkSaveMotionVectors = QCheckBox("Save the generated motion vectors")
-        self.checkScaling = QCheckBox("Scale longest side to 1024 px during calculation")
-        self.check_batchresultsFolder = QCheckBox("Use standard results folder, individual for each video")
-        self.check_autoPeak = QCheckBox("Detect Peaks and export graph")
-        
-        # create a variable for the checkbox status
-        # actually not needed anymore...
-        self.heatmap_status = True
-        self.quiver_status = True
-        self.timeAver_status = True
-        self.scaling_status = True
-        self.saveMotionVectors_status = False
-        self.check_batchresultsFolder.setChecked(True)
-        #self.check_batchresultsFolder.setEnabled(False) # to be implemented...
-        
-        self.checkFilter.setChecked(True)
-        self.checkCanny.setChecked(True)
-        self.check_autoPeak.setChecked(True)
-        #self.checkFilter.setEnabled(False)  # to be implemented...
-        self.checkSaveMotionVectors.setChecked(self.saveMotionVectors_status)
-        self.checkHeatmaps.setChecked(self.heatmap_status)
-        self.checkQuivers.setChecked(self.quiver_status)
-        #self.checkTimeAveraged.setChecked(self.timeAver_status)
-        self.checkScaling.setChecked(self.scaling_status)
-        
-        self.btn_startBatch = QPushButton('Start the automated analysis of chosen folders')
-        self.btn_startBatch.clicked.connect(self.on_startBatch)
-        self.btn_startBatch.setEnabled(False)
-        
-        self.btn_stopBatch = QPushButton('Stop onging analysis')
-        self.btn_stopBatch.clicked.connect(self.on_stopBatch)
-        self.btn_stopBatch.setEnabled(False)
+        # reuse box from tab_analysis instead of doing twice? todo: implement in v1.4 as
+        # self.analysis_settings = tab_analysis.TabAnalysis(self, self.ctrl)
         
         #label to display current results folder
-        self.label_results = QLabel('Current results folder: ')
-        self.label_results.setFont(QFont("Times",weight=QFont.Bold))
-        
-        self.label_results_folder = QLabel()
-        
-        #button for changing the results folder
-        self.btn_resultsfolder = QPushButton('Change results folder ')
-        self.btn_resultsfolder.clicked.connect(self.on_changeResultsfolder)
-        self.btn_resultsfolder.setEnabled(False)
-        self.check_batchresultsFolder.stateChanged.connect(self.changeStatus)
-        
-        self.progressbar = QProgressBar()
-        self.progressbar.setMaximum(100)  
-        self.progressbar.setValue(0)
-        self.progressbar.setFixedWidth(800)
-        self.progressbar.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        # todo: reimplement!
 
-        self.label_state = QLabel('idle')
-        self.label_state.setStyleSheet("color: rgb(255,0,0)")
-
-        ########## add widgets
-        
-        self.grid_param = QGridLayout()
-        
-        self.grid_param.addWidget(self.label_parameters,        0,0,1,2)
-        self.grid_param.addWidget(self.label_blockwidth,        1,0)
-        self.grid_param.addWidget(self.spinbox_blockwidth,      1,1)
-        self.grid_param.addWidget(self.label_delay,             2,0)
-        self.grid_param.addWidget(self.spinbox_delay,           2,1)
-        self.grid_param.addWidget(self.label_maxShift,          3,0)
-        self.grid_param.addWidget(self.spinbox_maxShift,        3,1)
-
-        self.grid_param.setSpacing(15)
-        self.grid_param.setAlignment(Qt.AlignTop|Qt.AlignLeft)
-        
         self.grid_overall = QGridLayout()
-
-        self.grid_overall.addWidget(self.info,                  1,0,1,3)
-        self.grid_overall.addWidget(self.info_batchfolders,     2,0)
-        self.grid_overall.addWidget(self.qlist_batchvideos,     3,0,3,2)#,Qt.AlignTop|Qt.AlignLeft)# spans 3 rows and 1 column
-        self.grid_overall.addWidget(self.btn_addVid,            3,2)
-        self.grid_overall.addWidget(self.btn_remVid,            4,2)
-        self.grid_overall.setRowStretch(5,2)    #otherwise gird_param will also stretch?
         
-        self.grid_overall.addLayout(self.grid_param,            6,0,1,3,Qt.AlignTop|Qt.AlignLeft)#,Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(label_batchOptions,         7,0)#,Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.addWidget(self.check_batchresultsFolder,   8,0)
-        self.grid_overall.addWidget(self.checkScaling,          9,0)
-        self.grid_overall.addWidget(self.checkCanny,            10,0)
-        self.grid_overall.addWidget(self.checkFilter,           11,0)
-        self.grid_overall.addWidget(self.check_autoPeak,        12,0)
-        self.grid_overall.addWidget(self.checkHeatmaps,         13,0)
-        self.grid_overall.addWidget(self.checkQuivers,          14,0)
-        self.grid_overall.addWidget(self.label_results,         15,0)
-        self.grid_overall.addWidget(self.label_results_folder,  15,1,1,2)
-        self.grid_overall.addWidget(self.btn_resultsfolder,     16,0)
-        self.grid_overall.addWidget(self.btn_startBatch,        16,1)
-        self.grid_overall.addWidget(self.btn_stopBatch,         16,2)
-        self.grid_overall.addWidget(self.progressbar,           17,0,1,3)
-        self.grid_overall.addWidget(self.label_state,           18,0,1,3)
-       
-        self.grid_overall.setSpacing(15)        
-        self.grid_overall.setAlignment(Qt.AlignTop|Qt.AlignLeft)
+        self.grid_overall.addWidget(self.box_input,0,0,1,2)
+        self.grid_overall.addWidget(self.box_anasettings,1,0)
+        self.grid_overall.addWidget(self.box_batchsettings,1,1)
+        self.grid_overall.addWidget(self.box_controls,2,0,1,2)
         
-        self.setLayout(self.grid_overall)
+        self.grid_overall.setRowStretch(0,100) # set stretching priority on first row
+        self.grid_overall.setRowStretch(3,1) # only stretch last row once maximum height of first row is reached
 
-        for label in self.findChildren(QLabel):
-            label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        for LineEdit in self.findChildren(QLineEdit):
-            LineEdit.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        for Slider in self.findChildren(QSlider):
-            Slider.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        for SpinBox in self.findChildren(QSpinBox):
-            SpinBox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        for CheckBox in self.findChildren(QCheckBox):
-            CheckBox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        #for btn in self.findChildren(QPushButton):
-        #   btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        # self.grid_overall.addWidget(self.label_results,         15,0)
+        # self.grid_overall.addWidget(self.label_results_folder,  15,1,1,2)
+        # self.grid_overall.addWidget(self.btn_resultsfolder,     16,0)
         
-    def on_addBatchVideo(self):
-    
-        new_files = UserDialogs.chooseFilesByUser("Select video to add for batch analysis", input_folder=self.parent.config['LAST SESSION']['input_folder'])
-
-        for new_file in new_files[0]:
-            if new_file not in self.videofiles:
-                self.qlist_batchvideos.addItem(new_file)
-        # allow selection of folders/multiple files...
-        #folderDialog = MultipleFoldersByUser.MultipleFoldersDialog()
-        #chosen_folders = folderDialog.getSelection()
-
-        self.videofiles = [self.qlist_batchvideos.item(i).text() for i in range(self.qlist_batchvideos.count())]        
-        if self.qlist_batchvideos.count() > 0:
-            #if folders are present in list
-            self.btn_startBatch.setEnabled(True)
-    
-    def on_removeBatchVideo(self):
-        
-        for item in self.qlist_batchvideos.selectedItems():
-            self.qlist_batchvideos.takeItem(self.qlist_batchvideos.row(item))
-        if self.qlist_batchvideos.count() == 0:
-            self.btn_startBatch.setEnabled(False)
-        self.videofiles = [self.qlist_batchvideos.item(i).text() for i in range(self.qlist_batchvideos.count())]
-            
-    def changeStatus(self):
-        #disable or enable the option to choose results folder
-        if self.sender() == self.check_batchresultsFolder:
-            if self.check_batchresultsFolder.isChecked():
-                self.btn_resultsfolder.setEnabled(False)
-            else:
-                self.btn_resultsfolder.setEnabled(True)
+        self.setLayout(self.grid_overall)            
 
     # might be better to move somewhere else....
     class BatchThread(QThread):
@@ -256,7 +80,7 @@ class TabBatch(QWidget):
             statedict = {"filenr":filenr,"state":state}
             self.stateSignal.emit(statedict)
 
-        # run method gets called when we start the thread
+        # run method gets called thread is started
         def run(self):
             for filenr, file in enumerate(self.videofiles):
                 self.set_state(filenr,'load')
@@ -319,46 +143,6 @@ class TabBatch(QWidget):
         def stopThread(self):
             self.stop_flag = True
     
-    def on_startBatch(self):
-        self.parent.current_ohw.save_ohw() # saves again as marked peaks might have changed
-        self.parent.current_ohw = OHW.OHW() # clears loaded analysis such that no crosstalk takes place
-        self.parent.update_tabs()
-        print('Starting batch analysis...')
-        self.btn_addVid.setEnabled(False)
-        self.btn_remVid.setEnabled(False)
-        self.btn_startBatch.setEnabled(False)
-        self.btn_stopBatch.setEnabled(True)
-        
-        self.Nfiles = len(self.videofiles)
-        
-        blockwidth = self.spinbox_blockwidth.value()
-        delay = self.spinbox_delay.value()
-        max_shift = self.spinbox_maxShift.value()
-        scaling = self.checkScaling.isChecked()
-        heatmaps = self.checkHeatmaps.isChecked()
-        quivers = self.checkQuivers.isChecked()
-        filter = self.checkFilter.isChecked()
-        canny = self.checkCanny.isChecked()
-        autoPeak = self.check_autoPeak.isChecked()
-        
-        global_resultsfolder = self.global_resultsfolder if self.check_batchresultsFolder.isChecked() == False else None #if check == True, then standard results folder is used
-        
-        param = {"blockwidth":blockwidth, "delay":delay, "max_shift":max_shift, "scaling":scaling,
-                    "heatmaps":heatmaps, "quivers":quivers, "canny":canny,"filter":filter, "autoPeak":autoPeak, "global_resultsfolder":global_resultsfolder}
-
-        #create a thread for batch analysis:
-        self.thread_batch = self.BatchThread(self.videofiles, param)
-    
-        self.thread_batch.start()
-        # use 2 progress bars later? 1 for file progress, 1 for individual calculations....?
-        self.thread_batch.finished.connect(self.finishBatch)
-        self.thread_batch.stateSignal.connect(self.updateState)  
-
-    def on_stopBatch(self):
-        self.stopBatch = True
-        self.btn_stopBatch.setEnabled(False)
-        self.thread_batch.stopThread()
-        
     def updateState(self, statedict):
         statemsg = {"load":"loading video","scale":"scaling video", "mcalc":"calculating motion",
                         "heatmapvideo":"creating heatmap video", "quivervideo":"creating quivervideo"}
@@ -383,18 +167,323 @@ class TabBatch(QWidget):
             self.stopBatch = False
         self.progressbar.setRange(0,1)
         self.progressbar.setValue(1)
+        
+class BoxInput(QGroupBox):
+    def __init__(self, parent, ctrl, boxtitle = "Video list"):
+        super(BoxInput, self).__init__(boxtitle, parent = parent)
+        self.parent=parent
+        self.ctrl = ctrl
+        self.init_ui()
+
+    @property
+    def cohw(self):
+        return self.ctrl.cohw #simplify calls to cohw    
+
+    def init_ui(self):
+
+        self.setStyleSheet("QGroupBox { font-weight: bold; } ") # bold title
+        self.setMaximumHeight(400)
+
+
+        self.qlist_batchvideos = QListWidget()
+        self.qlist_batchvideos.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.qlist_batchvideos.setMinimumWidth(600)
+        
+        self.btn_addVid = QPushButton('Add Video(s)')
+        self.btn_addVid.resize(self.btn_addVid.sizeHint())
+        self.btn_addVid.clicked.connect(self.on_addBatchVideo)
+        
+        self.btn_remVid = QPushButton('Remove selected Video(s)')
+        self.btn_remVid.resize(self.btn_remVid.sizeHint())
+        self.btn_remVid.clicked.connect(self.on_removeBatchVideo)
+        
+        self.grid = QGridLayout()
+        self.grid.setSpacing(10)
+        
+        self.grid.addWidget(self.qlist_batchvideos, 0,0,3,1)
+        self.grid.addWidget(self.btn_addVid, 0,1)
+        self.grid.addWidget(self.btn_remVid, 1,1)  
+
+        self.setLayout(self.grid)
+        
+    def on_addBatchVideo(self):
     
+        new_files = UserDialogs.chooseFilesByUser("Select video to add for batch analysis", input_folder=self.ctrl.config['LAST SESSION']['input_folder'])
+        curr_files = [self.qlist_batchvideos.item(i).text() for i in range(self.qlist_batchvideos.count())]
+
+        for new_file in new_files[0]:
+            if new_file not in curr_files:
+                self.qlist_batchvideos.addItem(new_file)
+        # allow selection of folders/multiple files...
+        #folderDialog = MultipleFoldersByUser.MultipleFoldersDialog()
+        #chosen_folders = folderDialog.getSelection()
+
+        # self.videofiles = [self.qlist_batchvideos.item(i).text() for i in range(self.qlist_batchvideos.count())]   
+        # don't save so far in class variable, create curr_files from qlist
+        if self.qlist_batchvideos.count() > 0:
+            #if folders are present in list
+            pass
+            # self.btn_startBatch.setEnabled(True)
+    
+    def on_removeBatchVideo(self):
+        
+        for item in self.qlist_batchvideos.selectedItems():
+            self.qlist_batchvideos.takeItem(self.qlist_batchvideos.row(item))
+        if self.qlist_batchvideos.count() == 0:
+            pass
+            # self.btn_startBatch.setEnabled(False)
+        # self.videofiles = [self.qlist_batchvideos.item(i).text() for i in range(self.qlist_batchvideos.count())]
+        
+        
+class BoxAnasettings(QGroupBox):
+    def __init__(self, parent, ctrl, boxtitle = "Blockmatch analysis settings"):
+        super(BoxAnasettings, self).__init__(boxtitle, parent = parent)
+        self.parent=parent
+        self.ctrl = ctrl
+        self.init_ui()
+
+    @property
+    def cohw(self):
+        return self.ctrl.cohw #simplify calls to cohw    
+
+    def init_ui(self):
+
+        self.setStyleSheet("QGroupBox { font-weight: bold; } ") # bold title
+
+        self.label_blockwidth = QLabel('Blockwidth:')
+        self.label_delay = QLabel('Delay:')
+        self.label_maxShift = QLabel('Maximum shift:')
+
+        #spinboxes incl settings
+        self.spinbox_blockwidth  = QSpinBox()
+        self.spinbox_delay = QSpinBox()
+        self.spinbox_maxShift = QSpinBox()
+        
+        self.checkScaling = QCheckBox("Scale longest side to 1024 px during calculation")
+        self.checkCanny = QCheckBox("Select region for calculation based on Canny filtering")
+        
+        
+        
+        self.spinbox_blockwidth.setRange(2,128)
+        self.spinbox_blockwidth.setSingleStep(2)
+        self.spinbox_blockwidth.setSuffix(' px')
+        self.spinbox_delay.setRange(1,20)
+        self.spinbox_delay.setSuffix(' frame(s)')
+        self.spinbox_delay.setSingleStep(1)
+        self.spinbox_maxShift.setSuffix(' px')
+        
+        blockwidth = int(self.ctrl.config['DEFAULT VALUES']['blockwidth'])
+        delay = int(self.ctrl.config['DEFAULT VALUES']['delay'])
+        max_shift = int(self.ctrl.config['DEFAULT VALUES']['maxshift'])
+
+        self.spinbox_blockwidth.setValue(blockwidth)
+        self.spinbox_delay.setValue(delay)
+        self.spinbox_maxShift.setValue(max_shift)
+        self.checkScaling.setChecked(True)
+        self.checkCanny.setChecked(True)
+
+        
+        self.grid = QGridLayout()
+        
+        self.grid.addWidget(self.label_blockwidth,        0,0)
+        self.grid.addWidget(self.spinbox_blockwidth,      0,1)
+        self.grid.addWidget(self.label_delay,             1,0)
+        self.grid.addWidget(self.spinbox_delay,           1,1)
+        self.grid.addWidget(self.label_maxShift,          2,0)
+        self.grid.addWidget(self.spinbox_maxShift,        2,1)
+        self.grid.addWidget(self.checkScaling,            3,0,1,2)
+        self.grid.addWidget(self.checkCanny,              4,0,1,2)
+
+        self.grid.setColumnStretch(2,1)
+        self.setLayout(self.grid)
+        # self.grid_param.setSpacing(15)
+        # self.grid_param.setAlignment(Qt.AlignTop|Qt.AlignLeft)
+        
+class BoxBatchsettings(QGroupBox):
+    def __init__(self, parent, ctrl, boxtitle = "Batch settings"):
+        super(BoxBatchsettings, self).__init__(boxtitle, parent = parent)
+        self.parent=parent
+        self.ctrl = ctrl
+        self.init_ui()
+        
+        # init with default settings, so far hardcoded
+        self.batchparam = {"heatmaps":True, "quivers":True, "filter":True, "autoPeak":True, 
+                    "global_resultsfolder":None}
+        self.show_resultsfolder()
+
+    @property
+    def cohw(self):
+        return self.ctrl.cohw #simplify calls to cohw    
+
+    def get_param(self):
+        """ returns parameterdict of parameters which can be set here """
+        # todo: update param with ui
+        return self.batchparam
+
+    def init_ui(self):
+
+        self.setStyleSheet("QGroupBox { font-weight: bold; } ") # bold title
+
+        self.checkFilter = QCheckBox("Filter motion vectors after calculation")
+        self.checkHeatmaps = QCheckBox("Create heatmap video")
+        self.checkQuivers = QCheckBox("Create quiver plot video")
+        #self.checkTimeAveraged = QCheckBox("Create plots for time averaged motion")
+        # self.checkSaveMotionVectors = QCheckBox("Save the generated motion vectors")
+        
+        self.check_batchresultsFolder = QCheckBox("Use standard results folder, individual for each video")
+        self.label_results_caption = QLabel('Current results folder: ')
+        self.label_results_caption.setFont(QFont("Times",weight=QFont.Bold))
+        self.label_results_folder = QLabel()
+        
+        #button for changing the results folder
+        self.btn_resultsfolder = QPushButton('Change results folder ')
+        self.btn_resultsfolder.clicked.connect(self.on_changeResultsfolder)
+        self.btn_resultsfolder.setEnabled(False) 
+        
+        self.check_autoPeak = QCheckBox("Detect Peaks and export graph")
+        
+        # initial checked options
+                
+        self.checkFilter.setChecked(True)
+        self.check_autoPeak.setChecked(True)
+        # self.checkSaveMotionVectors.setChecked(False)
+        self.checkHeatmaps.setChecked(True)
+        self.checkQuivers.setChecked(True)
+        #self.checkTimeAveraged.setChecked(self.timeAver_status)
+        self.check_batchresultsFolder.setChecked(True)        
+        
+        # callbacks
+        self.check_batchresultsFolder.stateChanged.connect(self.on_check_batchresultsFolder) # todo: enable again 
+        
+        self.grid = QGridLayout()
+        
+        self.grid.addWidget(self.check_batchresultsFolder,   0,0,1,2)
+        self.grid.addWidget(self.label_results_caption, 1,0,1,1)
+        self.grid.addWidget(self.label_results_folder, 1,1,1,1)
+        self.grid.addWidget(self.btn_resultsfolder, 2,0,1,1)
+        
+        self.grid.addWidget(self.checkFilter,           3,0,1,2)
+        self.grid.addWidget(self.check_autoPeak,        4,0,1,2)
+        self.grid.addWidget(self.checkHeatmaps,         5,0,1,2)
+        self.grid.addWidget(self.checkQuivers,          6,0,1,2)
+        self.grid.setColumnStretch(1,1)
+
+        self.setLayout(self.grid)
+        
+    def on_check_batchresultsFolder(self):
+        #disable or enable the option to choose results folder
+        if self.check_batchresultsFolder.isChecked():
+            self.btn_resultsfolder.setEnabled(False)
+        else:
+            self.btn_resultsfolder.setEnabled(True)
+        self.show_resultsfolder()
+            
     def on_changeResultsfolder(self):
         
         msg = 'Choose a global results folder for saving batch results'
-        folderName = UserDialogs.chooseFolderByUser(msg)#, input_folder=self.current_ohw.analysis_meta['results_folder'])#, input_folder=self.config['LAST SESSION']['results_folder'])  
+        folder = UserDialogs.chooseFolderByUser(msg)#, input_folder=self.current_ohw.analysis_meta['results_folder'])#, input_folder=self.config['LAST SESSION']['results_folder'])  
         
-        if (folderName == ''): #cancel pressed
+        if (folder == ''): #cancel pressed
             return
         
-        self.global_resultsfolder = pathlib.Path(folderName)
-        restext = str(self.global_resultsfolder)
+        self.batchparam["global_resultsfolder"] = pathlib.Path(folder)
+        self.show_resultsfolder()
+    
+    def show_resultsfolder(self):
+        """ sets resultsfolder in label, truncates for nice formatting """
+        folder = self.batchparam["global_resultsfolder"]
+        if (self.check_batchresultsFolder.isChecked() == True) or (folder is None):
+                restext = "individual for each video"
+        else:
+            restext = str(folder)
+        
         if len(restext) > 80:
             restext = restext[-80:]
             restext = "..." + restext[3:]
-        self.label_results_folder.setText(restext)
+        self.label_results_folder.setText(restext)        
+
+class BoxControls(QGroupBox):
+    def __init__(self, parent, ctrl, boxtitle = "Batch controls"):
+        super(BoxControls, self).__init__(boxtitle, parent = parent)
+        self.parent=parent
+        self.ctrl = ctrl
+        self.init_ui()
+
+    @property
+    def cohw(self):
+        return self.ctrl.cohw #simplify calls to cohw    
+
+    def init_ui(self):
+
+        self.setStyleSheet("QGroupBox { font-weight: bold; } ") # bold title
+
+        self.btn_startBatch = QPushButton('Start batch analysis')
+        self.btn_startBatch.clicked.connect(self.on_startBatch)
+        self.btn_startBatch.setEnabled(False)
+        
+        self.btn_stopBatch = QPushButton('Stop batch analysis')
+        self.btn_stopBatch.clicked.connect(self.on_stopBatch)
+        self.btn_stopBatch.setEnabled(False)
+        
+        self.progressbar = QProgressBar()
+        self.progressbar.setMaximum(100)  
+        self.progressbar.setValue(0)
+        self.progressbar.setFixedWidth(800)
+
+        self.label_state = QLabel('idle')
+        self.label_state.setStyleSheet("color: rgb(255,0,0)")        
+        
+        self.grid = QGridLayout()
+        self.grid.addWidget(self.btn_startBatch,        0,0)
+        self.grid.addWidget(self.btn_stopBatch,         0,1)
+        self.grid.addWidget(self.label_state,           0,2)        
+        self.grid.addWidget(self.progressbar,           1,0,1,3)
+        self.grid.setColumnStretch(2,1)
+        self.grid.setRowStretch(3,1)
+        
+        self.setLayout(self.grid)
+        
+    def on_startBatch(self):
+        self.ctrl.current_ohw.save_ohw() # saves again as marked peaks might have changed
+        self.ctrl.current_ohw = OHW.OHW() # clears loaded analysis such that no crosstalk takes place
+        self.ctrl.update_tabs()
+        print('Starting batch analysis...')
+        """
+        self.btn_addVid.setEnabled(False)
+        self.btn_remVid.setEnabled(False)
+        self.btn_startBatch.setEnabled(False)
+        self.btn_stopBatch.setEnabled(True)
+        
+        self.Nfiles = len(self.videofiles)
+        
+        blockwidth = self.spinbox_blockwidth.value()
+        delay = self.spinbox_delay.value()
+        max_shift = self.spinbox_maxShift.value()
+        scaling = self.checkScaling.isChecked()
+        heatmaps = self.checkHeatmaps.isChecked()
+        quivers = self.checkQuivers.isChecked()
+        filter = self.checkFilter.isChecked()
+        canny = self.checkCanny.isChecked()
+        autoPeak = self.check_autoPeak.isChecked()
+        
+        global_resultsfolder = self.global_resultsfolder if self.check_batchresultsFolder.isChecked() == False else None #if check == True, then standard results folder is used
+        
+        param = {"blockwidth":blockwidth, "delay":delay, "max_shift":max_shift, "scaling":scaling,
+                    "heatmaps":heatmaps, "quivers":quivers, "canny":canny,"filter":filter, "autoPeak":autoPeak, 
+                    "global_resultsfolder":global_resultsfolder}
+
+        #create a thread for batch analysis:
+        self.thread_batch = self.BatchThread(self.videofiles, param)
+    
+        self.thread_batch.start()
+        # use 2 progress bars later? 1 for file progress, 1 for individual calculations....?
+        self.thread_batch.finished.connect(self.finishBatch)
+        self.thread_batch.stateSignal.connect(self.updateState)
+        """
+
+    def on_stopBatch(self):
+        pass
+        # self.stopBatch = True
+        # self.btn_stopBatch.setEnabled(False)
+        # self.thread_batch.stopThread()
+    

@@ -12,23 +12,22 @@ from libraries import helpfunctions
 
 class TabTA(QWidget):
     """
-        for time averaged motion
+        tab for display of time averaged motion
     """
     
-    def __init__(self, parent):
+    def __init__(self, parent, ctrl):
         super(TabTA, self).__init__(parent)
         self.update = True # update flag, set when motion calculation changed
-        self.initUI()
         self.parent=parent
-        
+        self.ctrl = ctrl
+        self.initUI()
+        self.init_ohw()
+
+    @property
+    def cohw(self):
+        return self.ctrl.cohw #simplify calls to cohw        
+
     def initUI(self):
-    
-        self.info = QTextEdit()
-        self.info.setText('In this tab you can save the time averaged motion: absolute contractility and contractility in x- and y-direction.')
-        self.info.setReadOnly(True)
-        self.info.setMaximumHeight(50)
-        self.info.setFixedWidth(700)
-        self.info.setStyleSheet("background-color: LightSkyBlue")
         
         self.label_TA = QLabel('Motion averaged over time')
         self.label_TA.setFont(QFont("Times",weight=QFont.Bold))
@@ -51,58 +50,31 @@ class TabTA(QWidget):
         self.canvas_TA_x = FigureCanvas(self.fig_TA_x)
         self.canvas_TA_y = FigureCanvas(self.fig_TA_y)
         
-        self.canvas_TA_tot.setFixedSize(500,500)
-        self.canvas_TA_x.setFixedSize(500,500)
-        self.canvas_TA_y.setFixedSize(500,500)
+        cansize = 350
+        self.canvas_TA_tot.setFixedSize(cansize,cansize)
+        self.canvas_TA_x.setFixedSize(cansize,cansize)
+        self.canvas_TA_y.setFixedSize(cansize,cansize)
         
         #button for saving plots
-        self.label_save_TA = QLabel('Save the plots as: ')
-        self.btn_save_TA = QPushButton('Click for saving')
-        #self.btn_save_TA.resize(self.button_save_timeMotion.sizeHint())
+        self.btn_save_TA = QPushButton('Save plots')
         self.btn_save_TA.clicked.connect(self.on_saveTimeAveragedMotion)
-        self.btn_save_TA.setEnabled(False)
-        
-        #combobox for file extensions
-        self.combo_TA_ext = QComboBox(self)
-        for suffix in ['.png','.jpeg','.tiff','.svg','.eps']:
-            self.combo_TA_ext.addItem(suffix)
-        
+        self.btn_save_TA.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+               
         self.grid_overall = QGridLayout()
         
-        self.grid_overall.addWidget(self.info, 0,0,1,3)
-        self.grid_overall.addWidget(self.label_TA, 1,0)
-        self.grid_overall.addWidget(self.label_TA_tot,2,0)
-        self.grid_overall.addWidget(self.label_TA_x,2,1)
-        self.grid_overall.addWidget(self.label_TA_y,2,2)
-        self.grid_overall.addWidget(self.canvas_TA_tot, 3,0)
-        self.grid_overall.addWidget(self.canvas_TA_x,3,1)
-        self.grid_overall.addWidget(self.canvas_TA_y,3,2)
+        self.grid_overall.addWidget(self.label_TA, 0,0)
+        self.grid_overall.addWidget(self.label_TA_tot,1,0)
+        self.grid_overall.addWidget(self.label_TA_x,1,1)
+        self.grid_overall.addWidget(self.label_TA_y,1,2)
+        self.grid_overall.addWidget(self.canvas_TA_tot, 2,0)
+        self.grid_overall.addWidget(self.canvas_TA_x,2,1)
+        self.grid_overall.addWidget(self.canvas_TA_y,2,2)
+        self.grid_overall.addWidget(self.btn_save_TA,3,0)
         
-        self.grid_save = QGridLayout()
-        self.grid_save.setSpacing(10)
-        self.grid_save.setAlignment(Qt.AlignTop|Qt.AlignLeft)
-        
-        self.grid_save.addWidget(self.label_save_TA, 0,0)
-        self.grid_save.addWidget(self.combo_TA_ext, 0,1)
-        self.grid_save.addWidget(self.btn_save_TA, 0,2)        
-        
-        self.grid_overall.addLayout(self.grid_save,4,0,1,3,Qt.AlignTop|Qt.AlignLeft)
-        self.grid_overall.setSpacing(15)        
-        self.grid_overall.setAlignment(Qt.AlignTop|Qt.AlignLeft)      
-        self.setLayout(self.grid_overall)
+        self.grid_overall.setColumnStretch(4,1)
+        self.grid_overall.setRowStretch(4,1)
 
-        for label in self.findChildren(QLabel):
-            label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        for LineEdit in self.findChildren(QLineEdit):
-            LineEdit.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        for Slider in self.findChildren(QSlider):
-            Slider.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        for SpinBox in self.findChildren(QSpinBox):
-            SpinBox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        for CheckBox in self.findChildren(QCheckBox):
-            CheckBox.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        #for btn in self.findChildren(QPushButton):
-        #    btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        self.setLayout(self.grid_overall)
         
     def init_ohw(self):
         """
@@ -115,8 +87,8 @@ class TabTA(QWidget):
         #if self.parent.tabstates["tab_TA"]["toupdate"] == True:
         if self.update == True:
        
-            self.ceval = self.parent.cohw.ceval
-            if self.parent.cohw.analysis_meta["has_MVs"]:
+            self.ceval = self.cohw.ceval
+            if self.cohw.analysis_meta["has_MVs"]:
                 self.btn_save_TA.setEnabled(True)
                 self.init_TAmotion()
             else:
@@ -153,6 +125,5 @@ class TabTA(QWidget):
         self.canvas_TA_y.draw()
     
     def on_saveTimeAveragedMotion(self): 
-        file_ext = self.combo_TA_ext.currentText()
-        self.parent.cohw.plot_TimeAveragedMotions(file_ext)
+        self.cohw.plot_TimeAveragedMotion() # is saved as .png, maybe allow specification in extra-menu but not here
         helpfunctions.msgbox(self, 'Plots of time averaged motion were saved successfully.')
