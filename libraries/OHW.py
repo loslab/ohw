@@ -37,54 +37,84 @@ def check_finish(function, *args, **kwargs):
             
     return check_function
 
-def batch(videofiles, param={}):
+def batch(videofiles, param={}, stop_flag = None, progressSignal = None, *args, **kwargs):
+    """
+        batch processing of list of videos (= videofiles) with selected parameters
+        ... if executed as thread, stop_flag provides a threading.Event() which stops the analysis
+    """
     
     defaultparam = {"scaling":True, "global_resultsfolder":None, "canny":True,
-                   "autoPeak":True, "heatmaps":False, "quivers":False}
+                   "autoPeak":True, "heatmaps":False, "quivers":False,
+                   "blockwidth":16, "delay": 2, "max_shift": 7}
     defaultparam.update(param)
     param = defaultparam
+    print("running batch analysis with parameter", param)
     
-    for filenr, file in enumerate(videofiles):    
+    if stop_flag == None:
+        stop_flag = threading.Event() #create default event if none provided
+    
+    for filenr, file in enumerate(videofiles):   
+        if stop_flag.is_set():  break
+        if progressSignal != None:
+            progressSignal.emit({"filenr":filenr,"state":'load'})            
+        
         print("analyzing file", file)
         filepath = pathlib.Path(file)
-        curr_analysis = OHW.create_analysis()
+        curr_analysis = create_analysis()
         curr_analysis.import_video(filepath)
         curr_analysis.set_scale(2) # 1 px = microns 
         # todo: connect to param dict
         
         if param["scaling"]:
-            curr_analysis.set_px_longest(px_longest=512) # raises error if roi = None, todo: fix
+            curr_analysis.set_px_longest(px_longest=1024) # raises error if roi = None, todo: fix
             
         # adjust each results folder if option selected
         if param["global_resultsfolder"] != None:
             #print("change resultsfolder to...",self.param["global_resultsfolder"])
             inputpath = curr_analysis.videometa["inputpath"]
             results_folder = param["global_resultsfolder"]/("results_" + str(inputpath.stem) )
-            #curr_analysis.analysis_meta["results_folder"] = self.param["global_resultsfolder"]/("results_" + str(inputpath.stem) )
             curr_analysis.set_results_folder(results_folder)
             print("resultsfolder:", curr_analysis.analysis_meta["results_folder"])
         
         if param["canny"] == True:
             curr_analysis.set_prefilter("Canny",on = True)
-        
-        curr_analysis.calculate_motion(method = 'Blockmatch', blockwidth = 16, delay = 2, max_shift = 7, overwrite=True)
+
+        if stop_flag.is_set():  break
+        if progressSignal != None:
+            progressSignal.emit({"filenr":filenr,"state":'mcalc'})            
+        #curr_analysis.calculate_motion(method = 'Blockmatch', blockwidth = 16, delay = 2, max_shift = 7, overwrite=True)
+        curr_analysis.calculate_motion(method = 'Blockmatch', **param)
+        curr_analysis.save_ohw()        
         # init motion not needed anymore?
-        
+
+        if stop_flag.is_set():  break        
         if param["autoPeak"]:
             curr_analysis.detect_peaks(0.3, 4)  #take care, values hardcoded here so far!
             curr_analysis.plot_kinetics() # chooses default path
             curr_analysis.get_peakstatistics()
             curr_analysis.export_analysis()
+            curr_analysis.save_ohw() # save again as peak information is added
 
+        if stop_flag.is_set():  break
+        if progressSignal != None:
+            progressSignal.emit({"filenr":filenr,"state":'heatmapvideo'})                  
         if param["heatmaps"]:
             #self.set_state(filenr,'heatmapvideo')
             curr_analysis.save_heatmap(singleframe = False)
 
+        if stop_flag.is_set():  break
+        if progressSignal != None:
+            progressSignal.emit({"filenr":filenr,"state":'quivervideo'})            
         if param["quivers"]:
             #self.set_state(filenr,'quivervideo')
-            curr_analysis.save_quiver3(singleframe = False, skipquivers = 4) #allow to choose between quiver and quiver3 in future
+            curr_analysis.save_quiver3(singleframe = False, skipquivers = 4) #allow to choose between quiver and quiver3 in future  
 
-        #curr_analysis.save_ohw()        
+def batch_thread(videofiles, param):
+    """ returns QThread where batch runs, prevents blocking
+        # todo: maybe it's smarter to directly design it as class, subclassed from thread
+    """
+    thread_batch = helpfunctions.turn_function_into_thread(batch, emit_progSignal = True, use_stop_flag=True, videofiles = videofiles, param = param)
+    return thread_batch
 
 '''
 class CheckDecorators():

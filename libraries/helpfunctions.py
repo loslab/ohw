@@ -9,6 +9,7 @@ from PIL import ImageDraw, ImageFont, Image
 import requests
 import configparser
 import math
+import threading
 
 def get_figure_size(img, initial_val):
     ratio = img.shape[0]/img.shape[1]
@@ -27,17 +28,22 @@ def turn_function_into_thread(inputfunction, emit_progSignal=False, *arg, **kwar
     class ThreadedFunction(QThread):
         # create signal if wanted
         if emit_progSignal == True:
-            progressSignal = pyqtSignal(float)
+            progressSignal = pyqtSignal(object)
         else:
             progressSignal = False
             
+        print("init kwargs:", kwargs)
+        
+        if kwargs.get("use_stop_flag") == True:
+            stop_flag = threading.Event()
+            kwargs["stop_flag"] = stop_flag        
+        
         def __init__(self, inputfunction, *arg, **kwargs):
             QThread.__init__(self)
-            #self.stop_flag = False
 
         # run method gets called when we start the thread
         def run(self):
-            #print("kwargs:", kwargs)
+            print("kwargs:", kwargs)
             inputfunction(progressSignal = self.progressSignal, *arg, **kwargs)
         
         def isAlive(self):

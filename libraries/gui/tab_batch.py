@@ -65,6 +65,25 @@ class TabBatch(QWidget):
         
         self.setLayout(self.grid_overall)            
 
+    def get_param(self):
+        param = self.box_anasettings.get_param()
+        param_batch = self.box_batchsettings.get_param()
+        param.update(param_batch)
+        return param
+        
+    def get_files(self):
+        return self.box_input.get_files()
+        
+    def set_state(self,state):
+        if state == "running":
+            self.box_anasettings.setEnabled(False)
+            self.box_batchsettings.setEnabled(False)
+            self.box_input.setEnabled(False)
+        if state == "idle":
+            self.box_anasettings.setEnabled(True)
+            self.box_batchsettings.setEnabled(True)
+            self.box_input.setEnabled(True)
+
     # might be better to move somewhere else....
     class BatchThread(QThread):
         """ thread to evaluate list of files"""
@@ -142,31 +161,6 @@ class TabBatch(QWidget):
       
         def stopThread(self):
             self.stop_flag = True
-    
-    def updateState(self, statedict):
-        statemsg = {"load":"loading video","scale":"scaling video", "mcalc":"calculating motion",
-                        "heatmapvideo":"creating heatmap video", "quivervideo":"creating quivervideo"}
-        state = statedict["state"]
-        self.filenr = statedict["filenr"] + 1
-        fullstate = "file " + str(self.filenr) + "/" + str(self.Nfiles) + " files, " + statemsg[state]
-        self.label_state.setText(fullstate)
-        
-        if state != "mcalc":    #update progress for motioncalc in percentage... to be implemented
-            self.progressbar.setRange(0,0)
-    
-    def finishBatch(self):
-        # enable buttons again
-        self.btn_addVid.setEnabled(True)
-        self.btn_remVid.setEnabled(True)
-        self.btn_startBatch.setEnabled(True)
-        self.btn_stopBatch.setEnabled(False) 
-        if not self.stopBatch:
-            self.label_state.setText("idle, batch finished")
-        else:
-            self.label_state.setText("idle, batch aborted at file " + str(self.filenr))
-            self.stopBatch = False
-        self.progressbar.setRange(0,1)
-        self.progressbar.setValue(1)
         
 class BoxInput(QGroupBox):
     def __init__(self, parent, ctrl, boxtitle = "Video list"):
@@ -218,21 +212,20 @@ class BoxInput(QGroupBox):
         #folderDialog = MultipleFoldersByUser.MultipleFoldersDialog()
         #chosen_folders = folderDialog.getSelection()
 
-        # self.videofiles = [self.qlist_batchvideos.item(i).text() for i in range(self.qlist_batchvideos.count())]   
-        # don't save so far in class variable, create curr_files from qlist
         if self.qlist_batchvideos.count() > 0:
             #if folders are present in list
-            pass
-            # self.btn_startBatch.setEnabled(True)
+            self.parent.box_controls.btn_startBatch.setEnabled(True) #todo: quite ugly
     
     def on_removeBatchVideo(self):
         
         for item in self.qlist_batchvideos.selectedItems():
             self.qlist_batchvideos.takeItem(self.qlist_batchvideos.row(item))
         if self.qlist_batchvideos.count() == 0:
-            pass
-            # self.btn_startBatch.setEnabled(False)
-        # self.videofiles = [self.qlist_batchvideos.item(i).text() for i in range(self.qlist_batchvideos.count())]
+            self.parent.box_controls.btn_startBatch.setEnabled(False)
+        
+    def get_files(self):
+        files  = [self.qlist_batchvideos.item(i).text() for i in range(self.qlist_batchvideos.count())]
+        return files
         
         
 class BoxAnasettings(QGroupBox):
@@ -298,6 +291,14 @@ class BoxAnasettings(QGroupBox):
         self.setLayout(self.grid)
         # self.grid_param.setSpacing(15)
         # self.grid_param.setAlignment(Qt.AlignTop|Qt.AlignLeft)
+    
+    def get_param(self):
+        param = {"blockwidth": self.spinbox_blockwidth.value(),
+                 "max_shift": self.spinbox_maxShift.value(),
+                 "delay": self.spinbox_delay.value(),
+                 "scaling": self.checkScaling.isChecked(),
+                 "canny": self.checkCanny.isChecked()}
+        return param
         
 class BoxBatchsettings(QGroupBox):
     def __init__(self, parent, ctrl, boxtitle = "Batch settings"):
@@ -316,8 +317,16 @@ class BoxBatchsettings(QGroupBox):
         return self.ctrl.cohw #simplify calls to cohw    
 
     def get_param(self):
-        """ returns parameterdict of parameters which can be set here """
-        # todo: update param with ui
+        """ returns parameterdict of parameters which can be set in this box """
+        global_resultsfolder = self.batchparam["global_resultsfolder"]
+        if (self.check_batchresultsFolder.isChecked() == True) or (global_resultsfolder is None):
+            global_resultsfolder = None
+        
+        self.batchparam = {"heatmaps":self.checkHeatmaps.isChecked(), 
+                            "quivers":self.checkQuivers.isChecked(), 
+                            "filter":self.checkFilter.isChecked(), 
+                            "autoPeak":self.check_autoPeak.isChecked(), 
+                            "global_resultsfolder":global_resultsfolder}
         return self.batchparam
 
     def init_ui(self):
@@ -443,47 +452,55 @@ class BoxControls(QGroupBox):
         
         self.setLayout(self.grid)
         
+        self.stopBatch = False # tracks if batch aborted
+        
     def on_startBatch(self):
-        self.ctrl.current_ohw.save_ohw() # saves again as marked peaks might have changed
-        self.ctrl.current_ohw = OHW.OHW() # clears loaded analysis such that no crosstalk takes place
+        self.ctrl.cohw.save_ohw() # saves again as marked peaks might have changed
         self.ctrl.update_tabs()
         print('Starting batch analysis...')
-        """
-        self.btn_addVid.setEnabled(False)
-        self.btn_remVid.setEnabled(False)
-        self.btn_startBatch.setEnabled(False)
         self.btn_stopBatch.setEnabled(True)
+        self.btn_startBatch.setEnabled(False)
         
-        self.Nfiles = len(self.videofiles)
-        
-        blockwidth = self.spinbox_blockwidth.value()
-        delay = self.spinbox_delay.value()
-        max_shift = self.spinbox_maxShift.value()
-        scaling = self.checkScaling.isChecked()
-        heatmaps = self.checkHeatmaps.isChecked()
-        quivers = self.checkQuivers.isChecked()
-        filter = self.checkFilter.isChecked()
-        canny = self.checkCanny.isChecked()
-        autoPeak = self.check_autoPeak.isChecked()
-        
-        global_resultsfolder = self.global_resultsfolder if self.check_batchresultsFolder.isChecked() == False else None #if check == True, then standard results folder is used
-        
-        param = {"blockwidth":blockwidth, "delay":delay, "max_shift":max_shift, "scaling":scaling,
-                    "heatmaps":heatmaps, "quivers":quivers, "canny":canny,"filter":filter, "autoPeak":autoPeak, 
-                    "global_resultsfolder":global_resultsfolder}
-
-        #create a thread for batch analysis:
-        self.thread_batch = self.BatchThread(self.videofiles, param)
-    
+        videofiles = self.parent.get_files()
+        self.Nfiles = len(videofiles)
+        param = self.parent.get_param()
+        self.thread_batch = OHW.batch_thread(videofiles, param)
+        self.thread_batch.progressSignal.connect(self.updateState)
         self.thread_batch.start()
-        # use 2 progress bars later? 1 for file progress, 1 for individual calculations....?
         self.thread_batch.finished.connect(self.finishBatch)
-        self.thread_batch.stateSignal.connect(self.updateState)
-        """
+        self.parent.set_state("running") # disables fields
+
+        # use 2 progress bars later? 1 for file progress, 1 for individual calculations....?
+
+        
+    def finishBatch(self):
+        # enable buttons again
+        self.parent.set_state("idle")
+        
+        if not self.stopBatch:
+            self.label_state.setText("idle, batch finished")
+        else:
+            self.label_state.setText("idle, batch aborted at file " + str(self.filenr))
+            self.stopBatch = False
+
+        self.progressbar.setRange(0,1)
+        self.progressbar.setValue(1)
+        self.btn_startBatch.setEnabled(True)        
+
+    def updateState(self, statedict):
+        statemsg = {"load":"loading video","scale":"scaling video", "mcalc":"calculating motion",
+                        "heatmapvideo":"creating heatmap video", "quivervideo":"creating quivervideo"}
+        state = statedict["state"]
+        self.filenr = statedict["filenr"] + 1
+        # fullstate = "file " + str(self.filenr) + "/" + str(self.Nfiles) + " files, " + statemsg[state]
+        fullstate = "file " + str(self.filenr) + "/" + str(self.Nfiles) + " files, " + statemsg[state]
+        self.label_state.setText(fullstate)
+        
+        if state != "mcalc":    #update progress for motioncalc in percentage... to be implemented
+            self.progressbar.setRange(0,0)        
 
     def on_stopBatch(self):
-        pass
-        # self.stopBatch = True
-        # self.btn_stopBatch.setEnabled(False)
-        # self.thread_batch.stopThread()
-    
+        self.stopBatch = True
+        self.thread_batch.stop_flag.set() #stopping thread_batch
+        self.label_state.setText("aborting batch....")
+        self.btn_stopBatch.setEnabled(False)        
