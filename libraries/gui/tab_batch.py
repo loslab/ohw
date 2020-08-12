@@ -6,7 +6,7 @@ from PyQt5 import QtCore
 
 from PyQt5.QtWidgets import (QLabel, QLineEdit, QGridLayout, QComboBox,
     QTextEdit,QSizePolicy, QPushButton, QProgressBar,QSlider, QWidget, 
-    QSpinBox, QCheckBox, QListWidget, QAbstractItemView, QGroupBox)
+    QSpinBox, QDoubleSpinBox, QCheckBox, QListWidget, QAbstractItemView, QGroupBox, QAbstractSpinBox)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QFont
 from libraries import helpfunctions, UserDialogs, OHW
@@ -51,14 +51,15 @@ class TabBatch(QWidget):
 
         self.grid_overall = QGridLayout()
         
-        self.grid_overall.addWidget(self.box_input,0,0,1,2)
+        self.grid_overall.addWidget(self.box_input,0,0,1,3)
         self.grid_overall.addWidget(self.box_anasettings,1,0)
         self.grid_overall.addWidget(self.box_batchsettings,1,1)
         self.grid_overall.addWidget(self.box_controls,2,0,1,2)
         
         self.grid_overall.setRowStretch(0,100) # set stretching priority on first row
         self.grid_overall.setRowStretch(3,1) # only stretch last row once maximum height of first row is reached
-
+        self.grid_overall.setColumnStretch(2,1)
+    
         # self.grid_overall.addWidget(self.label_results,         15,0)
         # self.grid_overall.addWidget(self.label_results_folder,  15,1,1,2)
         # self.grid_overall.addWidget(self.btn_resultsfolder,     16,0)
@@ -252,10 +253,18 @@ class BoxAnasettings(QGroupBox):
         self.spinbox_delay = QSpinBox()
         self.spinbox_maxShift = QSpinBox()
         
+        self.label_mpp = QLabel('scale [microns/px]:')
+        self.edit_mpp = QLineEdit()#QDoubleSpinBox()
+        self.edit_mpp.setFixedWidth(90)
+        self.edit_mpp.setText(self.ctrl.config['DEFAULT VALUES']['microns_per_px'])
+
+        # self.edit_mpp.setButtonSymbols(QAbstractSpinBox.NoButtons)
+        # self.edit_mpp.setRange(0.0,1000.0)
+        # self.edit_mpp.setSingleStep(0.001)
+        # self.edit_mpp.setSuffix('microns/px')
+        
         self.checkScaling = QCheckBox("Scale longest side to 1024 px during calculation")
         self.checkCanny = QCheckBox("Select region for calculation based on Canny filtering")
-        
-        
         
         self.spinbox_blockwidth.setRange(2,128)
         self.spinbox_blockwidth.setSingleStep(2)
@@ -284,8 +293,10 @@ class BoxAnasettings(QGroupBox):
         self.grid.addWidget(self.spinbox_delay,           1,1)
         self.grid.addWidget(self.label_maxShift,          2,0)
         self.grid.addWidget(self.spinbox_maxShift,        2,1)
-        self.grid.addWidget(self.checkScaling,            3,0,1,2)
-        self.grid.addWidget(self.checkCanny,              4,0,1,2)
+        self.grid.addWidget(self.label_mpp,               3,0)
+        self.grid.addWidget(self.edit_mpp,                3,1)
+        self.grid.addWidget(self.checkScaling,            4,0,1,3)
+        self.grid.addWidget(self.checkCanny,              5,0,1,3)
 
         self.grid.setColumnStretch(2,1)
         self.setLayout(self.grid)
@@ -297,7 +308,8 @@ class BoxAnasettings(QGroupBox):
                  "max_shift": self.spinbox_maxShift.value(),
                  "delay": self.spinbox_delay.value(),
                  "scaling": self.checkScaling.isChecked(),
-                 "canny": self.checkCanny.isChecked()}
+                 "canny": self.checkCanny.isChecked(),
+                 "mpp": float(self.edit_mpp.text())}
         return param
         
 class BoxBatchsettings(QGroupBox):

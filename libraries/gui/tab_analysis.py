@@ -165,7 +165,7 @@ class BoxVideoInput(QGroupBox):
         
         # create widgets for video input parameters
         self.label_fps = QLabel('framerate [frames/s]:')
-        self.label_mpp = QLabel('scale [microns/pixel]:')
+        self.label_mpp = QLabel('scale [microns/px]:')
         self.label_path = QLabel('Video path:')
         self.label_results = QLabel('results folder:')
         

@@ -62,8 +62,7 @@ def batch(videofiles, param={}, stop_flag = None, progressSignal = None, *args, 
         filepath = pathlib.Path(file)
         curr_analysis = create_analysis()
         curr_analysis.import_video(filepath)
-        curr_analysis.set_scale(2) # 1 px = microns 
-        # todo: connect to param dict
+        curr_analysis.set_scale(param["mpp"]) # 1 px = mpp microns 
         
         if param["scaling"]:
             curr_analysis.set_px_longest(px_longest=1024) # raises error if roi = None, todo: fix
@@ -349,7 +348,7 @@ class OHW():
             data = pickle.load(loadfile)
         
         #return data
-        #print(data)
+        # print(data)
 
         self.analysis_meta = data["analysis_meta"]
         self.videometa = data["videometa"]
