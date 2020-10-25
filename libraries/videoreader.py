@@ -33,7 +33,7 @@ def read_imagestack(inputpath, *args, **kwargs):
         reads folder with sequence of tif-files
     """
 
-    inputtifs = list(inputpath.parent.glob('*.tif'))  # or use sorted instead of list    
+    inputtifs = list(inputpath.parent.glob('*.tif'))  # or use sorted instead of list?    
 
     rawImageStack = tifffile.imread(inputtifs, pattern = '')
     rawImageStack = rawImageStack.astype(np.float32)    #convert as cv2 needs float32 for templateMatching
@@ -94,3 +94,21 @@ def read_videofile(inputpath):
 
     cap.release()
     return rawImageStack, videometa
+    
+def get_first_frame(inputpath):
+
+    extension = inputpath.suffix
+    if extension not in ['.tif','.avi','.mov','.mp4']:
+        print('imputfile not supported. Choose a .tif/.avi/.mov/.mp4')
+        return
+    
+    if extension == '.tif':
+        first_file = list(inputpath.parent.glob('*.tif')) [0]
+        first_image = tifffile.imread(first_file, pattern = '')
+    else:
+
+        cap = cv2.VideoCapture(str(inputpath))
+        ret, first_image = cap.read()
+        cap.release()
+    
+    return first_image
