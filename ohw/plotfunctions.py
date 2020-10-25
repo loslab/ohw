@@ -8,7 +8,7 @@ import moviepy.editor as mpy
 from moviepy.video.io.bindings import mplfig_to_npimage
 from copy import deepcopy
 
-from libraries import helpfunctions, Filters
+from ohw import helpfunctions, Filters
 
 
 def plot_Kinetics(timeindex, motion, plotoptions, hipeaks, lopeaks, motiondescription = "motion", file_name=None):

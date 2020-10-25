@@ -12,7 +12,7 @@ from PyQt5.QtGui import QFont, QFontMetrics
 
 import pathlib
 import numpy as np
-from libraries import OHW, UserDialogs, helpfunctions
+from ohw import OHW, UserDialogs, helpfunctions
 
 class TabAnalysis(QWidget):
     #Python classes follow the CapWords convention

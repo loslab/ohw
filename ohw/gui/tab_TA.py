@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (QLabel, QLineEdit, QGridLayout, QComboBox,
     QTextEdit,QSizePolicy, QPushButton, QProgressBar,QSlider, QWidget, QSpinBox, QCheckBox)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from libraries import helpfunctions
+from ohw import helpfunctions
 
 class TabTA(QWidget):
     """

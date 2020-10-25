@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from libraries import OFlowCalc, plotfunctions, Filters, helpfunctions, PeakDetection
+from ohw import OFlowCalc, plotfunctions, Filters, helpfunctions, PeakDetection
 
 class Postproc():
     """

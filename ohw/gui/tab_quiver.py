@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import (QLabel, QLineEdit, QGridLayout, QComboBox,
     QSpinBox, QCheckBox, QGroupBox)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from libraries import helpfunctions
+from ohw import helpfunctions
 
 class TabQuiver(QWidget):
     """

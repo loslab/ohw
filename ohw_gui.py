@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 
 import sys
-from libraries.gui import tabwidget_main
+from ohw.gui import tabwidget_main
 from PyQt5.QtWidgets import QMainWindow, QApplication, QDesktopWidget 
 from PyQt5.QtGui import QIcon
-import PyQt5.QtCore as Core
+import PyQt5.QtCore as QtCore
 
 class OHWGUI(QMainWindow):
     """ QMainWindow incorporating TabWidgetMain with different tabs for ohw control"""
 
     def __init__(self, parent):
         super(OHWGUI, self).__init__(parent)
+        self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+
         
         self.title = 'OpenHeartWare (OHW) - Software for optical determination of Cardiomyocyte contractility'
         self.setWindowTitle(self.title)
@@ -31,26 +33,27 @@ class OHWGUI(QMainWindow):
     
     def keyPressEvent(self, e):
         ''' close window when escape pressed '''
-        if e.key() == Core.Qt.Key_Escape:
+        if e.key() == QtCore.Qt.Key_Escape:
             self.close()
-            sys.exit(app.exec_())
+            #sys.exit(app.exec_())
         
     def closeEvent(self, event):
         self.table_widget.close_Window()    
-    
-if __name__ == '__main__':
-    
+
+def run_gui():
+
     #suppress warnings for the user
     if not sys.warnoptions:
         import warnings
         warnings.simplefilter("ignore")
-    
-    #enable the following code when testing instead of line 57:
-       # warnings.simplefilter("default") # Change the filter in this process
-        #os.environ["PYTHONWARNINGS"] = "default" # Also affect subprocesses
    
     app = QApplication(sys.argv)
-    app.setAttribute(Core.Qt.AA_DisableHighDpiScaling)
+    app.setAttribute(QtCore.Qt.AA_DisableHighDpiScaling)
     app.aboutToQuit.connect(app.deleteLater)
     ohw_gui = OHWGUI(parent = None)    
-    app.exec_()
+    
+    sys.exit(app.exec_())    
+    
+if __name__ == '__main__':
+    
+    run_gui()

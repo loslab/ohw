@@ -9,8 +9,8 @@ from PyQt5.QtWidgets import (QLabel, QLineEdit, QGridLayout, QComboBox,
     QSpinBox, QDoubleSpinBox, QCheckBox, QListWidget, QAbstractItemView, QGroupBox, QAbstractSpinBox)
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtGui import QFont
-from libraries import helpfunctions, UserDialogs, OHW
-from libraries.gui import tab_analysis
+from ohw import helpfunctions, UserDialogs, OHW
+from ohw.gui import tab_analysis
 import pathlib
 
 class TabBatch(QWidget):

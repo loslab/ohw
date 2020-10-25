@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (QLabel, QLineEdit, QGridLayout,
     QWidget, QSpinBox, QCheckBox, QFileDialog, QComboBox)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from libraries import OHW, helpfunctions
+from ohw import OHW, helpfunctions
 
 class TabMotion(QWidget):
     

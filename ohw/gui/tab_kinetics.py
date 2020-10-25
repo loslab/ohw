@@ -9,9 +9,9 @@ from PyQt5.QtWidgets import (QLabel, QLineEdit, QGridLayout, QComboBox, QFileDia
     QGroupBox, QVBoxLayout, QHBoxLayout, QDoubleSpinBox)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
-from libraries import helpfunctions
+from ohw import helpfunctions
 import numpy as np
-from libraries.gui import dialog_kinoptions
+from ohw.gui import dialog_kinoptions
 import pathlib
 
 class TabKinetics(QWidget):

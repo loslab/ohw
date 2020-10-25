@@ -22,8 +22,8 @@ from PyQt5.QtGui import QIcon, QPixmap, QFont, QColor, QImage
 from PyQt5.QtCore import Qt, pyqtSignal
 #from PyQt5 import QtGui
  
-from libraries import MultipleFoldersByUser, UserDialogs, Filters, helpfunctions, QuiverExportOptions, plotfunctions, OHW
-from libraries.gui import tab_analysis, tab_TA, tab_quiver, tab_batch, tab_kinetics
+from ohw import MultipleFoldersByUser, UserDialogs, Filters, helpfunctions, QuiverExportOptions, plotfunctions, OHW
+from ohw.gui import tab_analysis, tab_TA, tab_quiver, tab_batch, tab_kinetics
 
 class TabWidgetMain(QWidget):
     def __init__(self, parent):   
