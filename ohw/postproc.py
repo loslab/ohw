@@ -31,6 +31,13 @@ class Postproc():
         # link to config somehow/ default pars somehow
         # init somewhere else?
 
+    def info(self):
+        """ prints information on current evaluation (postproc) object """
+        
+        print("########## eval info:")
+        for key, value in sorted(self.get_savedata().items(), key=lambda x: x[0]): 
+            print("{} : {}".format(key, value))
+
     def link_ohw(self, cohw):
         """ connect to ohw analysis object cohw (current ohw) with calculated motion and other metadata """
         # or does it make sense to do this already in the constructor?

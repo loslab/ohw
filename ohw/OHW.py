@@ -149,6 +149,22 @@ class OHW():
         self.config = helpfunctions.read_config() # load current ohw config        
         self._init_analysis()
 
+    def info(self):
+        """
+            prints information on current ohw object
+        """
+        print("information of current ohw:")
+        print("####### analysis_meta:")
+        for key, value in sorted(self.analysis_meta.items(), key=lambda x: x[0]): 
+            print("{} : {}".format(key, value))        
+        print("####### videometa:")
+        for key, value in sorted(self.videometa.items(), key=lambda x: x[0]): 
+            print("{} : {}".format(key, value))
+        print("####### evaluations:")
+        print(self.ceval.name)
+        self.ceval.info()
+
+
     def _init_analysis(self):
         """ called on instantiation to init ohw """
     
@@ -287,6 +303,9 @@ class OHW():
             roi = self.analysis_meta["roi"] #TODO: make sure roi dimensions are constrained <= image dimensions
             longest_side = max(roi[2],roi[3])
             self.analysis_meta["scalingfactor"] = float(self.analysis_meta["px_longest"])/longest_side
+        
+        else:
+            self.analysis_meta["scalingfactor"] = 1.0
     
     def _calc_analysisStack(self):
 
@@ -313,6 +332,7 @@ class OHW():
             especially useful after batchrun
             -> no need to recalculate MVs when filters/ plotting parameters are changed
         '''
+        print("saving ohw") #to do: remove
         if self.analysis_meta["results_folder"] == "": # don't save when no file loaded
             return
         filename = str(self.analysis_meta["results_folder"]/'ohw_analysis.pickle')
@@ -348,26 +368,100 @@ class OHW():
             data = pickle.load(loadfile)
         
         #return data
-        # print(data)
+        # print("loading file", filename)
+        # print(type(data))
+        # print(data.keys())
+        # print(data["analysis_meta"]["version"])
+        
+        
+        if type(data) is list:
+            version = "1.2" # only in this version saved as list, future versions save as dict
 
-        self.analysis_meta = data["analysis_meta"]
-        self.videometa = data["videometa"]
-        loaded_postprocs = data["postproc_savedict"]
-        self.kinplot_options = data["kinplot_options"]
-        
-        if "rawMVs" in data.keys():
-            self.rawMVs = data["rawMVs"]
-        
-        #, self.videometa, loaded_postprocs, self.kinplot_options = data
-        
-        self.postprocs = {}
-        for name, loaded_postproc in loaded_postprocs.items():
-            eval = postproc.Postproc(cohw=self, name=name)
-            eval.load_data(loaded_postproc)
+        else:
+            version = "1.3" # hardcode so far
+            #version = data["analysis_meta"]["version"] # will be read from dict
+
+        if version == "1.2":
+    
+            analysis_meta, videometa, rawMVs, Peaks = data
             
-            self.postprocs.update({name:eval})
+            self.rawMVs = rawMVs # update rawMVs
+            
+            
+            ######## update videometa
+            
+            videometa_updated = videometa.copy()
+            # basically all old keys used in new version
+            # to add: prev800px + prev_scale
 
-        self.ceval = self.postprocs[list(self.postprocs.keys())[0]] #set one as active
+            first_frame = videoreader.get_first_frame(videometa['inputpath']) #todo: works only 
+            videometa_updated['prev800px'] = helpfunctions.create_prev(first_frame, 800)
+            videometa_updated['prev_scale'] = 800/videometa["frameHeight"]
+            
+            self.videometa = videometa_updated
+        
+            ######### update analysis_meta
+        
+            analysis_meta_updated = {"motion_method":'Blockmatch', 'calc_finish':True} # only BM in 1_2 used
+            analysis_meta_updated["motion_parameters"] = analysis_meta['MV_parameters']
+            analysis_meta_updated["date"] = analysis_meta['date']
+            analysis_meta_updated["has_MVs"] = analysis_meta['has_MVs']
+            analysis_meta_updated["inputpath"] = analysis_meta['inputpath']
+            analysis_meta_updated["px_longest"] = analysis_meta['px_longest']
+            analysis_meta_updated["results_folder"] = analysis_meta['results_folder']
+
+            w, h = analysis_meta['shape'][1],analysis_meta['shape'][2] # todo: check if order is right
+            analysis_meta_updated['roi'] = [0,0,w,h]        
+            
+            #analysis_meta_updated['prefilters'] = {"Canny":{"on":analysis_meta['filter_status']}}
+            # no, filter_status specifies postfiltering, not Canny -> add to postproc
+            analysis_meta_updated['prefilters'] = {"Canny":{"on":analysis_meta['MV_parameters']['canny']}}
+            del analysis_meta['MV_parameters']['canny'] # delete old key, as moved to prefilter
+            analysis_meta_updated['version'] = '1.3.0'     
+        
+            self.analysis_meta = analysis_meta_updated
+            self._calc_scalingfactor()      
+            ####### update postproc, take info from analysis_meta
+
+        
+            eval = postproc.Postproc(cohw=self, name='post1') # create one eval, v1.2 stored only one evaluation
+            eval.method = self.analysis_meta["motion_method"]    
+            eval.roi = None
+            eval.filters = {"filter_singlemov":{"on":analysis_meta['filter_status']}} # analysis_meta['filter_status'] # TODO: add filter
+            self.postprocs.update({'post1':eval})
+            self.ceval = self.postprocs[list(self.postprocs.keys())[0]] #set first one as active
+            self.ceval.process() # should be done in the end when rawMVs are also loaded
+            # in v1_3: process is directly called from eval.load_data
+        
+
+            #peakdata = PeakDetection.PeakDetection() #not needed, is created in eval
+            #peakdata.peakmode = "alternating" # also set in eval
+            # peakdata.motiondescription = 'Mean Absolute Motion [µm/s]' # also set in eval
+            eval.PeakDetection.set_peaks(Peaks)
+            self._init_kinplot_options()
+        
+        elif version == "1.3":
+        
+            self.analysis_meta = data["analysis_meta"]
+            self.videometa = data["videometa"]
+            loaded_postprocs = data["postproc_savedict"]
+            self.kinplot_options = data["kinplot_options"]
+            
+            #print(self.videometa.keys())
+            
+            if "rawMVs" in data.keys():
+                self.rawMVs = data["rawMVs"]
+            
+            #, self.videometa, loaded_postprocs, self.kinplot_options = data
+            
+            self.postprocs = {}
+            for name, loaded_postproc in loaded_postprocs.items():
+                eval = postproc.Postproc(cohw=self, name=name)
+                eval.load_data(loaded_postproc)
+                
+                self.postprocs.update({name:eval})
+
+            self.ceval = self.postprocs[list(self.postprocs.keys())[0]] #set first one as active
 
     def _set_method(self, method, parameters):
         """ set analysis method + parameters, used before starting analysis

@@ -10,6 +10,7 @@ import requests
 import configparser
 import math
 import threading
+import pathlib
 
 def get_figure_size(img, initial_val):
     ratio = img.shape[0]/img.shape[1]
@@ -184,11 +185,13 @@ def check_update(self, curr_version):
 
 def read_config():
     config = configparser.ConfigParser()
-    config.read('config.ini')
+    cfgpath = pathlib.Path(__file__).parent.parent/'config.ini'
+    config.read(str(cfgpath))
     return config
         
 def save_config(config):
-    with open('config.ini', 'w') as configfile:
+    cfgpath = pathlib.Path(__file__).parent.parent/'config.ini'
+    with open(str(cfgpath), 'w') as configfile:
         config.write(configfile)
 
 def create_prev(img, height = 800):
