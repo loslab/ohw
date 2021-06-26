@@ -12,6 +12,9 @@ def import_video(inputpath):
             - videofile (.avi/.mov/.mp4)
             - folder with .tif-files (select one tif-file in folder)
     """
+    if type(inputpath) == str:
+        inputpath = pathlib.Path(inputpath) #convert string input to pathlib path
+    
     extension = inputpath.suffix
     if extension not in ['.tif','.avi','.mov','.mp4']:
         print('imputfile not supported. Choose a .tif/.avi/.mov/.mp4')

@@ -10,6 +10,8 @@ from PyQt5.QtWidgets import (QLabel, QLineEdit, QGridLayout, QComboBox,
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from ohw import helpfunctions
+from ohw.gui import dialog_quiveroptions
+import math
 
 class TabQuiver(QWidget):
     """
@@ -236,6 +238,9 @@ class BoxQuiver(QGroupBox):
         self.btn_quiver_save = QPushButton('Save this frame')
         self.btn_quiver_save.clicked.connect(self.on_saveQuiver)            
 
+        self.btn_quiver_sett = QPushButton('Export settings')
+        self.btn_quiver_sett.clicked.connect(self.on_quiversett)
+
         self.btn_quivers_video = QPushButton('Export quiver video')
         self.btn_quivers_video.clicked.connect(self.on_saveQuivervideo)
        
@@ -250,21 +255,17 @@ class BoxQuiver(QGroupBox):
         self.slider_quiver.setValue(0)
         # self.slider_quiver.setFixedWidth(500)
         self.slider_quiver.valueChanged.connect(self.slider_quiver_valueChanged)
-        
-        # todo: reintroduce
-        #button for changing the quiver export settings
-        # self.btn_quiver_settings = QPushButton('Change quiver export settings')
-        # self.btn_quiver_settings.clicked.connect(self.on_change_quiverSettings)
-        
-        self.grid.addWidget(self.canvas_quivers, 0,0,1,2)
+                
+        self.grid.addWidget(self.canvas_quivers, 0,0,1,3)
         self.grid.addWidget(self.label_quiver_idx, 1,0)
         self.grid.addWidget(self.label_quiver_time, 1,1)
-        self.grid.addWidget(self.slider_quiver, 2,0,1,2)
+        self.grid.addWidget(self.slider_quiver, 2,0,1,3)
         self.grid.addWidget(self.btn_quiver_save, 3,0)
+        self.grid.addWidget(self.btn_quiver_sett, 3,1)
         self.grid.addWidget(self.btn_quivers_video, 4,0)
-        self.grid.addWidget(self.progressbar_quivers, 4,1)
+        self.grid.addWidget(self.progressbar_quivers, 4,1,1,3)
         
-        self.grid.setColumnStretch(1,1)
+        self.grid.setColumnStretch(2,1)
         self.setLayout(self.grid)
         
     def init_ohw(self):
@@ -274,6 +275,13 @@ class BoxQuiver(QGroupBox):
         if self.cohw.analysis_meta["has_MVs"] and self.cohw.video_loaded: # todo: refactor!
             self.btn_quiver_save.setEnabled(True)
             self.btn_quivers_video.setEnabled(True)
+            self.btn_quiver_sett.setEnabled(True)
+            
+            fend = math.floor(self.ctrl.config['QUIVER OPTIONS'].getfloat('video_length')*self.cohw.videometa["fps"])
+            self.quiveroptions = {"view":"triple","startframe":0,"endframe":fend}# rudimentary test... todo:refactor
+            # todo: truncate if too long
+            
+            
             self.slider_quiver.setMaximum(self.ceval.mean_absMotions.shape[0]-1)# or introduce new variable which counts the amount of motion timepoints
             self.slider_quiver.setValue(0)
             self.slider_quiver.setEnabled(True)
@@ -282,6 +290,7 @@ class BoxQuiver(QGroupBox):
             self.btn_quiver_save.setEnabled(False)
             self.btn_quivers_video.setEnabled(False)
             self.slider_quiver.setEnabled(False)
+            self.btn_quiver_sett.setEnabled(False)
             self.placeholder_quivers()
             
     def clear_quivers(self):
@@ -301,7 +310,7 @@ class BoxQuiver(QGroupBox):
         scalingfactor = self.cohw.analysis_meta["scalingfactor"]
         scale_max = helpfunctions.get_scale_maxMotion2(self.ceval.absMotions)
         
-        skipquivers =  int(self.ctrl.config["DEFAULT QUIVER SETTINGS"]['quiver_density']) # store in ohw object!
+        skipquivers =  int(self.ctrl.config["QUIVER OPTIONS"]['quiver_density']) # store in ohw object!
         distance_between_arrows = blockwidth * skipquivers
         arrowscale = 1 / (distance_between_arrows / scale_max)
         
@@ -409,6 +418,14 @@ class BoxQuiver(QGroupBox):
         """
         self.cohw.save_quiver3(singleframe = singleframe)
         helpfunctions.msgbox(self, 'Quiver of frame ' + str(singleframe) + ' was saved successfully')
+    
+    def on_quiversett(self):
+        self.dialog_quiveroptions = dialog_quiveroptions.DialogQuiveroptions(self.ctrl, settings = self.quiveroptions) #
+        #plotsettings = self.cohw.kinplot_options) # where to store? in cohw or local in tab?
+        self.dialog_quiveroptions.exec_()
+        #self.kinplot_options.update(self.dialog_kinoptions.get_settings())
+        
+        # self.cohw.update_kinplot_options(self.dialog_kinoptions.get_settings())
 
     def updateQuiverBrightness(self,vmin,vmax): # todo: check if this is used correctly
         self.imshow_quivers.set_clim(vmin=vmin, vmax=vmax)

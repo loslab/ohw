@@ -59,7 +59,7 @@ class TabWidgetMain(QWidget):
         self.tabs.addTab(self.tab_TA,"Time averaged motion")
         self.tabs.addTab(self.tab_batch,"Batch analysis")
         
-        self.update_tabs()
+        #self.update_tabs() #not needed, init_ohw() called in each tab at initialization
         
         curr_date = datetime.now().date()   # move updatecheck into function
         last_check = datetime.strptime(self.config['UPDATE']['last_check'],"%Y-%m-%d").date()
@@ -72,13 +72,13 @@ class TabWidgetMain(QWidget):
         # self.config.getboolean(section='DEFAULT QUIVER SETTINGS', option='one_view')
         self.quiver_settings = {}# self.config['DEFAULT QUIVER SETTINGS']
         for item in ['one_view', 'three_views', 'show_scalebar']:
-            self.quiver_settings[item] = self.config.getboolean(section='DEFAULT QUIVER SETTINGS', option=item)
+            self.quiver_settings[item] = self.config.getboolean(section='QUIVER OPTIONS', option=item)
          
         for item in ['quiver_density']:
-            self.quiver_settings[item] = self.config.getint(section='DEFAULT QUIVER SETTINGS', option=item)
+            self.quiver_settings[item] = self.config.getint(section='QUIVER OPTIONS', option=item)
     
         for item in ['video_length']:
-            self.quiver_settings[item] = self.config.getfloat(section='DEFAULT QUIVER SETTINGS', option=item)
+            self.quiver_settings[item] = self.config.getfloat(section='QUIVER OPTIONS', option=item)
 
     def close_Window(self):
         ''' 

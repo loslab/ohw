@@ -6,6 +6,16 @@ developed by Oliver Schneider & Carla Sailer at the Loskill Group, Fraunhofer In
 
 https://github.com/loslab/ohw
 
+### xx.xx.2021 new release v1.3.0
+
+It took some time but we are finally releasing the next iteration of OHW. Check the update section on how to update to the recent version. Major improvements:
+* allow the selection of regions of interest (rois)
+* introduce the analysis of the integrated intensity in videos (useful e.g. for the analysis of Ca-signalling)
+* restructure the gui
+* introduce options to taylor the export of quiver videos
+* resturcture the ohw class providing a more concise interface and separating pre-filtering and post-filtering parameters
+* check out the doc section with an attempt to visualize the underlying class structure, a jupyter notebook displaying the class use and an API documentation made with pdoc
+
 ### 26.06.2019 new release v1.2.0
 
 * allow saving of analysis as .pickle

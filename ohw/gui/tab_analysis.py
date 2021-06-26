@@ -120,9 +120,8 @@ class TabAnalysis(QWidget):
             finish = self.cohw.analysis_meta["calc_finish"]
             
             if (loaded == True) and (finish == False):
-                self.box_preprocess.setEnabled(True)
+                self.box_preprocess.setEnabled(True)  # enable controls only if video loaded and nothing calculated yet
             else:
-                print("no vid loaded, nothing calculated")
                 self.box_preprocess.setEnabled(False)
             
             # check if video is loaded and update controls
@@ -249,7 +248,7 @@ class BoxVideoInput(QGroupBox):
             self.edit_fps.setEnabled(True)
             self.edit_mpp.setEnabled(True)
         
-        if (loaded == False) and (finish == True):
+        if (loaded == False): # and (finish == True):
             self.btn_reload_video.setEnabled(True)            
         else:
             self.btn_reload_video.setEnabled(False)            
@@ -294,11 +293,9 @@ class BoxVideoInput(QGroupBox):
         self.ctrl.config.set("LAST SESSION", "input_folder", str((inputpath / "..").resolve()))
         helpfunctions.save_config(self.ctrl.config)
 
-        # create OHW object to work with motion vectors
         self.cohw.save_ohw() #save old ohw when loading new file
         self.ctrl.cohw = OHW.create_analysis() # need to call self.ctrl.cohw to propagate to controller + other frames
-        #self.cohw = self.ctrl.cohw
-        # TODO: make sure this is transmitted properly to parent!
+        # todo: check if still needed with introduction of property?
         
         #read imagestack
         self.import_video_thread = self.cohw.import_video_thread(inputpath)
@@ -322,8 +319,9 @@ class BoxVideoInput(QGroupBox):
         self.parent.progbar.setRange(0,100) #TODO: improve self.parent call
         self.parent.progbar.setValue(100)
         
-        self.parent.update = True
-        self.parent.init_ohw() # TODO: change to self.ctrl.update_tabs()
+        self.ctrl.update_tabs()
+        #self.parent.update = True
+        #self.parent.init_ohw() # TODO: change to self.ctrl.update_tabs()
         
         #update videoinfos with data from cohw
 
@@ -512,7 +510,6 @@ class BoxMotion(QGroupBox):
     def init_ohw(self):
         loaded = self.cohw.video_loaded
         finish = self.cohw.analysis_meta["calc_finish"]
-                
         #for widget in self.findChildren(QWidget):
         #    widget.setEnabled(False)
         self.btn_calcmotion.setEnabled(False)
@@ -524,7 +521,7 @@ class BoxMotion(QGroupBox):
         if (loaded == True) and (finish == False):
             self.btn_calcmotion.setEnabled(True)
         
-        if (loaded == True) and (finish == True):
+        if (finish == True): # and (loaded == True):
             self.btn_reset.setEnabled(True)
         
         if finish == False:
@@ -590,15 +587,13 @@ class BoxMotion(QGroupBox):
         if (pickle_file == ''):
             return
         
-        if self.cohw.analysis_meta["calc_finish"]:
-            self.cohw.save_ohw()
+        self.cohw.save_ohw()
         self.ctrl.cohw = OHW.load_analysis(pickle_file) # creates new instance here, must refer to ctrl
 
-        print(self.cohw.analysis_meta)
+        #print(self.cohw.analysis_meta)
+        #self.cohw.info()
 
-        self.parent.update = True
-        self.parent.init_ohw()
-        #self.parent.update_tabs()
+        self.ctrl.update_tabs()
         self.set_motion_param() # or move to init_ohw?
 
     def set_motion_param(self):
@@ -619,6 +614,8 @@ class BoxMotion(QGroupBox):
         elif method == "Fluo-Intensity":
             self.combo_method.setCurrentIndex(1)
         
+        # todo: also specify scaling/ canny
+        
     def on_combo_method_changed(self):
         method = self.combo_method.currentText()
         
@@ -634,8 +631,9 @@ class BoxMotion(QGroupBox):
     
     def on_reset(self):
         self.cohw.reset()
-        self.parent.update = True #TODO: workaround, reimplement when tabs added
-        self.parent.init_ohw()
+        self.ctrl.update_tabs()
+        # self.parent.update = True #TODO: workaround, reimplement when tabs added
+        # self.parent.init_ohw()
     
     def on_calcmotion(self):
         

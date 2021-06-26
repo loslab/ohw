@@ -332,6 +332,10 @@ class OHW():
             especially useful after batchrun
             -> no need to recalculate MVs when filters/ plotting parameters are changed
         '''
+        # don't save if nothing calculated
+        if self.analysis_meta["calc_finish"] == False:
+            return        
+        
         print("saving ohw") #to do: remove
         if self.analysis_meta["results_folder"] == "": # don't save when no file loaded
             return
@@ -548,8 +552,7 @@ class OHW():
             prefilters[filtername].update(filterparameters)
         else:
             print("filter {} is not a valid filteroption for prefiltering".format(filtername))
-    
-    
+        
     def set_filter(self, filtername, on = False, **filterparameters):
         ''' sets specified filtername on/ off + parameters for current eval'''
         # TODO: better error handling if filter does not exist (what's the best way?)

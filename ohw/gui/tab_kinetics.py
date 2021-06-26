@@ -22,8 +22,7 @@ class TabKinetics(QWidget):
         self.parent = parent
         self.ctrl = ctrl
         self.initUI()
-        
-        #self.init_ohw() # for prototyping, TODO: remove
+        self.init_ohw()
         
     @property
     def cohw(self):
@@ -76,9 +75,8 @@ class TabKinetics(QWidget):
 
     def init_ohw(self):
         ''' set values from cohw '''
-        
+
         if self.update == True:
-            
             self.timeindex = self.cohw.ceval.PeakDetection.timeindex #easier to referene here...
             self.motion = self.cohw.ceval.PeakDetection.motion
             self.Peaks, self.hipeaks, self.lopeaks = self.cohw.ceval.get_peaks()
