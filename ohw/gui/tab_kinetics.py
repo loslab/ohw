@@ -541,5 +541,8 @@ class BoxControls(QGroupBox):
         helpfunctions.msgbox(self, 'Plot was saved successfully.')
 
     def on_export_analysis(self):
-        self.cohw.export_analysis()
-        helpfunctions.msgbox(self, 'analyzed Peaks were saved successfully.')        
+        try:
+            self.cohw.export_analysis()
+            helpfunctions.msgbox(self, 'analyzed Peaks were saved successfully.')        
+        except PermissionError:
+            helpfunctions.msgbox(self, "can't access outputfile, maybe it's still open?") 

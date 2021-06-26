@@ -10,6 +10,7 @@ from matplotlib.figure import Figure
 
 from openpyxl import Workbook
 from openpyxl.styles import Font
+from ohw import helpfunctions
 
 class PeakDetection():
     def __init__(self):
@@ -218,14 +219,24 @@ class PeakDetection():
         
         # quick workaround, interval calculation repeated, TODO: improve
         sheet_bpm_evol = workbook_peaks.create_sheet("bpm evolution")
-        sheet_bpm_evol.append(['f [bpm]', 'error [bpm]'])
+        sheet_bpm_evol.append(['t [s]', 'f [bpm]', 'error [bpm]']) 
+        # time indicates mean time of subsequent peaks which are used to calculate interval
 
         times_high = self.timeindex[self.hipeaks] if self.hipeaks != None else []
         contraction_intervals = np.diff(np.sort(times_high))
         freqs, errs = self.calc_bpm_evolution(contraction_intervals)
-        for freq, err in zip(freqs, errs):
-            sheet_bpm_evol.append([freq, err])        
+        meantimes = (times_high[:-1] + times_high[1:])/2
+        for time, freq, err in zip(meantimes, freqs, errs):
+            sheet_bpm_evol.append([time, freq, err])        
 
         results_folder.mkdir(parents = True, exist_ok = True) #TODO: check again, results_folder might not always be a path
         save_file = str(results_folder / 'Motionanalysis.xlsx')
-        workbook_peaks.save(save_file)
+        
+        try:
+            workbook_peaks.save(save_file)
+        except PermissionError:
+            print("can't access outputfile, "
+                    "maybe it's still open?") 
+                    # plot error (e.g. when called in cli), raise 
+                    # needed such that gui-calls can catch error
+            raise
