@@ -225,6 +225,11 @@ class Postproc():
         ''' update with manually added/ deleted peaks '''
         self.PeakDetection.set_peaks(Peaks)
         self.PeakDetection.assign_peaks()
+        
+    def set_peakmode(self, peakmode):
+        """ sets peakmode in PeakDetection, call also assign_peaks to reorder"""
+        self.PeakDetection.set_peakmode(peakmode)
+        self.PeakDetection.assign_peaks()
 
     def detect_peaks(self, ratio, number_of_neighbours):
         ''' automated peak detection in mean_absMotions'''

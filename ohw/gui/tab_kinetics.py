@@ -189,7 +189,7 @@ class TabKinetics(QWidget):
     
     def update_Peaks(self):
         ''' update manually changed Peaks with cohw '''
-        self.cohw.set_peaks(self.Peaks)
+        self.cohw.set_peaks(self.Peaks) # set_peaks sets in PeakDetection and assigns corresponding to peakmode
         self.box_metrics.update()
         
     def mouse_press_callback(self, event):
@@ -387,7 +387,10 @@ class BoxPeakdetection(QGroupBox):
         self.spinbox_ratio = QDoubleSpinBox()
         self.spinbox_ratio.setRange(0.01, 0.90)
         self.spinbox_ratio.setSingleStep(0.01)
-        self.spinbox_ratio.setValue(0.3) #init from config           
+        self.spinbox_ratio.setValue(0.3) #todo: init from config
+        self.check_peakmode_high = QCheckBox('Consider all peaks as contractions')
+        self.check_peakmode_high.setCheckState(False)
+        self.check_peakmode_high.stateChanged.connect(self.on_check_peakmode)
         
         self.label_neighbours = QLabel('Number of neighbours:') 
         self.spinbox_neighbours = QSpinBox()    
@@ -406,8 +409,9 @@ class BoxPeakdetection(QGroupBox):
         self.grid.addWidget(self.label_neighbours,1,0)
         self.grid.addWidget(self.spinbox_ratio,0,1)
         self.grid.addWidget(self.spinbox_neighbours,1,1)
-        self.grid.addWidget(self.btn_detect_peaks,2,1)
-        self.grid.addWidget(self.btn_remove_peaks,3,1)
+        self.grid.addWidget(self.check_peakmode_high,2,0,1,2)
+        self.grid.addWidget(self.btn_detect_peaks,3,1)
+        self.grid.addWidget(self.btn_remove_peaks,4,1)
         
         self.setLayout(self.grid)        
         
@@ -421,6 +425,17 @@ class BoxPeakdetection(QGroupBox):
     def on_remove_peaks(self):
         self.cohw.set_peaks([])
         self.parent.set_cohw_peaks()
+        
+    def on_check_peakmode(self):
+        checkstate = self.check_peakmode_high.isChecked()
+        if checkstate == True:
+            self.cohw.ceval.set_peakmode("high")
+        else:
+            self.cohw.ceval.set_peakmode("alternating")
+        
+        self.parent.set_cohw_peaks() # does basically the same as these function calls
+        # self.parent.plot_Peaks()
+        # self.parent.box_metrics.update()
 
 class BoxMetrics(QGroupBox):
     def __init__(self, parent, ctrl, boxtitle = "Peak metrics"):
