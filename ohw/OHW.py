@@ -168,6 +168,8 @@ class OHW():
     def _init_analysis(self):
         """ called on instantiation to init ohw """
     
+        self.pickle_file = None         # stores path of resultsfile
+    
         self.rawImageStack = None       # array for raw imported imagestack
         self.rawMVs = None              # array for raw motion vectors (MVs)
 
@@ -339,7 +341,10 @@ class OHW():
         print("saving ohw") #to do: remove
         if self.analysis_meta["results_folder"] == "": # don't save when no file loaded
             return
-        filename = str(self.analysis_meta["results_folder"]/'ohw_analysis.pickle')
+        
+        # if .pickle-file was read in a path is already specified, else save in specified results_folder
+        if self.pickle_file is None:
+            self.pickle_file = str(self.analysis_meta["results_folder"]/'ohw_analysis.pickle')
         
         # get savedata for all current postprocs:
         postproc_savedict = {name: eval.get_savedata() for name, eval in self.postprocs.items()}
@@ -353,7 +358,7 @@ class OHW():
         # keep saving minimal, everything should be reconstructed from these parameters...
 
         self.analysis_meta["results_folder"].mkdir(parents = True, exist_ok = True)
-        with open(filename, 'wb') as writefile:
+        with open(self.pickle_file, 'wb') as writefile:
             pickle.dump(savedata, writefile, protocol=pickle.HIGHEST_PROTOCOL)
 
     def load_ohw(self, filename):
@@ -370,6 +375,8 @@ class OHW():
         
         with open(filename, 'rb') as loadfile:
             data = pickle.load(loadfile)
+        
+        self.pickle_file = filename 
         
         #return data
         # print("loading file", filename)
