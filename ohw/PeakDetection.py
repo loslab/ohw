@@ -3,7 +3,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pathlib
-from scipy.signal import argrelextrema
+#from scipy.signal import argrelextrema
+from scipy.signal import find_peaks
 from PyQt5.QtWidgets import QSizePolicy
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -16,7 +17,7 @@ class PeakDetection():
     def __init__(self):
         self.motion = None
         self.timeindex = None
-        self.Peaks = []
+        self.Peaks = [] # list of peaks = indices of timeindex/ motion array where peak occurs
         self.hipeaks = []
         self.lopeaks = []
         self.peakmode = "alternating"
@@ -50,11 +51,12 @@ class PeakDetection():
         
         self.assign_peaks()
         
-    def detect_peaks(self, ratio, number_of_neighbours):
+    def detect_peaks(self, ratio, number_of_neighbours, prominence = 2):
         
         print("detecting peaks with ratio: ", ratio, " and neighbours: ", number_of_neighbours)
         
-        peaks_ = argrelextrema(self.motion, np.greater, order=number_of_neighbours)
+        #peaks_ = argrelextrema(self.motion, np.greater_equal, order=number_of_neighbours)
+        peaks_ = find_peaks(self.motion, distance= number_of_neighbours, prominence = prominence)
         peaks_ = np.array(peaks_[0])  #location of peaks in inputarray
         
         #remove peaks that are smaller than a certain threshold, e.g. ratio = 1/15
@@ -66,6 +68,25 @@ class PeakDetection():
         print(foundPeaks, " peaks found")
 
         self.Peaks = sorted(list(peaks_th))
+    
+    def remove_peaks(self, tmin, tmax, vmax):
+        """ removes peaks in range tmin->tmax which are smaller than vmax """
+        
+        # get adjacent frame corresponding to provided time
+        Nmin = (np.abs(self.timeindex - tmin)).argmin()
+        Nmax = (np.abs(self.timeindex - tmax)).argmin()
+        
+        # get indices of peaks in selected window
+        peaksel = np.array(self.Peaks)
+        peaksel = peaksel[np.where((peaksel>=Nmin) & (peaksel<=Nmax))]
+        
+        peakheights = self.motion[peaksel]
+        delpeaks = peaksel[peakheights < vmax]
+        
+        self.Peaks = np.array(self.Peaks)
+        self.Peaks = np.setdiff1d(self.Peaks, delpeaks)
+        self.Peaks = list(self.Peaks)
+
     
     def set_peakmode(self, mode="alternating"):
         """ 
