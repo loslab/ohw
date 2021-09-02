@@ -548,6 +548,7 @@ class BoxControls(QGroupBox):
         #let the user choose a folder from the starting path
         path = str(pathlib.PureWindowsPath(self.cohw.analysis_meta["results_folder"] / 'beating_kinetics.PNG'))
         filename = QFileDialog.getSaveFileName(None, 'Choose a folder and enter a filename', path, file_types)[0]
+        filename = pathlib.Path(filename)
 
         if (filename == ''): # if 'cancel' was pressed:
             return
