@@ -73,7 +73,7 @@ With release v1.2.0 an automatic check for new releases during startup was intro
 * from now on, OpenHeartWare can be run again by double-clicking on [run_OpenHeartWare.bat](run_OpenHeartWare.bat) (with adjusting the filepath as mentioned in the user guide. You can of course replace it with the old run_OpenHeartWare.bat file where the path is already adjusted)
 
 ### Problems, questions, bugs, feedback and suggestions
-We are happy about any feedback on OpenHeartWare. If you have problems setting up OpenHeartWare or can't analyze your data the way you want, don't hesitate to open an issue on github or contact us under oliver.schneider@igb.fraunhofer.de. The same goes for any bugs or additional features you would like to have implemented. We appreciate all input!
+We are happy about any feedback on OpenHeartWare. If you have problems setting up OpenHeartWare or can't analyze your data the way you want, don't hesitate to open an issue on github or contact us under ghilorevilo@posteo.de. The same goes for any bugs or additional features you would like to have implemented. We appreciate all input!
 
 ### License
 Please cite [Schneider et al. 2019](https://www.liebertpub.com/doi/abs/10.1089/ten.TEA.2019.0002) if you use OHW in your publication.
