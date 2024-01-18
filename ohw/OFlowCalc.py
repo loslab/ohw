@@ -213,6 +213,7 @@ def get_mean_absMotion(absMotions):
     filtered_absMotions = np.copy(absMotions) #copy needed, don't influence absMotions
     filtered_absMotions[:,movement_mask] = np.nan
     mean_absMotions = np.nanmean(filtered_absMotions, axis=(1,2))
+    np.nan_to_num(mean_absMotions, copy = False) #replace nans with 0 (nan is result of mean when no motion in whole frame)
     
     return mean_absMotions
     

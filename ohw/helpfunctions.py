@@ -165,7 +165,12 @@ def get_scale_maxMotion2(absMotions):
     """
     
     absMotions_flat = absMotions[absMotions>0].flatten()
-    scale_min, scale_maxMotion = np.percentile(absMotions_flat, (0, 80))   
+    # exception where no motion detected at all: set max to 1 (no motion, so no vector will be resized anyways)
+    if np.count_nonzero(absMotions_flat) == 0:
+    	scale_maxMotion = 1
+    else:
+    	scale_min, scale_maxMotion = np.percentile(absMotions_flat, (0, 80))   
+    
     return scale_maxMotion
     
 def check_update(self, curr_version):
