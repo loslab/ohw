@@ -79,3 +79,5 @@ We are happy about any feedback on OpenHeartWare. If you have problems setting u
 Please cite [Schneider et al. 2019](https://www.liebertpub.com/doi/abs/10.1089/ten.TEA.2019.0002) if you use OHW in your publication.
 
 This project is licensed under a BSD 3-Clause license. See the [LICENSE.md](licence.md) file for details.
+
+Modified by Michael
